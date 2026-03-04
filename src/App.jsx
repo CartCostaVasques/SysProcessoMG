@@ -15,6 +15,7 @@ import Dashboard from './components/dashboard/Dashboard.jsx';
 import Usuarios from './components/usuarios/Usuarios.jsx';
 import Processos from './components/processos/Processos.jsx';
 import Andamentos from './components/processos/Andamentos.jsx';
+import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
 import Oficios from './components/oficios/Oficios.jsx';
 import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
@@ -37,6 +38,7 @@ function AppShell() {
       case 'usuarios':      return <Usuarios />;
       case 'processos':     return <Processos />;
       case 'andamentos':    return <Andamentos />;
+      case 'interessados':   return <Interessados />;
       case 'tarefas':       return <Tarefas />;
       case 'oficios':       return <Oficios />;
       case 'servicos':      return <Servicos />;
