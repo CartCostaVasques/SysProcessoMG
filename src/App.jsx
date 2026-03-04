@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppProvider, useApp } from './context/AppContext.jsx';
+import { AppProvider, useApp } from './context/AppContextSupabase.jsx';
 
 // Estilos
 import './styles/globals.css';
