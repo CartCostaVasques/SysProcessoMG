@@ -189,7 +189,7 @@ export function AppProvider({ children }) {
 
   // ── CRUD ───────────────────────────────────────────────
   const addUsuario    = useCallback(async () => { addToast('Crie usuários no painel Supabase > Authentication', 'warning', 6000); }, []);
-  const editUsuario   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('usuarios').update(d).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const editUsuario   = useCallback(async (id, d) => { try { const { email, ...dadosSemEmail } = d; const {data,error} = await supabase.from('usuarios').update(dadosSemEmail).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs'];
