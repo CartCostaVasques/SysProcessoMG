@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../../context/AppContextSupabase.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 const STATUS_OFICIO = ['Enviado', 'Aguardando Resposta', 'Respondido', 'Arquivado'];
