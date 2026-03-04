@@ -151,7 +151,7 @@ export default function Processos() {
     const txt = (p.numero_interno + p.partes + p.especie + p.categoria + p.municipio).toLowerCase();
     return (!busca || txt.includes(busca.toLowerCase()))
       && (!filtroStatus || p.status === filtroStatus)
-      && (!filtroResp || p.responsavel === filtroResp)
+      && (!filtroResp || p.responsavel_nome === filtroResp)
       && (!filtroCateg || p.categoria === filtroCateg);
   });
 
@@ -185,7 +185,7 @@ export default function Processos() {
     }
   };
 
-  const responsaveis = [...new Set(processos.map(p => p.responsavel))].filter(Boolean);
+  const responsaveis = [...new Set(processos.map(p => p.responsavel_nome))].filter(Boolean);
 
   const getEspeciesPorCateg = (categ) => {
     return servicos.filter(s => !categ || s.categoria === categ).map(s => s.subcategoria);
@@ -326,7 +326,7 @@ export default function Processos() {
                       {STATUS_OPTS.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td>{p.andamentos}</td>
+                  <td>{p.total_andamentos || 0}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 3 }}>
                       <button className="btn btn-primary btn-sm" onClick={saveEdit}>✓</button>
@@ -346,8 +346,8 @@ export default function Processos() {
                   <td>{formatDate(p.dt_conclusao)}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div className="avatar avatar-sm">{p.responsavel ? p.responsavel[0].toUpperCase() : '?'}</div>
-                      <span>{p.responsavel}</span>
+                      <div className="avatar avatar-sm">{p.responsavel_nome ? p.responsavel_nome[0].toUpperCase() : '?'}</div>
+                      <span>{p.responsavel_nome}</span>
                     </div>
                   </td>
                   <td>{statusBadge(p.status)}</td>
@@ -357,7 +357,7 @@ export default function Processos() {
                       onClick={() => setModalAnd(p)}
                       style={{ fontFamily: 'var(--font-mono)', gap: 4 }}
                     >
-                      <span>{p.andamentos}</span>
+                      <span>{p.total_andamentos || 0}</span>
                       <span style={{ fontSize: 10 }}>↗</span>
                     </button>
                   </td>
