@@ -142,3 +142,46 @@ ul, ol { list-style: none; }
   outline: 2px solid var(--color-accent-dim);
   outline-offset: 2px;
 }
+
+/* ── Temas de Cor ────────────────────────────────────────── */
+[data-color="azul"] {
+  --color-bg:           #0a0f1e;
+  --color-surface:      #0d1528;
+  --color-surface-2:    #111d35;
+  --color-surface-3:    #162545;
+  --color-border:       #1e3055;
+  --color-border-light: #254070;
+  --color-text:         #e8eeff;
+  --color-text-muted:   #7a90b8;
+  --color-text-faint:   #3d5080;
+  --color-accent:       #60a5fa;
+  --color-accent-dim:   #2563eb;
+}
+
+[data-color="verde"] {
+  --color-bg:           #080f0c;
+  --color-surface:      #0a1610;
+  --color-surface-2:    #0f1e15;
+  --color-surface-3:    #14271b;
+  --color-border:       #1a3322;
+  --color-border-light: #224430;
+  --color-text:         #e6f5ec;
+  --color-text-muted:   #6a9e7a;
+  --color-text-faint:   #2d5c3a;
+  --color-accent:       #4ade80;
+  --color-accent-dim:   #16a34a;
+}
+
+[data-color="roxo"] {
+  --color-bg:           #0c0a14;
+  --color-surface:      #120f1e;
+  --color-surface-2:    #181426;
+  --color-surface-3:    #1f1a30;
+  --color-border:       #2a2240;
+  --color-border-light: #362d55;
+  --color-text:         #ede8ff;
+  --color-text-muted:   #8878b8;
+  --color-text-faint:   #4a3d7a;
+  --color-accent:       #a78bfa;
+  --color-accent-dim:   #7c3aed;
+}
