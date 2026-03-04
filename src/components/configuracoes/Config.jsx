@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext.jsx';
 // ─────────────────────────────────────────────
 export function Configuracoes() {
   const { cartorio, salvarCartorio, tema, toggleTema, addToast } = useApp();
+  const [corTema, setCorTema] = useState(document.documentElement.getAttribute('data-color') || 'padrao');
   const [form, setForm] = useState({ ...cartorio });
   const [tab, setTab] = useState('cartorio');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -17,6 +18,15 @@ export function Configuracoes() {
       document.documentElement.style.setProperty('--color-accent', form.cor_primaria);
     }
     addToast('Configurações salvas!', 'success');
+  };
+
+  const aplicarCorTema = (cor) => {
+    setCorTema(cor);
+    if (cor === 'padrao') {
+      document.documentElement.removeAttribute('data-color');
+    } else {
+      document.documentElement.setAttribute('data-color', cor);
+    }
   };
 
   const handleReset = () => {
@@ -117,26 +127,34 @@ export function Configuracoes() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Tema */}
+            {/* Tema claro/escuro */}
             <div>
-              <div className="form-label" style={{ marginBottom: 10 }}>Tema</div>
+              <div className="form-label" style={{ marginBottom: 10 }}>Tema Base</div>
               <div style={{ display: 'flex', gap: 12 }}>
-                {[['dark', '◑ Escuro (Padrão)'], ['light', '☀ Claro']].map(([id, label]) => (
-                  <button
-                    key={id}
-                    onClick={() => { if (tema !== id) toggleTema(); }}
-                    style={{
-                      padding: '12px 20px',
-                      background: tema === id ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
-                      border: `1px solid ${tema === id ? 'var(--color-accent-dim)' : 'var(--color-border)'}`,
-                      borderRadius: 'var(--radius-md)',
-                      color: tema === id ? 'var(--color-text)' : 'var(--color-text-muted)',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: 13,
-                      fontWeight: tema === id ? 600 : 400,
-                    }}
+                {[['dark', '◑ Escuro'], ['light', '☀ Claro']].map(([id, label]) => (
+                  <button key={id} onClick={() => { if (tema !== id) toggleTema(); }}
+                    style={{ padding: '12px 20px', background: tema === id ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: `1px solid ${tema === id ? 'var(--color-accent-dim)' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', color: tema === id ? 'var(--color-text)' : 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: tema === id ? 600 : 400 }}
                   >{label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Paleta de cores */}
+            <div>
+              <div className="form-label" style={{ marginBottom: 10 }}>Paleta de Cores</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'padrao', label: '⬛ Cinza Escuro', preview: '#18181b' },
+                  { id: 'azul',   label: '🔵 Azul Escuro',  preview: '#0d1528' },
+                  { id: 'verde',  label: '🟢 Verde Escuro', preview: '#0a1610' },
+                  { id: 'roxo',   label: '🟣 Roxo Escuro',  preview: '#120f1e' },
+                ].map(c => (
+                  <button key={c.id} onClick={() => aplicarCorTema(c.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: corTema === c.id ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: `2px solid ${corTema === c.id ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 13, color: corTema === c.id ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: corTema === c.id ? 600 : 400 }}
+                  >
+                    <div style={{ width: 20, height: 20, borderRadius: 4, background: c.preview, border: '1px solid rgba(255,255,255,0.15)' }} />
+                    {c.label}
+                  </button>
                 ))}
               </div>
             </div>
