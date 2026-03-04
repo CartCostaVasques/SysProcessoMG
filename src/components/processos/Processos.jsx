@@ -9,7 +9,7 @@ const EMPTY_ROW = {
   partes: '', municipio: 'Paranatinga', status: 'Em andamento',
   dt_abertura: new Date().toISOString().split('T')[0],
   dt_conclusao: '', responsavel_id: null, responsavel: '',
-  valor_ato: '', obs: '', andamentos: 0,
+  valor_ato: '', obs: '',
 };
 
 function InlineCell({ value, onChange, type = 'text', options, style }) {
