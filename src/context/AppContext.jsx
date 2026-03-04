@@ -12,6 +12,7 @@ export function AppProvider({ children }) {
   const [usuario, setUsuario]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [usuarios,   setUsuarios]   = useState([]);
+  const [interessados, setInteressados] = useState([]);
   const [processos,  setProcessos]  = useState([]);
   const [andamentos, setAndamentos] = useState([]);
   const [tarefas,    setTarefas]    = useState([]);
@@ -119,6 +120,7 @@ export function AppProvider({ children }) {
       fetchTarefas(),
       fetchOficios(),
       fetchUsuarios(),
+      fetchInteressados(),
       fetchLogs(),
     ]);
   };
@@ -174,6 +176,7 @@ export function AppProvider({ children }) {
 
   // ── FETCH ──────────────────────────────────────────────
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
+  const fetchInteressados = async () => { try { const {data} = await supabase.from('interessados').select('*').order('nome'); if(data) setInteressados(data); } catch(e){console.error('interessados',e)} };
   const fetchProcessos = async () => { try { const [{data:procs},{data:ands}] = await Promise.all([supabase.from('processos').select('*').order('dt_abertura',{ascending:false}), supabase.from('andamentos').select('processo_id')]); if(procs) { const counts = (ands||[]).reduce((acc,a)=>{acc[a.processo_id]=(acc[a.processo_id]||0)+1;return acc;},{}); setProcessos(procs.map(p=>({...p,total_andamentos:counts[p.id]||0}))); } } catch(e){console.error('processos',e)} };
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
@@ -201,6 +204,9 @@ export function AppProvider({ children }) {
   const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); setProcessos(p=>p.map(proc=>proc.id===d.processo_id?{...proc,total_andamentos:(proc.total_andamentos||0)+1}:proc)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().single(); if(error) throw error; setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteAndamento = useCallback(async (id) => { try { await supabase.from('andamentos').delete().eq('id',id); setAndamentos(p=>p.filter(a=>a.id!==id)); } catch(e){ addToast(e.message,'error'); } }, []);
+  const addInteressado    = useCallback(async (d) => { try { const {data,error} = await supabase.from('interessados').insert(d).select().single(); if(error) throw error; setInteressados(p=>[...p,data]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editInteressado   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('interessados').update(d).eq('id',id).select().single(); if(error) throw error; setInteressados(p=>p.map(i=>i.id===id?data:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteInteressado = useCallback(async (id) => { try { await supabase.from('interessados').delete().eq('id',id); setInteressados(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const addTarefa    = useCallback(async (d) => { try { const {data,error} = await supabase.from('tarefas').insert({...d,criado_por:usuario?.id}).select().single(); if(error) throw error; setTarefas(p=>[data,...p]); addToast('Tarefa criada!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const editTarefa   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('tarefas').update(d).eq('id',id).select().single(); if(error) throw error; setTarefas(p=>p.map(t=>t.id===id?{...t,...data}:t)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
@@ -251,6 +257,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
       usuarios, addUsuario, editUsuario, deleteUsuario,
+      interessados,
       processos, addProcesso, editProcesso, deleteProcesso,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
@@ -265,6 +272,7 @@ export function AppProvider({ children }) {
       toasts, addToast,
       loading,
       temPermissao,
+      interessados, addInteressado, editInteressado, deleteInteressado,
       carregarTudo, fetchProcessos, fetchAndamentos,
     }}>
       {children}
