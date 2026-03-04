@@ -189,8 +189,13 @@ export function AppProvider({ children }) {
   const editUsuario   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('usuarios').update(d).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const addProcesso    = useCallback(async (d) => { try { const {data,error} = await supabase.from('processos').insert({...d,criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
-  const editProcesso   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('processos').update(d).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const addProcesso    = useCallback(async (d) => { try { 
+    // Remove campos que não existem na tabela
+    const { andamentos, total_andamentos, responsavel_nome, responsavel_avatar, ...dadosLimpos } = d;
+    const {data,error} = await supabase.from('processos').insert({...dadosLimpos,criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const editProcesso   = useCallback(async (id, d) => { try {
+    const { andamentos, total_andamentos, responsavel_nome, responsavel_avatar, ...dadosLimpos } = d;
+    const {data,error} = await supabase.from('processos').update(dadosLimpos).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
