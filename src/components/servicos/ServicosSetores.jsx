@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContextSupabase.jsx';
+import { useApp } from '../../context/AppContext.jsx';
 
 // ─────────────────────────────────────────────
 //  SERVIÇOS

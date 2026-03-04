@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useApp } from '../../context/AppContextSupabase.jsx';
+import { useApp } from '../../context/AppContext.jsx';
 import { formatDate, formatCurrency } from '../../data/mockData.js';
 
 function MiniChart({ data, color = 'var(--color-text-muted)', height = 36 }) {

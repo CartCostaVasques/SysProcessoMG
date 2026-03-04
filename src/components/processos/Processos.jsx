@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { useApp } from '../../context/AppContextSupabase.jsx';
+import { useApp } from '../../context/AppContext.jsx';
 import { formatDate, formatCurrency } from '../../data/mockData.js';
 
 const STATUS_OPTS = ['Em andamento', 'Concluído', 'Devolvido', 'Suspenso'];

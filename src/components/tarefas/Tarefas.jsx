@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContextSupabase.jsx';
+import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 const TIPOS_TAREFA = ['Impressão', 'Revisão', 'Cadastro', 'Ofício', 'Treinamento', 'Reunião', 'Protocolo', 'Outros'];
