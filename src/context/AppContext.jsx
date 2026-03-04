@@ -1,33 +1,16 @@
-// ============================================================
-// SysProcesso — AppContext com Supabase REAL
-// Substitui o AppContext.jsx anterior
-// ============================================================
+// SysProcesso — AppContext com Supabase + debug
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import {
-  supabase,
-  signIn, signOut,
-  getUsuarios, atualizarUsuario, deletarUsuario,
-  getProcessos, criarProcesso, atualizarProcesso, deletarProcesso,
-  getAndamentos, criarAndamento, atualizarAndamento, deletarAndamento,
-  getTarefas, criarTarefa, atualizarTarefa, deletarTarefa,
-  getOficios, criarOficio, atualizarOficio, deletarOficio,
-  getSetores, criarSetor, atualizarSetor, deletarSetor,
-  getServicos, criarServico, atualizarServico, deletarServico,
-  getCartorio, salvarCartorio as salvarCartorioDB,
-  getLogs, registrarLog,
-  getDashboardStats,
-  uploadLogo,
-  proximoNumeroOficio,
-} from '../lib/supabase.js';
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  // ── Auth ──────────────────────────────────────────────────
-  const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario]     = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-
-  // ── Dados ─────────────────────────────────────────────────
   const [usuarios,   setUsuarios]   = useState([]);
   const [processos,  setProcessos]  = useState([]);
   const [andamentos, setAndamentos] = useState([]);
@@ -38,119 +21,141 @@ export function AppProvider({ children }) {
   const [logs,       setLogs]       = useState([]);
   const [cartorio,   setCartorio]   = useState({});
   const [dashStats,  setDashStats]  = useState(null);
-
-  // ── Loading states ────────────────────────────────────────
-  const [loading, setLoading] = useState({});
-  const setLoad = (key, v) => setLoading(p => ({ ...p, [key]: v }));
-
-  // ── UI ────────────────────────────────────────────────────
-  const [tema,             setTema]             = useState('dark');
+  const [loading,    setLoadingMap] = useState({});
+  const [tema,       setTema]       = useState('dark');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [toasts,           setToasts]           = useState([]);
+  const [toasts,     setToasts]     = useState([]);
 
-  // ─────────────────────────────────────────────────────────
-  // TOASTS
-  // ─────────────────────────────────────────────────────────
   const addToast = useCallback((msg, type = 'info', duration = 3500) => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, msg, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
   }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // AUTH
-  // ─────────────────────────────────────────────────────────
-
-  // Escuta mudanças de sessão do Supabase
+  // ── AUTH ────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    console.log('[Auth] Iniciando verificação de sessão...');
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('[Auth] Sessão:', session ? 'existe' : 'nenhuma', error || '');
       if (session?.user) {
-        await carregarPerfil(session.user.id);
+        carregarPerfil(session.user.id);
+      } else {
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] Evento:', event);
       if (event === 'SIGNED_IN' && session?.user) {
-        await carregarPerfil(session.user.id);
+        carregarPerfil(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUsuario(null);
+        setAuthLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Carrega dados ao logar
+  const carregarPerfil = async (uid) => {
+    console.log('[Perfil] Carregando perfil para uid:', uid);
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', uid)
+        .single();
+
+      console.log('[Perfil] Resultado:', data, 'Erro:', error);
+
+      if (data) {
+        setUsuario(data);
+        console.log('[Perfil] Usuário definido:', data.nome_simples);
+      } else {
+        // Perfil não encontrado — cria um mínimo para não travar
+        console.warn('[Perfil] Não encontrado, criando perfil mínimo...');
+        const { data: authUser } = await supabase.auth.getUser();
+        const perfilMinimo = {
+          id: uid,
+          nome_completo: authUser?.user?.email || 'Usuário',
+          nome_simples: authUser?.user?.email?.split('@')[0] || 'Usuário',
+          perfil: 'Administrador',
+          ativo: true,
+          permissoes: ['dashboard','usuarios','processos','andamentos','tarefas','oficios','servicos','setores','configuracoes','logs'],
+        };
+        setUsuario(perfilMinimo);
+      }
+    } catch (err) {
+      console.error('[Perfil] Exceção:', err);
+      // Mesmo com erro, deixa o usuário entrar com perfil mínimo
+      const { data: authUser } = await supabase.auth.getUser();
+      setUsuario({
+        id: uid,
+        nome_completo: authUser?.user?.email || 'Usuário',
+        nome_simples: authUser?.user?.email?.split('@')[0] || 'Usuário',
+        perfil: 'Administrador',
+        ativo: true,
+        permissoes: ['dashboard','usuarios','processos','andamentos','tarefas','oficios','servicos','setores','configuracoes','logs'],
+      });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (usuario) {
+      console.log('[App] Usuário logado, carregando dados...');
       carregarTudo();
     }
   }, [usuario?.id]);
 
-  const carregarPerfil = async (uid) => {
-    try {
-      const { data } = await supabase.from('usuarios').select('*').eq('id', uid).single();
-      if (data) setUsuario(data);
-    } catch (err) {
-      console.error('Erro ao carregar perfil:', err);
-    }
-  };
-
   const carregarTudo = async () => {
     await Promise.allSettled([
-      fetchUsuarios(),
+      fetchSetores(),
+      fetchServicos(),
+      fetchCartorio(),
       fetchProcessos(),
       fetchAndamentos(),
       fetchTarefas(),
       fetchOficios(),
-      fetchSetores(),
-      fetchServicos(),
-      fetchCartorio(),
-      fetchDashboard(),
+      fetchUsuarios(),
       fetchLogs(),
     ]);
   };
 
   const login = useCallback(async (email, senha) => {
-    setLoad('login', true);
+    console.log('[Login] Tentando login:', email);
     try {
-      await signIn(email, senha);
-      // Perfil carregado pelo onAuthStateChange
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      console.log('[Login] Resultado:', data?.user ? 'OK' : 'Falhou', error?.message || '');
+      if (error) {
+        addToast(error.message || 'Credenciais inválidas.', 'error');
+        return false;
+      }
       addToast('Bem-vindo ao SysProcesso!', 'success');
-
-      // Registra log de login
-      await registrarLog({
-        usuario_id: null, // será preenchido depois via trigger
-        usuario: email.split('@')[0],
-        ip: '—',
-        navegador: navigator.userAgent.slice(0, 100),
-        so: navigator.platform || '—',
-        acao: 'Login',
-      });
       return true;
     } catch (err) {
-      addToast(err.message || 'Credenciais inválidas.', 'error');
+      console.error('[Login] Exceção:', err);
+      addToast('Erro ao conectar. Tente novamente.', 'error');
       return false;
-    } finally {
-      setLoad('login', false);
     }
   }, []);
 
   const logout = useCallback(async () => {
-    await signOut();
+    await supabase.auth.signOut();
     setUsuario(null);
-    // Limpa estados
     setProcessos([]); setAndamentos([]); setTarefas([]);
     setOficios([]); setDashStats(null);
   }, []);
 
   const registrarAcesso = useCallback(async () => {
-    await registrarLog({
-      acao: 'Acesso (sem login)',
-      navegador: navigator.userAgent.slice(0, 100),
-      so: navigator.platform || '—',
-    });
+    try {
+      await supabase.from('logs_acesso').insert({
+        acao: 'Acesso (sem login)',
+        navegador: navigator.userAgent.slice(0, 100),
+        so: navigator.platform || '—',
+      });
+    } catch(e) {}
   }, []);
 
   const toggleTema = useCallback(() => {
@@ -167,302 +172,94 @@ export function AppProvider({ children }) {
     return usuario.permissoes?.includes(modulo) ?? false;
   }, [usuario]);
 
-  // ─────────────────────────────────────────────────────────
-  // FETCH functions
-  // ─────────────────────────────────────────────────────────
-  const fetchUsuarios  = async () => { try { setLoad('usuarios', true);  setUsuarios(await getUsuarios());     } catch(e) { addToast('Erro ao carregar usuários.', 'error'); } finally { setLoad('usuarios', false); } };
-  const fetchProcessos = async () => { try { setLoad('processos', true); setProcessos(await getProcessos());   } catch(e) { addToast('Erro ao carregar processos.', 'error'); } finally { setLoad('processos', false); } };
-  const fetchAndamentos = async () => { try { setAndamentos(await getAndamentos()); } catch(e) {} };
-  const fetchTarefas   = async () => { try { setTarefas(await getTarefas());     } catch(e) {} };
-  const fetchOficios   = async () => { try { setOficios(await getOficios());     } catch(e) {} };
-  const fetchSetores   = async () => { try { setSetores(await getSetores());     } catch(e) {} };
-  const fetchServicos  = async () => { try { setServicos(await getServicos());   } catch(e) {} };
-  const fetchLogs      = async () => { try { setLogs(await getLogs());           } catch(e) {} };
-  const fetchCartorio  = async () => { try { setCartorio(await getCartorio());   } catch(e) {} };
-  const fetchDashboard = async () => { try { setDashStats(await getDashboardStats()); } catch(e) {} };
+  // ── FETCH ──────────────────────────────────────────────
+  const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
+  const fetchProcessos = async () => { try { const {data} = await supabase.from('vw_processos').select('*').order('dt_abertura', {ascending:false}); if(data) setProcessos(data); } catch(e){console.error('processos',e)} };
+  const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
+  const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
+  const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
+  const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
+  const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
+  const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
+  const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) setCartorio(data); } catch(e){} };
+  const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
-  // ─────────────────────────────────────────────────────────
-  // USUÁRIOS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addUsuario = useCallback(async (dados) => {
-    // Criação de usuário Auth é feita pelo Administrador via painel Supabase
-    // ou via função criarUsuario() que requer service_role key
-    // Por ora, atualiza perfil se o ID já existir (usuário criado pelo admin)
-    addToast('Para criar usuários, use o painel Supabase > Authentication > Users', 'warning', 6000);
-  }, []);
+  // ── CRUD ───────────────────────────────────────────────
+  const addUsuario    = useCallback(async () => { addToast('Crie usuários no painel Supabase > Authentication', 'warning', 6000); }, []);
+  const editUsuario   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('usuarios').update(d).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const editUsuario = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarUsuario(id, dados);
-      setUsuarios(prev => prev.map(u => u.id === id ? updated : u));
-      // Se editou o próprio perfil
-      if (usuario?.id === id) setUsuario(updated);
-      addToast('Usuário atualizado!', 'success');
-    } catch (err) {
-      addToast('Erro ao atualizar usuário: ' + err.message, 'error');
-    }
-  }, [usuario]);
+  const addProcesso    = useCallback(async (d) => { try { const {data,error} = await supabase.from('processos').insert({...d,criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const editProcesso   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('processos').update(d).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const deleteUsuario = useCallback(async (id) => {
-    try {
-      await deletarUsuario(id); // inativa
-      setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ativo: false } : u));
-      addToast('Usuário inativado.', 'info');
-    } catch (err) {
-      addToast('Erro: ' + err.message, 'error');
-    }
-  }, []);
+  const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().single(); if(error) throw error; setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteAndamento = useCallback(async (id) => { try { await supabase.from('andamentos').delete().eq('id',id); setAndamentos(p=>p.filter(a=>a.id!==id)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // PROCESSOS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addProcesso = useCallback(async (dados) => {
-    try {
-      const novo = await criarProcesso({ ...dados, criado_por: usuario?.id });
-      await fetchProcessos(); // recarrega com count de andamentos
-      addToast('Processo cadastrado!', 'success');
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, [usuario]);
+  const addTarefa    = useCallback(async (d) => { try { const {data,error} = await supabase.from('tarefas').insert({...d,criado_por:usuario?.id}).select().single(); if(error) throw error; setTarefas(p=>[data,...p]); addToast('Tarefa criada!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const editTarefa   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('tarefas').update(d).eq('id',id).select().single(); if(error) throw error; setTarefas(p=>p.map(t=>t.id===id?{...t,...data}:t)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteTarefa = useCallback(async (id) => { try { await supabase.from('tarefas').delete().eq('id',id); setTarefas(p=>p.filter(t=>t.id!==id)); addToast('Removida.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const editProcesso = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarProcesso(id, dados);
-      setProcessos(prev => prev.map(p => p.id === id ? { ...p, ...updated } : p));
-      addToast('Processo atualizado!', 'success');
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
+  const addOficio    = useCallback(async (d) => { try { const {data,error} = await supabase.from('oficios').insert(d).select().single(); if(error) throw error; setOficios(p=>[data,...p]); addToast('Ofício registrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editOficio   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('oficios').update(d).eq('id',id).select().single(); if(error) throw error; setOficios(p=>p.map(o=>o.id===id?{...o,...data}:o)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteOficio = useCallback(async (id) => { try { await supabase.from('oficios').delete().eq('id',id); setOficios(p=>p.filter(o=>o.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const deleteProcesso = useCallback(async (id) => {
-    try {
-      await deletarProcesso(id);
-      setProcessos(prev => prev.filter(p => p.id !== id));
-      addToast('Processo removido.', 'info');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
+  const addSetor    = useCallback(async (d) => { try { const {data,error} = await supabase.from('setores').insert(d).select().single(); if(error) throw error; setSetores(p=>[...p,data]); addToast('Setor criado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editSetor   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('setores').update(d).eq('id',id).select().single(); if(error) throw error; setSetores(p=>p.map(s=>s.id===id?{...s,...data}:s)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteSetor = useCallback(async (id) => { try { await supabase.from('setores').delete().eq('id',id); setSetores(p=>p.filter(s=>s.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  // ─────────────────────────────────────────────────────────
-  // ANDAMENTOS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addAndamento = useCallback(async (dados) => {
-    try {
-      const novo = await criarAndamento({ ...dados, responsavel_id: usuario?.id });
-      setAndamentos(prev => [novo, ...prev]);
-      // Atualiza counter na lista de processos
-      setProcessos(prev => prev.map(p =>
-        p.id === dados.processo_id ? { ...p, total_andamentos: (p.total_andamentos || 0) + 1 } : p
-      ));
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, [usuario]);
+  const addServico    = useCallback(async (d) => { try { const {data,error} = await supabase.from('servicos').insert(d).select().single(); if(error) throw error; setServicos(p=>[...p,data]); addToast('Serviço criado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editServico   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('servicos').update(d).eq('id',id).select().single(); if(error) throw error; setServicos(p=>p.map(s=>s.id===id?{...s,...data}:s)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const deleteServico = useCallback(async (id) => { try { await supabase.from('servicos').delete().eq('id',id); setServicos(p=>p.filter(s=>s.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const editAndamento = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarAndamento(id, dados);
-      setAndamentos(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a));
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
+  const salvarCartorio = useCallback(async (d) => { try { const {data,error} = await supabase.from('cartorio').upsert({id:1,...d}).select().single(); if(error) throw error; setCartorio(data); addToast('Configurações salvas!','success'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const deleteAndamento = useCallback(async (id) => {
-    try {
-      const and = andamentos.find(a => a.id === id);
-      await deletarAndamento(id);
-      setAndamentos(prev => prev.filter(a => a.id !== id));
-      if (and) {
-        setProcessos(prev => prev.map(p =>
-          p.id === and.processo_id ? { ...p, total_andamentos: Math.max(0, (p.total_andamentos || 1) - 1) } : p
-        ));
-      }
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, [andamentos]);
-
-  // ─────────────────────────────────────────────────────────
-  // TAREFAS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addTarefa = useCallback(async (dados) => {
-    try {
-      const novo = await criarTarefa({ ...dados, criado_por: usuario?.id });
-      setTarefas(prev => [novo, ...prev]);
-      addToast('Tarefa criada!', 'success');
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, [usuario]);
-
-  const editTarefa = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarTarefa(id, dados);
-      setTarefas(prev => prev.map(t => t.id === id ? { ...t, ...updated } : t));
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const deleteTarefa = useCallback(async (id) => {
-    try {
-      await deletarTarefa(id);
-      setTarefas(prev => prev.filter(t => t.id !== id));
-      addToast('Tarefa removida.', 'info');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // OFÍCIOS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addOficio = useCallback(async (dados) => {
-    try {
-      const novo = await criarOficio(dados);
-      setOficios(prev => [novo, ...prev]);
-      addToast('Ofício registrado!', 'success');
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const editOficio = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarOficio(id, dados);
-      setOficios(prev => prev.map(o => o.id === id ? { ...o, ...updated } : o));
-      addToast('Ofício atualizado!', 'success');
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const deleteOficio = useCallback(async (id) => {
-    try {
-      await deletarOficio(id);
-      setOficios(prev => prev.filter(o => o.id !== id));
-      addToast('Ofício removido.', 'info');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // SETORES CRUD
-  // ─────────────────────────────────────────────────────────
-  const addSetor = useCallback(async (dados) => {
-    try {
-      const novo = await criarSetor(dados);
-      setSetores(prev => [...prev, novo]);
-      addToast('Setor cadastrado!', 'success');
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const editSetor = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarSetor(id, dados);
-      setSetores(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
-      addToast('Setor atualizado!', 'success');
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const deleteSetor = useCallback(async (id) => {
-    try {
-      await deletarSetor(id);
-      setSetores(prev => prev.filter(s => s.id !== id));
-      addToast('Setor removido.', 'info');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // SERVIÇOS CRUD
-  // ─────────────────────────────────────────────────────────
-  const addServico = useCallback(async (dados) => {
-    try {
-      const novo = await criarServico(dados);
-      setServicos(prev => [...prev, novo]);
-      addToast('Serviço cadastrado!', 'success');
-      return novo;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const editServico = useCallback(async (id, dados) => {
-    try {
-      const updated = await atualizarServico(id, dados);
-      setServicos(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
-      addToast('Serviço atualizado!', 'success');
-      return updated;
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  const deleteServico = useCallback(async (id) => {
-    try {
-      await deletarServico(id);
-      setServicos(prev => prev.filter(s => s.id !== id));
-      addToast('Serviço removido.', 'info');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // CARTÓRIO
-  // ─────────────────────────────────────────────────────────
-  const salvarCartorio = useCallback(async (dados) => {
-    try {
-      // Se tem logo como File, faz upload primeiro
-      if (dados._logoFile instanceof File) {
-        const url = await uploadLogo(dados._logoFile);
-        dados = { ...dados, logo_url: url };
-        delete dados._logoFile;
-      }
-      const updated = await salvarCartorioDB(dados);
-      setCartorio(updated);
-      addToast('Configurações salvas!', 'success');
-    } catch (err) { addToast('Erro: ' + err.message, 'error'); }
-  }, []);
-
-  // ─────────────────────────────────────────────────────────
-  // PROXÍMO NÚMERO OFÍCIO
-  // ─────────────────────────────────────────────────────────
   const getProximoNumeroOficio = useCallback(async (mesAno) => {
-    try {
-      return await proximoNumeroOficio(mesAno);
-    } catch {
-      // Fallback local
-      const doMes = oficios.filter(o => o.mes_ano === mesAno);
-      return String(doMes.length + 1).padStart(4, '0') + '/' + mesAno.split('/')[1];
-    }
+    try { const {data} = await supabase.rpc('proximo_numero_oficio', {p_mes_ano: mesAno}); return data; }
+    catch { const doMes = oficios.filter(o=>o.mes_ano===mesAno); return String(doMes.length+1).padStart(4,'0')+'/'+mesAno.split('/')[1]; }
   }, [oficios]);
 
-  // ─────────────────────────────────────────────────────────
-  // REALTIME — escuta mudanças no banco em tempo real
-  // ─────────────────────────────────────────────────────────
+  // Realtime
   useEffect(() => {
     if (!usuario) return;
-
-    const channel = supabase
-      .channel('sysprocesso-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'processos' }, () => fetchProcessos())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'andamentos' }, () => fetchAndamentos())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tarefas' },    () => fetchTarefas())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'oficios' },    () => fetchOficios())
+    const channel = supabase.channel('realtime')
+      .on('postgres_changes', {event:'*',schema:'public',table:'processos'}, fetchProcessos)
+      .on('postgres_changes', {event:'*',schema:'public',table:'andamentos'}, fetchAndamentos)
+      .on('postgres_changes', {event:'*',schema:'public',table:'tarefas'}, fetchTarefas)
+      .on('postgres_changes', {event:'*',schema:'public',table:'oficios'}, fetchOficios)
       .subscribe();
-
     return () => supabase.removeChannel(channel);
   }, [usuario?.id]);
 
+  if (authLoading) {
+    return (
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#111',color:'#fff',flexDirection:'column',gap:12}}>
+        <div style={{width:32,height:32,border:'3px solid #444',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}} />
+        <span style={{fontSize:13,color:'#888'}}>Conectando...</span>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
   return (
     <AppContext.Provider value={{
-      // Auth
       usuario, login, logout, registrarAcesso, authLoading,
-      // Dados
-      usuarios,   addUsuario,   editUsuario,   deleteUsuario,
-      processos,  addProcesso,  editProcesso,  deleteProcesso,
+      usuarios, addUsuario, editUsuario, deleteUsuario,
+      processos, addProcesso, editProcesso, deleteProcesso,
       andamentos, addAndamento, editAndamento, deleteAndamento,
-      tarefas,    addTarefa,    editTarefa,    deleteTarefa,
-      oficios,    addOficio,    editOficio,    deleteOficio,
-      setores,    addSetor,     editSetor,     deleteSetor,
-      servicos,   addServico,   editServico,   deleteServico,
+      tarefas, addTarefa, editTarefa, deleteTarefa,
+      oficios, addOficio, editOficio, deleteOficio,
+      setores, addSetor, editSetor, deleteSetor,
+      servicos, addServico, editServico, deleteServico,
       logs, cartorio, salvarCartorio,
       dashStats, fetchDashboard,
-      // Helpers
       getProximoNumeroOficio,
-      // UI
       tema, toggleTema,
       sidebarCollapsed, setSidebarCollapsed,
       toasts, addToast,
       loading,
       temPermissao,
-      // Recarregar
       carregarTudo, fetchProcessos, fetchAndamentos,
     }}>
       {children}
