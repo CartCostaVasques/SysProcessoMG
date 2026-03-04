@@ -151,7 +151,7 @@ export default function Processos() {
     const txt = (p.numero_interno + p.partes + p.especie + p.categoria + p.municipio).toLowerCase();
     return (!busca || txt.includes(busca.toLowerCase()))
       && (!filtroStatus || p.status === filtroStatus)
-      && (!filtroResp || p.responsavel_nome === filtroResp)
+      && (!filtroResp || (usuarios.find(u=>u.id===p.responsavel_id)?.nome_simples || "") === filtroResp)
       && (!filtroCateg || p.categoria === filtroCateg);
   });
 
@@ -185,7 +185,7 @@ export default function Processos() {
     }
   };
 
-  const responsaveis = [...new Set(processos.map(p => p.responsavel_nome))].filter(Boolean);
+  const responsaveis = [...new Set(processos.map(p => usuarios.find(u=>u.id===p.responsavel_id)?.nome_simples).filter(Boolean))];
 
   const getEspeciesPorCateg = (categ) => {
     return servicos.filter(s => !categ || s.categoria === categ).map(s => s.subcategoria);
@@ -346,8 +346,8 @@ export default function Processos() {
                   <td>{formatDate(p.dt_conclusao)}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div className="avatar avatar-sm">{p.responsavel_nome ? p.responsavel_nome[0].toUpperCase() : '?'}</div>
-                      <span>{p.responsavel_nome}</span>
+                      <div className="avatar avatar-sm">{usuarios.find(u=>u.id===p.responsavel_id)?.nome_simples?.[0]?.toUpperCase() || '?'}</div>
+                      <span>{usuarios.find(u=>u.id===p.responsavel_id)?.nome_simples || "—"}</span>
                     </div>
                   </td>
                   <td>{statusBadge(p.status)}</td>
