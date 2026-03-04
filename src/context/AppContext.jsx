@@ -257,7 +257,6 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
       usuarios, addUsuario, editUsuario, deleteUsuario,
-      interessados,
       processos, addProcesso, editProcesso, deleteProcesso,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
