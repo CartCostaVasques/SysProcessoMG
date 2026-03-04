@@ -234,7 +234,7 @@ export function LogsAcesso() {
   const [filtroTipo, setFiltroTipo] = useState('');
 
   const lista = logs.filter(l => {
-    const txt = (l.ip + l.usuario + l.navegador + l.so).toLowerCase();
+    const txt = ((l.ip||'') + (l.usuario||'') + (l.navegador||'') + (l.so||'')).toLowerCase();
     return (!busca || txt.includes(busca.toLowerCase()))
       && (!filtroTipo || l.acao === filtroTipo);
   });
@@ -300,7 +300,7 @@ export function LogsAcesso() {
                 <td>
                   {l.usuario !== '—' ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className="avatar avatar-sm">{l.usuario[0]?.toUpperCase()}</div>
+                      <div className="avatar avatar-sm">{l.usuario?.[0]?.toUpperCase() || '?'}</div>
                       <span>{l.usuario}</span>
                     </div>
                   ) : (
@@ -313,8 +313,8 @@ export function LogsAcesso() {
                   </span>
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{l.ip || '—'}</td>
-                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{l.navegador}</td>
-                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{l.so}</td>
+                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{l.navegador || '—'}</td>
+                <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{l.so || '—'}</td>
               </tr>
             ))}
           </tbody>
