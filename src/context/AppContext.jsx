@@ -198,7 +198,7 @@ export function AppProvider({ children }) {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); // Atualiza contador do processo localmente setProcessos(p=>p.map(proc=>proc.id===d.processo_id?{...proc,total_andamentos:(proc.total_andamentos||0)+1}:proc)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().single(); if(error) throw error; setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteAndamento = useCallback(async (id) => { try { await supabase.from('andamentos').delete().eq('id',id); setAndamentos(p=>p.filter(a=>a.id!==id)); } catch(e){ addToast(e.message,'error'); } }, []);
 
