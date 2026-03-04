@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContextSupabase.jsx';
+import { useApp } from '../../context/AppContext.jsx';
 
 export default function LoginPage() {
   const { login, registrarAcesso, addToast, cartorio } = useApp();
