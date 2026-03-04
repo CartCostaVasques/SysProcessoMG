@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../../context/AppContextSupabase.jsx';
 import { getInitials, formatDate, PERFIS } from '../../data/mockData.js';
 
 const MODULOS = [
