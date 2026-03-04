@@ -174,7 +174,7 @@ export function AppProvider({ children }) {
 
   // ── FETCH ──────────────────────────────────────────────
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
-  const fetchProcessos = async () => { try { const {data} = await supabase.from('vw_processos').select('*').order('dt_abertura', {ascending:false}); if(data) setProcessos(data); } catch(e){console.error('processos',e)} };
+  const fetchProcessos = async () => { try { const {data} = await supabase.from('processos').select('*').order('dt_abertura', {ascending:false}); if(data) setProcessos(data); } catch(e){console.error('processos',e)} };
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
