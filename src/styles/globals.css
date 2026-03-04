@@ -1,0 +1,144 @@
+/* ============================================================
+   SysProcesso — Global Styles
+   Tema: Cinza/Preto tom sobre tom, elegante e profissional
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── CSS Variables (Tema) ────────────────────────────────── */
+:root {
+  /* Cores principais */
+  --color-bg:           #111113;
+  --color-surface:      #18181b;
+  --color-surface-2:    #1f1f23;
+  --color-surface-3:    #27272c;
+  --color-border:       #2e2e35;
+  --color-border-light: #3a3a42;
+
+  /* Texto */
+  --color-text:         #f0f0f2;
+  --color-text-muted:   #8a8a96;
+  --color-text-faint:   #55555f;
+
+  /* Acento */
+  --color-accent:       #e0e0e6;
+  --color-accent-dim:   #6b6b78;
+
+  /* Status */
+  --color-success:      #4ade80;
+  --color-warning:      #fbbf24;
+  --color-danger:       #f87171;
+  --color-info:         #60a5fa;
+
+  /* Status suave (bg) */
+  --color-success-bg:   rgba(74, 222, 128, 0.08);
+  --color-warning-bg:   rgba(251, 191, 36, 0.08);
+  --color-danger-bg:    rgba(248, 113, 113, 0.08);
+  --color-info-bg:      rgba(96, 165, 250, 0.08);
+
+  /* Sombras */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.6);
+  --shadow-xl:   0 16px 48px rgba(0,0,0,0.7);
+
+  /* Raios */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+
+  /* Tipografia */
+  --font-sans:  'DM Sans', system-ui, sans-serif;
+  --font-mono:  'DM Mono', 'Fira Code', monospace;
+
+  /* Layout */
+  --sidebar-w:  240px;
+  --header-h:   56px;
+
+  /* Transições */
+  --transition: 0.18s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* Tema claro */
+[data-theme="light"] {
+  --color-bg:           #f4f4f6;
+  --color-surface:      #ffffff;
+  --color-surface-2:    #f0f0f4;
+  --color-surface-3:    #e8e8ee;
+  --color-border:       #d8d8e0;
+  --color-border-light: #c8c8d4;
+  --color-text:         #111113;
+  --color-text-muted:   #5a5a68;
+  --color-text-faint:   #9a9aaa;
+  --color-accent:       #111113;
+  --color-accent-dim:   #6b6b78;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.1);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+img { display: block; max-width: 100%; }
+ul, ol { list-style: none; }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
+
+/* ── Seleção ─────────────────────────────────────────────── */
+::selection { background: rgba(224,224,230,0.2); color: var(--color-text); }
+
+/* ── Animações globais ───────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInFast {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.fade-in { animation: fadeIn 0.25s ease forwards; }
+.slide-in { animation: slideInRight 0.25s ease forwards; }
+
+/* ── Focus ring ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-accent-dim);
+  outline-offset: 2px;
+}
