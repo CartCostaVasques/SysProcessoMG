@@ -15,10 +15,8 @@ export default function LoginPage() {
     e.preventDefault();
     if (!email || !senha) { setErro('Preencha e-mail e senha.'); return; }
     setLoading(true); setErro('');
-    await new Promise(r => setTimeout(r, 600));
-    const ok = login(email, senha);
+    const ok = await login(email, senha);
     if (!ok) { setErro('Credenciais inválidas. Verifique e-mail e senha.'); }
-    else { addToast('Bem-vindo ao SysProcesso!', 'success'); }
     setLoading(false);
   };
 
@@ -95,10 +93,7 @@ export default function LoginPage() {
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}>v1.0.0 · Next.js · Supabase · Vercel</div>
         </div>
 
-        {/* Dica dev */}
-        <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)', border: '1px solid var(--color-border)' }}>
-          <strong style={{ color: 'var(--color-text-muted)' }}>Demo:</strong> mauro@cartorio.com · qualquer senha
-        </div>
+
       </div>
     </div>
   );
