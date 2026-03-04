@@ -113,7 +113,7 @@ export default function Dashboard({ setPage }) {
 
   const porResponsavel = useMemo(() => {
     const map = {};
-    processos.forEach(p => { map[p.responsavel_nome] = (map[p.responsavel_nome] || 0) + 1; });
+    processos.forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + 1; });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [processos]);
 
@@ -236,7 +236,7 @@ export default function Dashboard({ setPage }) {
                       <div style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>{p.categoria}</div>
                     </td>
                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{p.partes}</td>
-                    <td><span className="badge badge-neutral">{p.responsavel_nome}</span></td>
+                    <td><span className="badge badge-neutral">{(usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"}</span></td>
                     <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.total_andamentos || 0}</span></td>
                   </tr>
                 ))}
