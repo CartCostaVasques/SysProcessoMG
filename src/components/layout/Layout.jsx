@@ -1,4 +1,4 @@
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../../context/AppContextSupabase.jsx';
 import { getInitials } from '../../data/mockData.js';
 
 const NAV_ITEMS = [
