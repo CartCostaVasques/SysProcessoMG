@@ -316,14 +316,18 @@ function TabAndamentos({ processoId, usuarios }) {
 }
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
-function gerarRequerimento(proc, certidoes, interessados, cartorio) {
+function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
   const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
-  const primeiraParteId = partes[0]?.id;
-  const int = interessados.find(i => String(i.id) === String(primeiraParteId));
-  const req = int || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
+  // Busca o primeiro interessado do processo na tabela usuarios pelo nome
+  const primeiraNome = partes[0]?.nome || '';
+  const usr = usuarios.find(u => u.nome_completo?.toLowerCase().trim() === primeiraNome.toLowerCase().trim())
+           || usuarios.find(u => u.nome_simples?.toLowerCase().trim() === primeiraNome.toLowerCase().trim());
+  const req = usr
+    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: '', email: usr.email||'', telefone: usr.celular||'' }
+    : { nome: primeiraNome, cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
 
-  const hoje       = new Date().toLocaleDateString('pt-BR');
-  const cidadeData = cartorio?.cidade || 'Paranatinga-MT';
+  const hoje         = new Date().toLocaleDateString('pt-BR');
+  const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
   const nomeCartorio = cartorio?.nome || '';
   const oficial      = cartorio?.responsavel || 'Oficial Registrador';
 
@@ -582,7 +586,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio }) {
         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certidoes.length} pedido(s) de certidão</span>
         <div style={{ display: 'flex', gap: 8 }}>
           {certidoes.length > 0 && (
-            <button className="btn btn-secondary btn-sm" onClick={() => gerarRequerimento(proc, certidoes, interessados, cartorio)}>
+            <button className="btn btn-secondary btn-sm" onClick={() => gerarRequerimento(proc, certidoes, usuarios, cartorio)}>
               🖨 Imprimir Requerimento
             </button>
           )}
