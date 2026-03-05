@@ -400,7 +400,7 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
 
 <table class="campo-bloco"><tr>
   <td style="width:60%;"><span class="flabel">Email</span><span class="fval">${req.email||''}</span></td>
-  <td style="width:40%;"><span class="flabel">Celular</span><span class="fval">${req.telefone||req.celular||''}</span></td>
+  <td style="width:40%;"><span class="flabel">Celular</span><span class="fval">${req.telefone||''}</span></td>
 </tr></table>
 
 <!-- Certidões -->
