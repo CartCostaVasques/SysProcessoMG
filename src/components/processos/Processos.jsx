@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
@@ -76,7 +77,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-title">⚡ Cadastro Rápido</span>
@@ -152,7 +153,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
           <button className="btn btn-primary" onClick={salvar}>✓ Salvar</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
@@ -224,7 +225,7 @@ function ModalInteressado({ nomeInicial = '', onSalvar, onClose }) {
   const [form, setForm] = useState({ nome: nomeInicial, cpf: '', rg: '', email: '', telefone: '', endereco: '', obs: '' });
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-title">Cadastrar Interessado</span>
@@ -245,7 +246,7 @@ function ModalInteressado({ nomeInicial = '', onSalvar, onClose }) {
           <button className="btn btn-primary" onClick={() => { if (!form.nome.trim()) { alert('Nome obrigatório'); return; } onSalvar(form); }}>Salvar</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
