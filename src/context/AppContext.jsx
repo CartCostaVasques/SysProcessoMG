@@ -209,7 +209,8 @@ export function AppProvider({ children }) {
       return data;
     } catch(e) { addToast(e.message, 'error'); }
   }, []);
-  const editUsuario   = useCallback(async (id, d) => { try { const { email, ...dadosSemEmail } = d; const {data,error} = await supabase.from('usuarios').update(dadosSemEmail).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const editUsuario   = useCallback(async (id, d) => { try { const { senha: _s, ...dadosSenha } = d; const {data,error} = await supabase.from('usuarios').update(dadosSenha).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+  const redefinirSenha = useCallback(async (email) => { try { const {error} = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if(error) throw error; addToast('E-mail de redefinição enviado para ' + email, 'success'); } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs'];
@@ -276,7 +277,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
-      usuarios, addUsuario, editUsuario, deleteUsuario,
+      usuarios, addUsuario, editUsuario, deleteUsuario, redefinirSenha,
       processos, addProcesso, editProcesso, deleteProcesso,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
