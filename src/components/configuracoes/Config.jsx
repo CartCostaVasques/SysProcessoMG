@@ -216,7 +216,32 @@ export function Configuracoes() {
 
       {tab === 'sistema' && (
         <div className="card">
-          <div className="card-header"><div className="card-title">Informações do Sistema</div></div>
+          <div className="card-header"><div className="card-title">Configurações do Sistema</div></div>
+
+          {/* Numeração de Ofícios */}
+          <div style={{ marginBottom: 24 }}>
+            <div className="form-label" style={{ marginBottom: 10, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>Numeração de Ofícios</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12, alignItems: 'end' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Número Inicial do Ofício</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  value={form.oficio_numero_inicial ?? 0}
+                  onChange={e => set('oficio_numero_inicial', Number(e.target.value))}
+                  placeholder="0"
+                />
+              </div>
+              <div className="form-hint" style={{ paddingBottom: 4 }}>
+                Número base para contar ofícios do mês. Se já havia 45 ofícios antes do sistema, coloque 45 — o próximo será 46/mês.
+              </div>
+            </div>
+          </div>
+
+          <hr className="divider" />
+
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: 'var(--color-text-muted)' }}>Informações do Sistema</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[
               ['Versão', '1.0.0'],
