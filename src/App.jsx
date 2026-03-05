@@ -14,7 +14,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
 import Usuarios from './components/usuarios/Usuarios.jsx';
 import Processos from './components/processos/Processos.jsx';
-import Andamentos from './components/processos/Andamentos.jsx';
+import ProcessoDetalhePage from './components/processos/ProcessoDetalhePage.jsx';
 import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
 import Oficios from './components/oficios/Oficios.jsx';
@@ -37,7 +37,7 @@ function AppShell() {
       case 'dashboard':     return <Dashboard setPage={setPage} />;
       case 'usuarios':      return <Usuarios />;
       case 'processos':     return <Processos />;
-      case 'andamentos':    return <Andamentos />;
+      case 'andamentos':    return <ProcessoDetalhePage />;
       case 'interessados':   return <Interessados />;
       case 'tarefas':       return <Tarefas />;
       case 'oficios':       return <Oficios />;
