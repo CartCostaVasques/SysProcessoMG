@@ -95,6 +95,7 @@ export default function Dashboard({ setPage }) {
     const concluidos = processos.filter(p => p.status === 'Concluído').length;
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosPendentes = oficios.filter(o => o.status === 'Aguardando Resposta').length;
+    const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
 
     const hoje = new Date();
     const tarefasVencidas = tarefas.filter(t => {
@@ -146,7 +147,7 @@ export default function Dashboard({ setPage }) {
           { label: 'Em Andamento', value: stats.emAndamento, sub: 'Processos ativos', icon: '🔄', color: 'var(--color-warning)' },
           { label: 'Concluídos', value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
           { label: 'Tarefas Pendentes', value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
-          { label: 'Ofícios Pendentes', value: stats.oficiosPendentes, sub: 'Aguardando resposta', icon: '✉', color: 'var(--color-warning)' },
+          { label: 'Ofícios Enviados', value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
           { label: 'Usuários Ativos', value: usuarios.filter(u => u.ativo).length, sub: `de ${usuarios.length} cadastrados`, icon: '◉', color: 'var(--color-text-muted)' },
         ].map((s, i) => (
           <div key={i} className="stat-card">
@@ -235,7 +236,19 @@ export default function Dashboard({ setPage }) {
                       <div style={{ fontSize: 12 }}>{p.especie}</div>
                       <div style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>{p.categoria}</div>
                     </td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{p.partes}</td>
+                    <td style={{ fontSize: 12 }}>
+                        {(() => {
+                          try {
+                            const arr = JSON.parse(p.partes || '[]');
+                            if (!arr.length) return <span style={{ color: 'var(--color-text-faint)' }}>—</span>;
+                            return arr.slice(0,2).map((i,idx) => (
+                              <div key={idx} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
+                                {i.nome?.trim().split(/\s+/).slice(0,2).join(' ') || '—'}
+                              </div>
+                            ));
+                          } catch { return <span style={{ color: 'var(--color-text-faint)' }}>—</span>; }
+                        })()}
+                      </td>
                     <td><span className="badge badge-neutral">{(usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"}</span></td>
                     <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.total_andamentos || 0}</span></td>
                   </tr>
