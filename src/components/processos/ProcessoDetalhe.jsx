@@ -312,7 +312,8 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
   // Pega o primeiro interessado como requerente
   const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
   const primeiraParteId = partes[0]?.id;
-  const requerente = interessados.find(i => i.id === primeiraParteId) || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', celular: '' };
+  const int = interessados.find(i => String(i.id) === String(primeiraParteId));
+  const requerente = int || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
 
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const cidade = cartorio?.cidade || 'Paranatinga-MT';
@@ -349,6 +350,7 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
 </head><body>
 <div class="cabecalho">
   <h2>${nomeCartorio}</h2>
+  <div style="border-bottom:1px solid #000;margin:6px auto;width:60%;"></div>
   <h3>${oficial}</h3>
 </div>
 
@@ -378,7 +380,7 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
   </div>
   <div class="campo-linha">
     <div class="campo" style="flex:2"><span class="campo-label">Email</span><div class="campo-valor">${requerente.email || ''}</div></div>
-    <div class="campo" style="flex:1"><span class="campo-label">Celular</span><div class="campo-valor">${requerente.celular || ''}</div></div>
+    <div class="campo" style="flex:1"><span class="campo-label">Celular</span><div class="campo-valor">${requerente.telefone || requerente.celular || ''}</div></div>
   </div>
 </div>
 
