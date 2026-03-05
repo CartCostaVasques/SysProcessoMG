@@ -38,79 +38,103 @@ const EMPTY_ROW = {
   valor_ato: 0, obs: '', _sel: [],
 };
 
-// ─── Serviço Rápido (modal) ──────────────────────────────────
-function ModalServicRapido({ servicos, usuarios, onSalvar, onClose }) {
-  const categorias = [...new Set(servicos.map(s => s.categoria))];
-  const [categ, setCateg] = useState('');
-  const [especie, setEspecie] = useState('');
-  const [numero, setNumero] = useState('');
-  const [respId, setRespId] = useState('');
-  const [data, setData] = useState('hoje');
-  const especies = servicos.filter(s => !categ || s.categoria === categ).map(s => s.subcategoria);
+// ─── Serviços fixos do cadastro rápido ──────────────────────
+// Edite categoria/especie para bater com os cadastrados no banco
+const SERVICOS_RAPIDOS = [
+  { label: 'Cancelamento de Protesto', categoria: 'Protesto',         especie: 'Cancelamento' },
+  { label: 'Averbação Registro Civil', categoria: 'Registro Civil',   especie: 'Averbação' },
+  { label: 'Certidão Registro Civil',  categoria: 'Certidão de Atos', especie: 'Cert Registro Civil' },
+];
+
+// ─── Modal Cadastro Rápido ───────────────────────────────────
+function ModalServicRapido({ usuarios, onSalvar, onClose }) {
+  const [selecionado, setSelecionado] = useState(null);
+  const [numero, setNumero]           = useState('');
+  const [respId, setRespId]           = useState('');
+  const [data, setData]               = useState('hoje');
   const numRef = useRef(null);
 
   useEffect(() => { numRef.current?.focus(); }, []);
 
   const salvar = () => {
-    if (!numero) { alert('Nº Interno obrigatório'); return; }
+    if (!numero.trim()) { alert('Nº Interno obrigatório'); return; }
+    if (!selecionado)   { alert('Selecione um tipo de serviço'); return; }
     const dt = data === 'ontem' ? ONTEM() : HOJE();
     onSalvar({
-      numero_interno: numero,
-      categoria: categ,
-      especie,
+      numero_interno: numero.trim(),
+      categoria:      selecionado.categoria,
+      especie:        selecionado.especie,
       responsavel_id: respId || null,
-      dt_abertura: dt,
-      dt_conclusao: dt,
-      status: 'Concluído',
-      valor_ato: 0,
-      partes: '[]',
-      municipio: 'Paranatinga',
-      obs: '',
+      dt_abertura:    dt,
+      dt_conclusao:   dt,
+      status:         'Concluído',
+      valor_ato:      0,
+      partes:         '[]',
+      municipio:      'Paranatinga',
+      obs:            '',
     });
   };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal modal-sm">
+      <div className="modal">
         <div className="modal-header">
           <span className="modal-title">⚡ Cadastro Rápido</span>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 14 }}>
-            Para serviços simples: certidões, baixa de protesto, averbações, etc.
+
+          {/* Grade de serviços — option buttons */}
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Tipo de Serviço *</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {SERVICOS_RAPIDOS.map((s, i) => {
+                const ativo = selecionado?.label === s.label;
+                return (
+                  <button key={i} onClick={() => setSelecionado(s)} style={{
+                    padding: '11px 14px', textAlign: 'left', cursor: 'pointer',
+                    background: ativo ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+                    border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    color: ativo ? 'var(--color-text)' : 'var(--color-text-muted)',
+                    fontFamily: 'var(--font-sans)', fontSize: 13,
+                    fontWeight: ativo ? 600 : 400, transition: 'all 0.12s',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, color: 'var(--color-bg)' }}>
+                      {ativo ? '✓' : ''}
+                    </span>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="form-grid form-grid-2">
+
+          {/* Nº Interno + Data + Responsável */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label">Nº Interno *</label>
-              <input ref={numRef} className="form-input" value={numero} onChange={e => setNumero(e.target.value)} placeholder="Ex: 001" onKeyDown={e => e.key === 'Enter' && salvar()} />
+              <input ref={numRef} className="form-input" value={numero}
+                onChange={e => setNumero(e.target.value)}
+                placeholder="Ex: 001"
+                onKeyDown={e => e.key === 'Enter' && salvar()} />
             </div>
             <div className="form-group">
               <label className="form-label">Data</label>
               <div style={{ display: 'flex', gap: 6 }}>
-                {[['hoje', 'Hoje'], ['ontem', 'Ontem']].map(([v, l]) => (
-                  <button key={v} onClick={() => setData(v)}
-                    style={{ flex: 1, padding: '7px 0', borderRadius: 'var(--radius-md)', border: `1px solid ${data === v ? 'var(--color-accent)' : 'var(--color-border)'}`, background: data === v ? 'var(--color-surface-3)' : 'var(--color-surface-2)', color: data === v ? 'var(--color-text)' : 'var(--color-text-muted)', cursor: 'pointer', fontSize: 12, fontWeight: data === v ? 600 : 400 }}>
-                    {l}
-                  </button>
+                {[['hoje','Hoje'],['ontem','Ontem']].map(([v,l]) => (
+                  <button key={v} onClick={() => setData(v)} style={{
+                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-md)',
+                    border: `1px solid ${data===v ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    background: data===v ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+                    color: data===v ? 'var(--color-text)' : 'var(--color-text-muted)',
+                    cursor: 'pointer', fontSize: 13, fontWeight: data===v ? 600 : 400,
+                  }}>{l}</button>
                 ))}
               </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Categoria</label>
-              <select className="form-select" value={categ} onChange={e => { setCateg(e.target.value); setEspecie(''); }}>
-                <option value="">Todas</option>
-                {categorias.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Serviço</label>
-              <select className="form-select" value={especie} onChange={e => setEspecie(e.target.value)}>
-                <option value="">Selecione</option>
-                {especies.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div className="form-group form-full">
+            <div className="form-group" style={{ gridColumn: '1/-1' }}>
               <label className="form-label">Responsável</label>
               <select className="form-select" value={respId} onChange={e => setRespId(e.target.value)}>
                 <option value="">—</option>
@@ -118,7 +142,8 @@ function ModalServicRapido({ servicos, usuarios, onSalvar, onClose }) {
               </select>
             </div>
           </div>
-          <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)' }}>
+
+          <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)' }}>
             Valor: R$ 0,00 · Status: Concluído · Dt. Cadastro = Dt. Conclusão
           </div>
         </div>
@@ -375,17 +400,16 @@ export default function Processos() {
         <table className="data-table" style={{ fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ width: 80 }}>Nº Interno</th>
-              <th style={{ width: 90 }}>Dt. Cadastro</th>
-              <th style={{ width: 110 }}>Categoria</th>
-              <th style={{ width: 130 }}>Serviço</th>
-              <th>Interessados</th>
-              <th style={{ width: 110 }}>Responsável</th>
-              <th style={{ width: 90 }}>Valor</th>
-              <th style={{ width: 110 }}>Status</th>
-              <th style={{ width: 55 }}>And.</th>
+              <th style={{ width: 70 }}>Nº Interno</th>
+              <th style={{ width: 82 }}>Dt. Cadastro</th>
+              <th style={{ width: 95 }}>Categoria</th>
+              <th style={{ minWidth: 150 }}>Serviço</th>
+              <th style={{ minWidth: 220 }}>Interessados</th>
+              <th style={{ width: 90 }}>Responsável</th>
+              <th style={{ width: 80 }}>Valor</th>
+              <th style={{ width: 100 }}>Status</th>
               <th style={{ width: 95 }}>Dt. Conclusão</th>
-              <th style={{ width: 90 }}></th>
+              <th style={{ width: 75 }}></th>
             </tr>
           </thead>
           <tbody>
@@ -410,7 +434,6 @@ export default function Processos() {
                 <td><select className="td-select" value={newRow.status} onChange={e => { setNR('status', e.target.value); if (e.target.value === 'Concluído') setNR('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td style={{ color: 'var(--color-text-faint)' }}>—</td>
                 <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveNewRow}>✓</button>
@@ -420,7 +443,7 @@ export default function Processos() {
             )}
 
             {lista.length === 0 && !newRow && (
-              <tr><td colSpan={11}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
+              <tr><td colSpan={10}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
             )}
 
             {lista.map(p => editingId === p.id ? (
@@ -443,7 +466,6 @@ export default function Processos() {
                 <td><select className="td-select" value={editRow.status} onChange={e => { setEd('status', e.target.value); if (e.target.value === 'Concluído' && !editRow.dt_conclusao) setEd('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td>{p.total_andamentos || 0}</td>
                 <td><input className="td-input" type="date" value={editRow.dt_conclusao || ''} onChange={e => setEd('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit}>✓</button>
@@ -467,11 +489,6 @@ export default function Processos() {
                   {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
                 </td>
                 <td>{statusBadge(p.status)}</td>
-                <td>
-                  <button className="btn btn-ghost btn-sm" onClick={() => { /* abre tela detalhe futuramente */ }} style={{ fontFamily: 'var(--font-mono)', gap: 4 }}>
-                    <span>{p.total_andamentos || 0}</span><span style={{ fontSize: 10 }}>↗</span>
-                  </button>
-                </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(p.dt_conclusao) || '—'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end' }}>
@@ -488,7 +505,7 @@ export default function Processos() {
         </table>
       </div>
 
-      {modalRapido && <ModalServicRapido servicos={servicos} usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
+      {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
     </div>
   );
