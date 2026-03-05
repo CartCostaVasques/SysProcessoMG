@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
@@ -21,7 +22,7 @@ function ModalTarefa({ tarefa, onClose, onSave, usuarios, setores }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-title">{tarefa ? 'Editar Tarefa' : 'Nova Tarefa'}</span>
@@ -81,7 +82,7 @@ function ModalTarefa({ tarefa, onClose, onSave, usuarios, setores }) {
           <button className="btn btn-primary" onClick={handleSubmit}>{tarefa ? 'Salvar' : 'Criar Tarefa'}</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
