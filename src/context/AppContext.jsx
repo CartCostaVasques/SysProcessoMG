@@ -6,6 +6,11 @@ const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// Client separado para signUp de novos usuários (não interfere na sessão do admin)
+const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { persistSession: false, autoRefreshToken: false, storageKey: 'sysprocesso-anon-signup' }
+});
+
 const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
@@ -188,13 +193,6 @@ export function AppProvider({ children }) {
       const { data: existente } = await supabase.from('usuarios').select('id').eq('email', d.email).maybeSingle();
       if (existente) { addToast('E-mail já cadastrado no sistema.', 'error'); return; }
 
-      // Client anônimo separado para signUp não deslogar o admin
-      const { createClient } = await import('@supabase/supabase-js');
-      const anonClient = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-      );
       const { data: authData, error: authError } = await anonClient.auth.signUp({
         email: d.email,
         password: d.senha,
