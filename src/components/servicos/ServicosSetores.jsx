@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 
 // ─────────────────────────────────────────────
@@ -14,7 +15,7 @@ function ModalServico({ servico, onClose, onSave, categorias }) {
     onSave(form);
   };
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-sm">
         <div className="modal-header">
           <span className="modal-title">{servico ? 'Editar Serviço' : 'Novo Tipo de Serviço'}</span>
@@ -56,7 +57,7 @@ function ModalServico({ servico, onClose, onSave, categorias }) {
           <button className="btn btn-primary" onClick={handleSubmit}>Salvar</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
