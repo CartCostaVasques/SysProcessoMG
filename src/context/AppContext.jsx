@@ -181,42 +181,33 @@ export function AppProvider({ children }) {
   const addUsuario    = useCallback(async (d) => {
     try {
       if (!d.senha) { addToast('Senha obrigatória para novo usuário.', 'error'); return; }
-      // 1. Cria no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: d.email,
-        password: d.senha,
+      if (!d.email) { addToast('E-mail obrigatório.', 'error'); return; }
+      if (!d.nome_completo) { addToast('Nome completo obrigatório.', 'error'); return; }
+
+      // Usa RPC com SECURITY DEFINER para criar no Auth + tabela em uma única chamada
+      const { data: rpcData, error: rpcError } = await supabase.rpc('criar_usuario_sistema', {
+        p_email:         d.email,
+        p_senha:         d.senha,
+        p_nome_completo: d.nome_completo,
+        p_nome_simples:  d.nome_simples || d.nome_completo.split(' ')[0],
+        p_cargo:         d.cargo   || null,
+        p_setor:         d.setor   || null,
+        p_celular:       d.celular || null,
+        p_cpf:           d.cpf     || null,
+        p_rg:            d.rg      || null,
+        p_perfil:        d.perfil  || 'Operador',
+        p_permissoes:    d.permissoes || [],
       });
-      if (authError) throw authError;
-      const uid = authData?.user?.id;
-      if (!uid) throw new Error('Falha ao obter UID do usuário criado.');
-      // 2. Verifica se já existe na tabela usuarios (evita duplicate key)
-      const { data: existente } = await supabase.from('usuarios').select('id').eq('id', uid).single();
-      if (existente) {
-        addToast('Este e-mail já está cadastrado no sistema.', 'error');
-        return;
+      if (rpcError) throw rpcError;
+
+      // Busca o perfil recém criado para atualizar o estado
+      const uid = rpcData?.id;
+      if (uid) {
+        const { data: perfil } = await supabase.from('usuarios').select('*').eq('id', uid).single();
+        if (perfil) setUsuarios(p => [...p, perfil]);
       }
-      // 3. Monta perfil sem senha e sem campos que não existem na tabela
-      const { senha: _s, ...perfil } = d;
-      const { data, error } = await supabase.from('usuarios')
-        .insert({
-          id: uid,
-          nome_completo: perfil.nome_completo,
-          nome_simples:  perfil.nome_simples,
-          email:         perfil.email,
-          cpf:           perfil.cpf    || null,
-          rg:            perfil.rg     || null,
-          celular:       perfil.celular|| null,
-          cargo:         perfil.cargo  || null,
-          setor:         perfil.setor  || null,
-          perfil:        perfil.perfil || 'Operador',
-          permissoes:    perfil.permissoes || [],
-          ativo:         true,
-        })
-        .select().single();
-      if (error) throw error;
-      setUsuarios(p => [...p, data]);
       addToast('Usuário cadastrado com sucesso!', 'success');
-      return data;
+      return rpcData;
     } catch(e) { addToast(e.message, 'error'); }
   }, []);
   const editUsuario   = useCallback(async (id, d) => { try { const { senha: _s, ...dadosSenha } = d; const {data,error} = await supabase.from('usuarios').update(dadosSenha).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
