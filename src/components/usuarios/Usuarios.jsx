@@ -24,7 +24,7 @@ const EMPTY = {
   endereco: '', cidade: '', uf: 'MT', ativo: true, permissoes: ['dashboard','processos','tarefas'],
 };
 
-function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando }) {
+function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando, onRedefinirSenha }) {
   const [form, setForm] = useState(usuario ? { ...usuario } : { ...EMPTY });
   const [tab, setTab] = useState('dados');
   const [editando, setEditando] = useState(isNovo || iniciarEditando || false);
@@ -194,7 +194,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
             </>
           ) : (
             <>
-              <button className="btn btn-secondary" onClick={() => redefinirSenha(usuario.email)}>
+              <button className="btn btn-secondary" onClick={() => onRedefinirSenha(usuario.email)}>
                 🔑 Redefinir Senha
               </button>
               <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
@@ -324,6 +324,7 @@ export default function Usuarios() {
           onClose={() => setModal(null)}
           onSave={handleSave}
           setores={setores}
+          onRedefinirSenha={redefinirSenha}
         />
       )}
     </div>
