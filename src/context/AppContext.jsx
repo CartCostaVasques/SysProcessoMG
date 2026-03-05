@@ -205,7 +205,7 @@ export function AppProvider({ children }) {
   const redefinirSenha = useCallback(async (email) => { try { const {error} = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if(error) throw error; addToast('E-mail de redefinição enviado para ' + email, 'success'); } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs'];
+  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
   const addProcesso    = useCallback(async (d) => { try { 
