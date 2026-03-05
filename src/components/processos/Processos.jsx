@@ -53,6 +53,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [numero, setNumero]           = useState('');
   const [respId, setRespId]           = useState('');
   const [data, setData]               = useState('hoje');
+  const [valor, setValor]             = useState('0,00');
   const numRef = useRef(null);
 
   useEffect(() => { numRef.current?.focus(); }, []);
@@ -69,7 +70,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
       dt_abertura:    dt,
       dt_conclusao:   dt,
       status:         'Concluído',
-      valor_ato:      0,
+      valor_ato:      parseBRL(valor),
       partes:         '[]',
       municipio:      'Paranatinga',
       obs:            '',
@@ -144,8 +145,23 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             </div>
           </div>
 
-          <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)' }}>
-            Valor: R$ 0,00 · Status: Concluído · Dt. Cadastro = Dt. Conclusão
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Valor do Ato (R$)</label>
+              <input
+                className="form-input"
+                value={valor}
+                onChange={e => setValor(e.target.value)}
+                onBlur={e => setValor(formatBRL(parseBRL(e.target.value)))}
+                style={{ textAlign: 'right' }}
+                placeholder="0,00"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+              <div style={{ padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)', width: '100%' }}>
+                Status: Concluído · Dt. Cadastro = Dt. Conclusão
+              </div>
+            </div>
           </div>
         </div>
         <div className="modal-footer">
