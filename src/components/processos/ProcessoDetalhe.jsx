@@ -121,18 +121,7 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
               : <div style={{ fontSize: 13, padding: '6px 0', fontFamily: 'var(--font-mono)' }}>{proc.valor_ato > 0 ? `R$ ${formatBRL(proc.valor_ato)}` : '—'}</div>
             }
           </Campo>
-          <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
           <Campo label="Nº Judicial">{inp(proc.numero_judicial, 'numero_judicial')}</Campo>
-          <Campo label="Livro / Ato">{inp(proc.livro_ato, 'livro_ato')}</Campo>
-          <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-          <Campo label="Observações" full>
-            {editando
-              ? <textarea className="form-input" value={proc.obs || ''} onChange={e => onChange('obs', e.target.value)} rows={2} style={{ resize: 'vertical', fontSize: 12 }} />
-              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.obs ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.obs || '—'}</div>
-            }
-          </Campo>
         </div>
       </Secao>
 
@@ -169,21 +158,32 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
         </div>
       </Secao>
 
-      <Secao titulo="Dados para Escritura / Procuração" defaultOpen={false}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+      <Secao titulo="Escritura / Procuração / Conclusão" defaultOpen={!!(proc.livro_ato || proc.esc_natureza || proc.dt_conclusao || proc.obs)}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+          <Campo label="Livro / Ato">{inp(proc.livro_ato, 'livro_ato')}</Campo>
+          <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
+          <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
           <Campo label="Natureza do Ato">{inp(proc.esc_natureza, 'esc_natureza', { ph: 'Ex: Compra e Venda' })}</Campo>
-          <Campo label="Livro">{inp(proc.esc_livro, 'esc_livro')}</Campo>
-          <Campo label="Folha(s)">{inp(proc.esc_folhas, 'esc_folhas')}</Campo>
+          <Campo label="Livro Escritura">{inp(proc.esc_livro, 'esc_livro')}</Campo>
+          <Campo label="Folha(s) Escritura">{inp(proc.esc_folhas, 'esc_folhas')}</Campo>
           <Campo label="Data do Ato">{inp(proc.esc_data, 'esc_data')}</Campo>
           <Campo label="Matrícula / Transcrição">{inp(proc.esc_matricula, 'esc_matricula')}</Campo>
-          <Campo label="Cartório de Registro">{inp(proc.esc_cartorio_reg, 'esc_cartorio_reg')}</Campo>
+          <Campo label="Cartório de Registro">{inp(proc.esc_cartorio_reg, 'esc_cartorio_reg', { ph: '' })}</Campo>
         </div>
-        <Campo label="Descrição do Imóvel / Objeto" full>
-          {editando
-            ? <textarea className="form-input" value={proc.esc_descricao || ''} onChange={e => onChange('esc_descricao', e.target.value)} rows={3} style={{ resize: 'vertical', fontSize: 12 }} placeholder="Descrição completa do bem ou objeto do ato" />
-            : <div style={{ fontSize: 13, padding: '6px 0', color: proc.esc_descricao ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.esc_descricao || '—'}</div>
-          }
-        </Campo>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+          <Campo label="Descrição do Imóvel / Objeto" full>
+            {editando
+              ? <textarea className="form-input" value={proc.esc_descricao || ''} onChange={e => onChange('esc_descricao', e.target.value)} rows={3} style={{ resize: 'vertical', fontSize: 12 }} placeholder="Descrição completa do bem ou objeto do ato" />
+              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.esc_descricao ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.esc_descricao || '—'}</div>
+            }
+          </Campo>
+          <Campo label="Observações" full>
+            {editando
+              ? <textarea className="form-input" value={proc.obs || ''} onChange={e => onChange('obs', e.target.value)} rows={2} style={{ resize: 'vertical', fontSize: 12 }} />
+              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.obs ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.obs || '—'}</div>
+            }
+          </Campo>
+        </div>
       </Secao>
     </div>
   );
