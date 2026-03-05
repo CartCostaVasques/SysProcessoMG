@@ -190,9 +190,8 @@ export function AppProvider({ children }) {
       if (authError) throw authError;
       const uid = authData?.user?.id;
       if (!uid) throw new Error('Falha ao obter UID do usuário criado.');
-      // 2. Confirma e-mail automaticamente (sem precisar de link de confirmação)
-      await supabase.rpc('confirmar_email_usuario', { p_user_id: uid });
-      // 3. Insere perfil na tabela usuarios (sem senha — email é coluna da tabela)
+      // 2. Insere perfil na tabela usuarios (sem senha — email é coluna da tabela)
+      // Nota: desative "Confirm email" em Supabase > Authentication > Providers > Email
       const { senha: _s, ...perfil } = d;
       const { data, error } = await supabase.from('usuarios').insert({ ...perfil, id: uid }).select().single();
       if (error) throw error;
