@@ -317,212 +317,232 @@ function TabAndamentos({ processoId, usuarios }) {
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
 function gerarRequerimento(proc, certidoes, interessados, cartorio) {
-  // Pega o primeiro interessado como requerente
   const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
   const primeiraParteId = partes[0]?.id;
   const int = interessados.find(i => String(i.id) === String(primeiraParteId));
-  const requerente = int || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
+  const req = int || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
 
-  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const cidade = cartorio?.cidade || 'Paranatinga-MT';
-  const nomeCartorio = cartorio?.nome || '1º SERVIÇO DE REGISTRO DE IMÓVEIS E TÍTULOS E DOCUMENTOS DA COMARCA DE PARANATINGA – MT';
-  const oficial = cartorio?.responsavel || 'Oficial Registrador';
+  const hoje       = new Date().toLocaleDateString('pt-BR');
+  const cidadeData = cartorio?.cidade || 'Paranatinga-MT';
+  const nomeCartorio = cartorio?.nome || '';
+  const oficial      = cartorio?.responsavel || 'Oficial Registrador';
 
   const linhasCert = certidoes.map(c => `
     <tr>
-      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.dt_pedido ? new Date(c.dt_pedido + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
-      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.tipo || ''}</td>
-      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.descricao || c.obs || ''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${c.descricao||c.obs||''}</td>
     </tr>`).join('');
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <style>
-  body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px 40px; color: #000; }
-  .cabecalho { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 16px; }
-  .cabecalho h2 { font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; }
-  .cabecalho h3 { font-size: 12px; margin: 0; font-weight: normal; }
-  .titulo-req { text-align: center; background: #ccc; font-size: 16px; font-weight: bold; padding: 6px; margin-bottom: 16px; }
-  .campo-linha { display: flex; gap: 0; margin-bottom: 6px; }
-  .campo { border: 1px solid #999; padding: 3px 8px; font-size: 11px; flex: 1; }
-  .campo-label { font-size: 9px; color: #555; display: block; margin-bottom: 1px; }
-  .campo-valor { font-size: 12px; min-height: 16px; }
-  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-  th { border: 1px solid #999; padding: 4px 8px; background: #eee; font-size: 11px; text-align: left; }
-  .rodape { margin-top: 32px; }
-  .assinatura { text-align: center; margin-top: 48px; border-top: 1px solid #000; display: inline-block; padding-top: 4px; min-width: 240px; font-size: 12px; }
-  .declaracao { border: 1px solid #ccc; padding: 10px 14px; margin-top: 24px; font-size: 10px; text-align: justify; line-height: 1.5; }
-  .declaracao p { margin: 0 0 8px 0; }
-  @media print { body { padding: 10px 20px; } }
+  @page { size: A4 portrait; margin: 16mm 18mm 16mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
+  .cab { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+  .cab h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 3px; }
+  .cab-sep { border: none; border-top: 1px solid #000; width: 55%; margin: 5px auto; }
+  .cab h3 { font-size: 12px; font-weight: normal; }
+  .titulo-req { background: #ddd; text-align: center; font-size: 15px; font-weight: bold; padding: 6px; margin-bottom: 10px; }
+  .proc-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .proc-box { border: 1px solid #888; padding: 3px 14px 3px 10px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .proc-box strong { font-size: 16px; }
+  /* Campos */
+  .campo-bloco { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .campo-bloco td { border: 1px solid #999; padding: 3px 8px; vertical-align: top; }
+  .flabel { font-size: 9px; color: #555; display: block; margin-bottom: 1px; }
+  .fval   { font-size: 12px; min-height: 17px; display: block; }
+  /* Tabela certidões */
+  .tab-cert { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .tab-cert th { border: 1px solid #aaa; padding: 4px 8px; background: #eee; font-size: 11px; text-align: left; }
+  /* Assinatura */
+  .assin-area { margin-top: 36px; text-align: center; }
+  .assin-linha { display: inline-block; border-top: 1px solid #000; padding-top: 4px; min-width: 240px; text-align: center; font-size: 12px; }
+  /* LGPD */
+  .lgpd { border: 1px solid #ccc; padding: 9px 12px; margin-top: 22px; font-size: 10px; line-height: 1.55; text-align: justify; }
+  .lgpd p { margin-bottom: 6px; }
+  .lgpd p:last-child { margin-bottom: 0; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head><body>
-<div class="cabecalho">
+
+<div class="cab">
   <h2>${nomeCartorio}</h2>
-  <div style="border-bottom:1px solid #000;margin:6px auto;width:60%;"></div>
+  <hr class="cab-sep">
   <h3>${oficial}</h3>
 </div>
 
 <div class="titulo-req">Requerimento - Pedido de Certidão</div>
 
-<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-  <div style="border:1px solid #999;padding:3px 12px;font-size:11px;">
-    <span style="font-size:9px;color:#555;">Processo Interno &nbsp;</span>
-    <strong style="font-size:14px;">${proc.numero_interno || ''}</strong>
-  </div>
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno||''}</strong></div>
 </div>
 
-<div style="margin-bottom:4px;">
-  <div class="campo-linha">
-    <div class="campo" style="flex:3"><span class="campo-label">Requerente</span><div class="campo-valor">${requerente.nome || ''}</div></div>
-  </div>
-  <div class="campo-linha">
-    <div class="campo" style="flex:1"><span class="campo-label">CPF</span><div class="campo-valor">${requerente.cpf || ''}</div></div>
-    <div class="campo" style="flex:1"><span class="campo-label">Registro Geral</span><div class="campo-valor">${requerente.rg || ''}</div></div>
-  </div>
-  <div class="campo-linha">
-    <div class="campo" style="flex:3"><span class="campo-label">Endereço</span><div class="campo-valor">${requerente.endereco || ''}</div></div>
-  </div>
-  <div class="campo-linha">
-    <div class="campo" style="flex:2"><span class="campo-label">Cidade</span><div class="campo-valor">${requerente.cidade || cidade}</div></div>
-    <div class="campo" style="flex:1"><span class="campo-label">CEP</span><div class="campo-valor">${requerente.cep || ''}</div></div>
-  </div>
-  <div class="campo-linha">
-    <div class="campo" style="flex:2"><span class="campo-label">Email</span><div class="campo-valor">${requerente.email || ''}</div></div>
-    <div class="campo" style="flex:1"><span class="campo-label">Celular</span><div class="campo-valor">${requerente.telefone || requerente.celular || ''}</div></div>
-  </div>
-</div>
+<!-- Requerente -->
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Requerente</span><span class="fval">${req.nome||''}</span></td>
+</tr></table>
 
-<table>
+<table class="campo-bloco"><tr>
+  <td style="width:50%;"><span class="flabel">CPF</span><span class="fval">${req.cpf||''}</span></td>
+  <td style="width:50%;"><span class="flabel">Registro Geral</span><span class="fval">${req.rg||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Endereço</span><span class="fval">${req.endereco||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Cidade</span><span class="fval">${req.cidade||cidadeData}</span></td>
+  <td style="width:40%;"><span class="flabel">CEP</span><span class="fval">${req.cep||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Email</span><span class="fval">${req.email||''}</span></td>
+  <td style="width:40%;"><span class="flabel">Celular</span><span class="fval">${req.telefone||req.celular||''}</span></td>
+</tr></table>
+
+<!-- Certidões -->
+<table class="tab-cert">
   <thead><tr>
-    <th style="width:100px;">Dt Pedido</th>
-    <th style="width:180px;">Tipo Certidão</th>
+    <th style="width:90px;">Dt Pedido</th>
+    <th style="width:170px;">Tipo Certidão</th>
     <th>Detalhes do Pedido - Matrícula</th>
   </tr></thead>
   <tbody>${linhasCert}</tbody>
 </table>
 
-<div style="margin-top:24px;font-size:12px;">${cidade}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
+<div style="font-size:12px;margin-top:16px;">${cidadeData}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
 
-<div style="margin-top:32px;text-align:center;">
-  <div class="assinatura">
-    <div>${requerente.nome || ''}</div>
+<div class="assin-area">
+  <div class="assin-linha">
+    <div>${req.nome||''}</div>
     <div style="font-size:10px;color:#555;">Requerente</div>
   </div>
 </div>
 
-<div class="declaracao">
+<div class="lgpd">
   <p>Estou ciente de que os dados são tratados de acordo com o regime jurídico da publicidade notarial e registral, bem como nos processos judiciais ou administrativos, atos notariais e registrais ou cidadania, consoante os §§ 4º e 5º, artigo 233, da Lei Federal nº13.709/2018 – LGPD, e que os dados coletados têm finalidade para efetuar qualificação notarial e/ou registral, cadastramento no sistema interno, publicações de editais onde há previsão legal e compartilhamento com Centrais Nacionais, Conselho Nacional de Justiça e a Central Eletrônica de Informações e Integração (CEI-MT).</p>
   <p>Art. 31 Para a expedição de certidão ou Informação restrita ao que constar nos Indicadores e Índices pessoais deverá ser exigida a identificação do requerente, por escrito, bem como a finalidade da solicitação, para fins de anotação da solicitação em prontuário, mantido em pasta física ou digital, que viabilizará o exercício da autodeterminação informativa do titular do dado pessoal, não se responsabilizando o delegatário pelo exame desta finalidade, salvo na hipótese de manifesta ilicitude penal, caso em que deverá negar o pedido.</p>
-  <p>Art. 23. O tratamento de dados pessoais pelas pessoas jurídicas de direito público referidas no parágrafo único do art. 1º da Lei nº 12.527, de 18 de novembro de 2011 (Lei de Acesso à Informação), deverá ser realizado para o atendimento de sua finalidade pública, na persecução do interesse público, com o objetivo de executar as competências legais ou cumprir as atribuições legais do serviço público, desde que:</p>
-  <p>§ 4º Os serviços notariais e de registro exercidos em caráter privado, por delegação do Poder Público, terão o mesmo tratamento dispensado às pessoas jurídicas referidas no caput deste artigo, nos termos desta Lei.</p>
-  <p>§ 5º Os órgãos notariais e de registro devem fornecer acesso aos dados por meio eletrônico para a administração pública, tendo em vista as finalidades de que trata o caput deste artigo.</p>
+  <p>Art. 23. O tratamento de dados pessoais pelas pessoas jurídicas de direito público referidas no parágrafo único do art. 1º da Lei nº 12.527, de 18 de novembro de 2011 (Lei de Acesso à Informação), deverá ser realizado para o atendimento de sua finalidade pública, na persecução do interesse público, com o objetivo de executar as competências legais ou cumprir as atribuições legais do serviço público, desde que: § 4º Os serviços notariais e de registro exercidos em caráter privado, por delegação do Poder Público, terão o mesmo tratamento dispensado às pessoas jurídicas referidas no caput deste artigo, nos termos desta Lei. § 5º Os órgãos notariais e de registro devem fornecer acesso aos dados por meio eletrônico para a administração pública, tendo em vista as finalidades de que trata o caput deste artigo.</p>
 </div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=800,height=900');
+  const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write(html);
   w.document.close();
-  setTimeout(() => w.print(), 500);
+  setTimeout(() => w.print(), 600);
 }
 
+
 function gerarArquivoAtos(proc, interessados, cartorio) {
-  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
-
-  const nomeCartorio  = cartorio?.nomeSimples || cartorio?.nome || '2º Serviço de Paranatinga';
-  const nomeCompleto  = cartorio?.nome || '';
-  const endereco      = cartorio?.endereco || '';
-  const cidade        = cartorio?.cidade || 'Paranatinga-MT';
-  const telefone      = cartorio?.telefone || '';
-  const email         = cartorio?.email || '';
-  const logo          = cartorio?.logo || '';
-
-  const dtConc = proc.dt_conclusao
-    ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')
-    : '';
+  const partes  = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const nomeSimples = cartorio?.nomeSimples || cartorio?.nome || '';
+  const endereco    = cartorio?.endereco || '';
+  const cidade      = cartorio?.cidade   || '';
+  const telefone    = cartorio?.telefone || '';
+  const email       = cartorio?.email    || '';
+  const logo        = cartorio?.logo     || '';
+  const dtConc      = proc.dt_conclusao
+    ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
 
   const linhasPartes = partes.map(p => {
-    const int = interessados.find(i => String(i.id) === String(p.id));
-    const nome = int?.nome || p.nome || '';
+    const int    = interessados.find(i => String(i.id) === String(p.id));
+    const nome   = int?.nome || p.nome || '';
     const vinculo = p.vinculo || 'Parte';
     return `<tr>
-      <td style="border:1px solid #ccc;padding:5px 10px;font-size:12px;width:160px;background:#f5f5f5;">${vinculo}</td>
-      <td style="border:1px solid #ccc;padding:5px 10px;font-size:12px;">${nome}</td>
+      <td style="width:140px;padding:4px 8px;border:1px solid #aaa;background:#f0f0f0;font-size:12px;">${vinculo}</td>
+      <td style="padding:4px 8px;border:1px solid #aaa;font-size:12px;">${nome}</td>
     </tr>`;
   }).join('');
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <style>
+  @page { size: A4 portrait; margin: 18mm 18mm 18mm 18mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px 36px; color: #000; }
-  .cabecalho { display: flex; align-items: center; gap: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
-  .logo-box { width: 90px; height: 70px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
+  /* Cabeçalho */
+  .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 8px; border-bottom: 2px solid #000; margin-bottom: 8px; }
+  .logo-box { width: 85px; height: 66px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
   .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-txt { font-size: 9px; color: #aaa; }
   .cab-info { flex: 1; text-align: center; }
-  .cab-nome { font-size: 18px; font-weight: bold; margin-bottom: 3px; }
-  .cab-sub { font-size: 11px; color: #333; line-height: 1.5; }
-  .titulo-doc { text-align: center; background: #b8cce4; font-size: 13px; font-weight: bold; padding: 6px; letter-spacing: 2px; margin: 10px 0 8px 0; }
-  .separador { border: none; border-top: 1px solid #999; margin: 4px 0; }
-  .proc-num { float: right; border: 1px solid #999; padding: 3px 12px; font-size: 12px; margin-bottom: 8px; }
-  .proc-num strong { font-size: 16px; margin-left: 10px; }
-  .label-campo { font-size: 10px; color: #555; margin-bottom: 2px; margin-top: 8px; }
-  .caixa { border: 1px solid #999; padding: 4px 10px; min-height: 24px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 6px; }
-  .tabela-partes { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .descricao-box { border: 1px solid #999; padding: 5px 10px; font-size: 12px; min-height: 36px; margin-bottom: 12px; }
-  .livro-table { float: right; border-collapse: collapse; margin-top: 8px; }
-  .livro-table td { border: 1px solid #999; padding: 4px 10px; font-size: 12px; }
-  .livro-table .label { background: #f0f0f0; font-weight: normal; width: 80px; }
-  .livro-table .valor { font-weight: bold; text-align: right; min-width: 90px; }
-  .rodape-linha { clear: both; border-top: 1px solid #999; margin-top: 28px; }
-  @media print { body { padding: 10px 20px; } }
+  .cab-nome { font-size: 17px; font-weight: bold; line-height: 1.2; margin-bottom: 4px; }
+  .cab-sub  { font-size: 11px; color: #222; line-height: 1.55; }
+  /* Título */
+  .titulo { background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 5px 0; margin: 6px 0 5px 0; }
+  .sep { border: none; border-top: 1px solid #888; margin: 3px 0; }
+  /* Número processo */
+  .proc-row { display: flex; justify-content: flex-end; margin: 6px 0 10px 0; }
+  .proc-box { border: 1px solid #888; padding: 3px 14px 3px 10px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .proc-box strong { font-size: 16px; font-weight: bold; }
+  /* Espécie */
+  .label { font-size: 10px; color: #555; margin-bottom: 2px; margin-top: 10px; }
+  .caixa { border: 1px solid #888; padding: 5px 10px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; }
+  /* Partes */
+  .tab-partes { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
+  /* Descrição */
+  .desc-box { border: 1px solid #888; padding: 6px 10px; font-size: 12px; min-height: 44px; width: 100%; margin-top: 2px; }
+  /* Livro / Folhas / Data */
+  .bottom-area { display: flex; justify-content: flex-end; margin-top: 28px; }
+  .livro-tab { border-collapse: collapse; }
+  .livro-tab td { border: 1px solid #888; padding: 4px 12px; font-size: 12px; }
+  .livro-tab .lbl { background: #f0f0f0; width: 80px; }
+  .livro-tab .val { font-weight: bold; min-width: 100px; text-align: right; }
+  /* Rodapé */
+  .rodape { border-top: 1px solid #888; margin-top: 40px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head><body>
 
-<div class="cabecalho">
+<div class="cab">
   <div class="logo-box">
-    ${logo ? `<img src="${logo}" alt="Logo" />` : '<span style="font-size:10px;color:#aaa;">Logo</span>'}
+    ${logo ? `<img src="${logo}" alt="Logo">` : '<span class="logo-txt">Logo</span>'}
   </div>
   <div class="cab-info">
-    <div class="cab-nome">${nomeCartorio}</div>
+    <div class="cab-nome">${nomeSimples}</div>
     <div class="cab-sub">
       ${endereco}<br>
-      ${telefone}${telefone && email ? ' - ' : ''}${email}<br>
+      ${[telefone, email].filter(Boolean).join(' - ')}<br>
       ${cidade}
     </div>
   </div>
 </div>
 
-<div class="titulo-doc">Controle de Acervo Extrajudicial</div>
-<hr class="separador">
-<hr class="separador" style="margin-top:2px;">
+<div class="titulo">Controle de Acervo Extrajudicial</div>
+<hr class="sep"><hr class="sep" style="margin-top:2px;">
 
-<div style="overflow:hidden;margin-bottom:12px;">
-  <div class="proc-num">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
-  <div style="clear:both;"></div>
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
 </div>
 
-<div class="label-campo">Especie</div>
+<div class="label">Especie</div>
 <div class="caixa">${proc.especie || ''}</div>
 
-<table class="tabela-partes">${linhasPartes}</table>
+<table class="tab-partes">${linhasPartes}</table>
 
-<div class="label-campo">Descrição Ato</div>
-<div class="descricao-box">${proc.esc_descricao || proc.obs || ''}</div>
+<div class="label">Descrição Ato</div>
+<div class="desc-box">${proc.esc_descricao || proc.obs || ''}</div>
 
-<table class="livro-table">
-  <tr><td class="label">Livro Ato</td><td class="valor">${proc.livro_ato || ''}</td></tr>
-  <tr><td class="label">Folhas Ato</td><td class="valor">${proc.folhas_ato || ''}</td></tr>
-  <tr><td class="label">Data</td><td class="valor">${dtConc}</td></tr>
-</table>
+<div class="bottom-area">
+  <table class="livro-tab">
+    <tr><td class="lbl">Livro Ato</td><td class="val">${proc.livro_ato  || ''}</td></tr>
+    <tr><td class="lbl">Folhas Ato</td><td class="val">${proc.folhas_ato || ''}</td></tr>
+    <tr><td class="lbl">Data</td><td class="val">${dtConc}</td></tr>
+  </table>
+</div>
 
-<div class="rodape-linha"></div>
+<div class="rodape"></div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=800,height=900');
+  const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write(html);
   w.document.close();
-  setTimeout(() => w.print(), 500);
+  setTimeout(() => w.print(), 600);
 }
+
 
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio }) {
   const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
