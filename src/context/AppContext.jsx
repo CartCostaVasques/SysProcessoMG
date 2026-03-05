@@ -190,7 +190,10 @@ export function AppProvider({ children }) {
       // Insere apenas na tabela usuarios (sem Auth)
       // O acesso ao sistema será criado via "Redefinir Senha" que envia link ao usuário
       const { senha: _s, ...perfil } = d;
+      // Gera UUID para o novo usuário
+      const novoId = crypto.randomUUID();
       const { data, error } = await supabase.from('usuarios').insert({
+        id:            novoId,
         nome_completo: perfil.nome_completo,
         nome_simples:  perfil.nome_simples || perfil.nome_completo.split(' ')[0],
         email:         perfil.email,
