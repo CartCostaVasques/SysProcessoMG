@@ -200,7 +200,7 @@ export function AppProvider({ children }) {
       if (authError) throw authError;
       const uid = authData?.user?.id;
       if (!uid) throw new Error('Falha ao obter UID do usuário criado.');
-      // 2. Insere perfil na tabela usuarios
+      // 2. Insere perfil na tabela usuarios (sem senha — email é coluna da tabela)
       const { senha: _s, ...perfil } = d;
       const { data, error } = await supabase.from('usuarios').insert({ ...perfil, id: uid }).select().single();
       if (error) throw error;
