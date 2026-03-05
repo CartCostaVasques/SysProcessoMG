@@ -24,7 +24,7 @@ const EMPTY = {
   endereco: '', cidade: '', uf: 'MT', ativo: true, permissoes: ['dashboard','processos','tarefas'],
 };
 
-function ModalUsuario({ usuario, onClose, onSave, setores }) {
+function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
   const [form, setForm] = useState(usuario ? { ...usuario } : { ...EMPTY });
   const [tab, setTab] = useState('dados');
 
@@ -43,6 +43,8 @@ function ModalUsuario({ usuario, onClose, onSave, setores }) {
 
   const handleSubmit = () => {
     if (!form.nome_completo || !form.email) { alert('Nome completo e e-mail são obrigatórios.'); return; }
+    if (isNovo && !form.senha) { alert('Senha obrigatória para novo usuário.'); return; }
+    if (isNovo && form.senha && form.senha.length < 6) { alert('Senha deve ter no mínimo 6 caracteres.'); return; }
     onSave(form);
   };
 
@@ -74,6 +76,13 @@ function ModalUsuario({ usuario, onClose, onSave, setores }) {
                 <label className="form-label">E-mail *</label>
                 <input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
+              {isNovo && (
+                <div className="form-group">
+                  <label className="form-label">Senha *</label>
+                  <input className="form-input" type="password" value={form.senha || ''} onChange={e => set('senha', e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+                  <div className="form-hint">Senha de acesso ao sistema. Pode ser alterada depois pelo usuário.</div>
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">CPF</label>
                 <input className="form-input" value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" />
@@ -291,6 +300,7 @@ export default function Usuarios() {
       {modal && (
         <ModalUsuario
           usuario={modal === 'novo' ? null : modal}
+          isNovo={modal === 'novo'}
           onClose={() => setModal(null)}
           onSave={handleSave}
           setores={setores}
