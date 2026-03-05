@@ -7,7 +7,7 @@ const HOJE = () => new Date().toISOString().split('T')[0];
 const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vendedor', 'Credor', 'Devedor', 'Representante', 'Outros'];
 const STATUS_OPTS   = ['Em andamento', 'Concluído', 'Devolvido', 'Suspenso'];
 const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
-const TIPOS_CERT    = ['Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
+const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
 function formatBRL(v) {
   const n = parseFloat(String(v || 0).replace(/\./g, '').replace(',', '.')) || 0;
@@ -308,10 +308,117 @@ function TabAndamentos({ processoId, usuarios }) {
 }
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
-function TabCertidoes({ proc, editando, onChange }) {
+function gerarRequerimento(proc, certidoes, interessados, cartorio) {
+  // Pega o primeiro interessado como requerente
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const primeiraParteId = partes[0]?.id;
+  const requerente = interessados.find(i => i.id === primeiraParteId) || { nome: partes[0]?.nome || '', cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', celular: '' };
+
+  const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const cidade = cartorio?.cidade || 'Paranatinga-MT';
+  const nomeCartorio = cartorio?.nome || '1º SERVIÇO DE REGISTRO DE IMÓVEIS E TÍTULOS E DOCUMENTOS DA COMARCA DE PARANATINGA – MT';
+  const oficial = cartorio?.responsavel || 'Oficial Registrador';
+
+  const linhasCert = certidoes.map(c => `
+    <tr>
+      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.dt_pedido ? new Date(c.dt_pedido + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.tipo || ''}</td>
+      <td style="border:1px solid #999;padding:4px 8px;font-size:11px;">${c.descricao || c.obs || ''}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px 40px; color: #000; }
+  .cabecalho { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 16px; }
+  .cabecalho h2 { font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; }
+  .cabecalho h3 { font-size: 12px; margin: 0; font-weight: normal; }
+  .titulo-req { text-align: center; background: #ccc; font-size: 16px; font-weight: bold; padding: 6px; margin-bottom: 16px; }
+  .campo-linha { display: flex; gap: 0; margin-bottom: 6px; }
+  .campo { border: 1px solid #999; padding: 3px 8px; font-size: 11px; flex: 1; }
+  .campo-label { font-size: 9px; color: #555; display: block; margin-bottom: 1px; }
+  .campo-valor { font-size: 12px; min-height: 16px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th { border: 1px solid #999; padding: 4px 8px; background: #eee; font-size: 11px; text-align: left; }
+  .rodape { margin-top: 32px; }
+  .assinatura { text-align: center; margin-top: 48px; border-top: 1px solid #000; display: inline-block; padding-top: 4px; min-width: 240px; font-size: 12px; }
+  .declaracao { border: 1px solid #ccc; padding: 10px 14px; margin-top: 24px; font-size: 10px; text-align: justify; line-height: 1.5; }
+  .declaracao p { margin: 0 0 8px 0; }
+  @media print { body { padding: 10px 20px; } }
+</style>
+</head><body>
+<div class="cabecalho">
+  <h2>${nomeCartorio}</h2>
+  <h3>${oficial}</h3>
+</div>
+
+<div class="titulo-req">Requerimento - Pedido de Certidão</div>
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+  <div style="border:1px solid #999;padding:3px 12px;font-size:11px;">
+    <span style="font-size:9px;color:#555;">Processo Interno &nbsp;</span>
+    <strong style="font-size:14px;">${proc.numero_interno || ''}</strong>
+  </div>
+</div>
+
+<div style="margin-bottom:4px;">
+  <div class="campo-linha">
+    <div class="campo" style="flex:3"><span class="campo-label">Requerente</span><div class="campo-valor">${requerente.nome || ''}</div></div>
+  </div>
+  <div class="campo-linha">
+    <div class="campo" style="flex:1"><span class="campo-label">CPF</span><div class="campo-valor">${requerente.cpf || ''}</div></div>
+    <div class="campo" style="flex:1"><span class="campo-label">Registro Geral</span><div class="campo-valor">${requerente.rg || ''}</div></div>
+  </div>
+  <div class="campo-linha">
+    <div class="campo" style="flex:3"><span class="campo-label">Endereço</span><div class="campo-valor">${requerente.endereco || ''}</div></div>
+  </div>
+  <div class="campo-linha">
+    <div class="campo" style="flex:2"><span class="campo-label">Cidade</span><div class="campo-valor">${requerente.cidade || cidade}</div></div>
+    <div class="campo" style="flex:1"><span class="campo-label">CEP</span><div class="campo-valor">${requerente.cep || ''}</div></div>
+  </div>
+  <div class="campo-linha">
+    <div class="campo" style="flex:2"><span class="campo-label">Email</span><div class="campo-valor">${requerente.email || ''}</div></div>
+    <div class="campo" style="flex:1"><span class="campo-label">Celular</span><div class="campo-valor">${requerente.celular || ''}</div></div>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th style="width:100px;">Dt Pedido</th>
+    <th style="width:180px;">Tipo Certidão</th>
+    <th>Detalhes do Pedido - Matrícula</th>
+  </tr></thead>
+  <tbody>${linhasCert}</tbody>
+</table>
+
+<div style="margin-top:24px;font-size:12px;">${cidade}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
+
+<div style="margin-top:32px;text-align:center;">
+  <div class="assinatura">
+    <div>${requerente.nome || ''}</div>
+    <div style="font-size:10px;color:#555;">Requerente</div>
+  </div>
+</div>
+
+<div class="declaracao">
+  <p>Estou ciente de que os dados são tratados de acordo com o regime jurídico da publicidade notarial e registral, bem como nos processos judiciais ou administrativos, atos notariais e registrais ou cidadania, consoante os §§ 4º e 5º, artigo 233, da Lei Federal nº13.709/2018 – LGPD, e que os dados coletados têm finalidade para efetuar qualificação notarial e/ou registral, cadastramento no sistema interno, publicações de editais onde há previsão legal e compartilhamento com Centrais Nacionais, Conselho Nacional de Justiça e a Central Eletrônica de Informações e Integração (CEI-MT).</p>
+  <p>Art. 31 Para a expedição de certidão ou Informação restrita ao que constar nos Indicadores e Índices pessoais deverá ser exigida a identificação do requerente, por escrito, bem como a finalidade da solicitação, para fins de anotação da solicitação em prontuário, mantido em pasta física ou digital, que viabilizará o exercício da autodeterminação informativa do titular do dado pessoal, não se responsabilizando o delegatário pelo exame desta finalidade, salvo na hipótese de manifesta ilicitude penal, caso em que deverá negar o pedido.</p>
+  <p>Art. 23. O tratamento de dados pessoais pelas pessoas jurídicas de direito público referidas no parágrafo único do art. 1º da Lei nº 12.527, de 18 de novembro de 2011 (Lei de Acesso à Informação), deverá ser realizado para o atendimento de sua finalidade pública, na persecução do interesse público, com o objetivo de executar as competências legais ou cumprir as atribuições legais do serviço público, desde que:</p>
+  <p>§ 4º Os serviços notariais e de registro exercidos em caráter privado, por delegação do Poder Público, terão o mesmo tratamento dispensado às pessoas jurídicas referidas no caput deste artigo, nos termos desta Lei.</p>
+  <p>§ 5º Os órgãos notariais e de registro devem fornecer acesso aos dados por meio eletrônico para a administração pública, tendo em vista as finalidades de que trata o caput deste artigo.</p>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=800,height=900');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function TabCertidoes({ proc, editando, onChange, interessados, cartorio }) {
   const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
 
-  const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', matricula: '', nome_requerente: '', obs: '', concluido: false };
+  const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
 
   const add    = () => onChange('certidoes', JSON.stringify([...certidoes, { ...EMPTY_CERT }]));
   const remove = (idx) => onChange('certidoes', JSON.stringify(certidoes.filter((_, i) => i !== idx)));
@@ -324,24 +431,31 @@ function TabCertidoes({ proc, editando, onChange }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certidoes.length} pedido(s) de certidão</span>
-        {editando && <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar Pedido</button>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {certidoes.length > 0 && (
+            <button className="btn btn-secondary btn-sm" onClick={() => gerarRequerimento(proc, certidoes, interessados, cartorio)}>
+              🖨 Imprimir Requerimento
+            </button>
+          )}
+          {editando && <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>}
+        </div>
       </div>
 
       {certidoes.length === 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
-          {editando ? 'Clique em "+ Adicionar Pedido" para registrar.' : 'Nenhum pedido de certidão registrado.'}
+          {editando ? 'Clique em "+ Adicionar" para registrar um pedido.' : 'Nenhum pedido de certidão registrado.'}
         </div>
       )}
 
-      {/* Cabeçalho da tabela */}
       {certidoes.length > 0 && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 160px 160px 1fr 80px 30px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo Certidão</span><span>Matrícula</span><span>Nome Requerente / Obs</span><span style={{ textAlign: 'center' }}>Concluído</span><span></span>
+          {/* Cabeçalho */}
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 90px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span style={{ textAlign: 'center' }}>Concluído</span><span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {certidoes.map((c, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 160px 160px 1fr 80px 30px', gap: 8, padding: '8px 10px', background: c.concluido ? 'transparent' : 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'center', opacity: c.concluido ? 0.65 : 1 }}>
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 90px 28px', gap: 8, padding: '8px 10px', background: c.concluido ? 'transparent' : 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'center', opacity: c.concluido ? 0.65 : 1 }}>
                 {editando
                   ? <input className="form-input" type="date" value={c.dt_pedido} onChange={e => update(idx, 'dt_pedido', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
                   : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{formatDate(c.dt_pedido)}</span>
@@ -350,20 +464,14 @@ function TabCertidoes({ proc, editando, onChange }) {
                   ? <select className="form-select" value={c.tipo} onChange={e => update(idx, 'tipo', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
                       <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
                     </select>
-                  : <span style={{ fontSize: 12 }}>{c.tipo || '—'}</span>
+                  : <span style={{ fontSize: 12, fontWeight: 500 }}>{c.tipo || '—'}</span>
                 }
                 {editando
-                  ? <input className="form-input" value={c.matricula || ''} onChange={e => update(idx, 'matricula', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} placeholder="Nº matrícula" />
-                  : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{c.matricula || '—'}</span>
-                }
-                {editando
-                  ? <input className="form-input" value={c.obs || ''} onChange={e => update(idx, 'obs', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} placeholder="Requerente ou observação" />
-                  : <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{c.obs || '—'}</span>
+                  ? <input className="form-input" value={c.descricao || ''} onChange={e => update(idx, 'descricao', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} placeholder="Ex: Matrícula nº 123, do livro 02-A, datada de 05/03/2026" />
+                  : <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{c.descricao || '—'}</span>
                 }
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <input type="checkbox" checked={c.concluido} onChange={e => update(idx, 'concluido', e.target.checked)}
-                    disabled={!editando}
-                    style={{ width: 16, height: 16, cursor: editando ? 'pointer' : 'default' }} />
+                  <input type="checkbox" checked={!!c.concluido} onChange={e => update(idx, 'concluido', e.target.checked)} disabled={!editando} style={{ width: 16, height: 16, cursor: editando ? 'pointer' : 'default' }} />
                 </div>
                 {editando
                   ? <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
@@ -380,7 +488,7 @@ function TabCertidoes({ proc, editando, onChange }) {
 
 // ── Modal Principal ───────────────────────────────────────────
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, usuarios, servicos, interessados, addInteressado, addToast } = useApp();
+  const { editProcesso, usuarios, servicos, interessados, addInteressado, addToast, cartorio } = useApp();
   const [aba, setAba]         = useState('dados');
   const [editando, setEditando] = useState(false);
   const [form, setForm]       = useState({ ...processo });
@@ -465,7 +573,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabAndamentos processoId={processo.id} usuarios={usuarios} />
             )}
             {aba === 'certidoes' && (
-              <TabCertidoes proc={form} editando={editando} onChange={onChange} />
+              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} />
             )}
           </div>
 
