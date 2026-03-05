@@ -437,7 +437,7 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
 
 
 function gerarArquivoAtos(proc, interessados, cartorio) {
-  const partes  = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const partes      = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
   const nomeSimples = cartorio?.nomeSimples || cartorio?.nome || '';
   const endereco    = cartorio?.endereco || '';
   const cidade      = cartorio?.cidade   || '';
@@ -448,52 +448,66 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
     ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
 
   const linhasPartes = partes.map(p => {
-    const int    = interessados.find(i => String(i.id) === String(p.id));
-    const nome   = int?.nome || p.nome || '';
+    const int     = interessados.find(i => String(i.id) === String(p.id));
+    const nome    = int?.nome || p.nome || '';
     const vinculo = p.vinculo || 'Parte';
     return `<tr>
-      <td style="width:140px;padding:4px 8px;border:1px solid #aaa;background:#f0f0f0;font-size:12px;">${vinculo}</td>
-      <td style="padding:4px 8px;border:1px solid #aaa;font-size:12px;">${nome}</td>
+      <td style="width:130px;padding:5px 10px;border:1px solid #aaa;background:#f0f0f0;font-size:12px;">${vinculo}</td>
+      <td style="padding:5px 10px;border:1px solid #aaa;font-size:12px;">${nome}</td>
     </tr>`;
   }).join('');
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <style>
-  @page { size: A4 portrait; margin: 18mm 18mm 18mm 18mm; }
+  @page { size: A4 portrait; margin: 20mm 20mm 20mm 20mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
-  /* Cabeçalho */
-  .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 8px; border-bottom: 2px solid #000; margin-bottom: 8px; }
-  .logo-box { width: 85px; height: 66px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; }
+
+  /* === CABEÇALHO === */
+  .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+  .logo-box { width: 88px; height: 68px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
   .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .logo-txt { font-size: 9px; color: #aaa; }
   .cab-info { flex: 1; text-align: center; }
   .cab-nome { font-size: 17px; font-weight: bold; line-height: 1.2; margin-bottom: 4px; }
-  .cab-sub  { font-size: 11px; color: #222; line-height: 1.55; }
-  /* Título */
-  .titulo { background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 5px 0; margin: 6px 0 5px 0; }
+  .cab-sub  { font-size: 11px; color: #222; line-height: 1.6; }
+
+  /* === FAIXA: 3cm abaixo do cabeçalho === */
+  .titulo { margin-top: 3cm; background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 6px 0; }
   .sep { border: none; border-top: 1px solid #888; margin: 3px 0; }
-  /* Número processo */
-  .proc-row { display: flex; justify-content: flex-end; margin: 6px 0 10px 0; }
-  .proc-box { border: 1px solid #888; padding: 3px 14px 3px 10px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
-  .proc-box strong { font-size: 16px; font-weight: bold; }
-  /* Espécie */
-  .label { font-size: 10px; color: #555; margin-bottom: 2px; margin-top: 10px; }
+
+  /* === Nº INTERNO: 2.5cm abaixo da faixa === */
+  .proc-row { margin-top: 2.5cm; display: flex; justify-content: flex-end; }
+  .proc-box { border: 1px solid #888; padding: 4px 16px 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 10px; }
+  .proc-box strong { font-size: 18px; font-weight: bold; }
+
+  /* === ESPÉCIE: 3cm abaixo do Nº interno === */
+  .bloco-especie { margin-top: 3cm; }
+  .label { font-size: 10px; color: #555; margin-bottom: 3px; }
   .caixa { border: 1px solid #888; padding: 5px 10px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; }
-  /* Partes */
-  .tab-partes { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; }
-  /* Descrição */
-  .desc-box { border: 1px solid #888; padding: 6px 10px; font-size: 12px; min-height: 44px; width: 100%; margin-top: 2px; }
-  /* Livro / Folhas / Data */
-  .bottom-area { display: flex; justify-content: flex-end; margin-top: 28px; }
+
+  /* === INTERESSADOS: 2.5cm abaixo da espécie === */
+  .bloco-partes { margin-top: 2.5cm; }
+  .tab-partes { width: 100%; border-collapse: collapse; }
+
+  /* === DESCRIÇÃO: 3cm abaixo dos interessados === */
+  .bloco-desc { margin-top: 3cm; }
+  .desc-box { border: 1px solid #888; padding: 7px 10px; font-size: 12px; min-height: 48px; width: 100%; }
+
+  /* === QUADRO ATO: 3.5cm abaixo da descrição === */
+  .bloco-ato { margin-top: 3.5cm; display: flex; justify-content: flex-end; }
   .livro-tab { border-collapse: collapse; }
-  .livro-tab td { border: 1px solid #888; padding: 4px 12px; font-size: 12px; }
+  .livro-tab td { border: 1px solid #888; padding: 5px 14px; font-size: 12px; }
   .livro-tab .lbl { background: #f0f0f0; width: 80px; }
-  .livro-tab .val { font-weight: bold; min-width: 100px; text-align: right; }
-  /* Rodapé */
-  .rodape { border-top: 1px solid #888; margin-top: 40px; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .livro-tab .val { font-weight: bold; min-width: 110px; text-align: right; }
+
+  /* === RODAPÉ === */
+  .rodape { clear: both; border-top: 1px solid #888; margin-top: 40px; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head><body>
 
@@ -518,17 +532,23 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
   <div class="proc-box">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
 </div>
 
-<div class="label">Especie</div>
-<div class="caixa">${proc.especie || ''}</div>
+<div class="bloco-especie">
+  <div class="label">Especie</div>
+  <div class="caixa">${proc.especie || ''}</div>
+</div>
 
-<table class="tab-partes">${linhasPartes}</table>
+<div class="bloco-partes">
+  <table class="tab-partes">${linhasPartes}</table>
+</div>
 
-<div class="label">Descrição Ato</div>
-<div class="desc-box">${proc.esc_descricao || proc.obs || ''}</div>
+<div class="bloco-desc">
+  <div class="label">Descrição Ato</div>
+  <div class="desc-box">${proc.esc_descricao || proc.obs || ''}</div>
+</div>
 
-<div class="bottom-area">
+<div class="bloco-ato">
   <table class="livro-tab">
-    <tr><td class="lbl">Livro Ato</td><td class="val">${proc.livro_ato  || ''}</td></tr>
+    <tr><td class="lbl">Livro Ato</td><td class="val">${proc.livro_ato   || ''}</td></tr>
     <tr><td class="lbl">Folhas Ato</td><td class="val">${proc.folhas_ato || ''}</td></tr>
     <tr><td class="lbl">Data</td><td class="val">${dtConc}</td></tr>
   </table>
@@ -537,7 +557,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 <div class="rodape"></div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=820,height=1100');
+  const w = window.open('', '_blank', 'width=840,height=1150');
   w.document.write(html);
   w.document.close();
   setTimeout(() => w.print(), 600);
