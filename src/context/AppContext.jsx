@@ -182,18 +182,31 @@ export function AppProvider({ children }) {
     try {
       if (!d.email)         { addToast('E-mail obrigatório.', 'error'); return; }
       if (!d.nome_completo) { addToast('Nome completo obrigatório.', 'error'); return; }
+      if (!d.senha)         { addToast('Senha obrigatória.', 'error'); return; }
 
       // Verifica se e-mail já existe
       const { data: existente } = await supabase.from('usuarios').select('id').eq('email', d.email).maybeSingle();
       if (existente) { addToast('E-mail já cadastrado no sistema.', 'error'); return; }
 
-      // Insere apenas na tabela usuarios (sem Auth)
-      // O acesso ao sistema será criado via "Redefinir Senha" que envia link ao usuário
+      // Client anônimo separado para signUp não deslogar o admin
+      const { createClient } = await import('@supabase/supabase-js');
+      const anonClient = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+      const { data: authData, error: authError } = await anonClient.auth.signUp({
+        email: d.email,
+        password: d.senha,
+      });
+      if (authError) throw authError;
+      const uid = authData?.user?.id;
+      if (!uid) throw new Error('Falha ao criar acesso no Auth.');
+
+      // Insere perfil na tabela usuarios com o uid do Auth
       const { senha: _s, ...perfil } = d;
-      // Gera UUID para o novo usuário
-      const novoId = crypto.randomUUID();
       const { data, error } = await supabase.from('usuarios').insert({
-        id:            novoId,
+        id:            uid,
         nome_completo: perfil.nome_completo,
         nome_simples:  perfil.nome_simples || perfil.nome_completo.split(' ')[0],
         email:         perfil.email,
@@ -208,7 +221,7 @@ export function AppProvider({ children }) {
       }).select().single();
       if (error) throw error;
       setUsuarios(p => [...p, data]);
-      addToast('Usuário cadastrado! Use "Redefinir Senha" para enviar o acesso por e-mail.', 'success');
+      addToast('Usuário cadastrado com sucesso!', 'success');
       return data;
     } catch(e) { addToast(e.message, 'error'); }
   }, []);
