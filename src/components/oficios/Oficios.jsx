@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
@@ -38,7 +39,7 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos }) 
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
           <span className="modal-title">{oficio ? 'Editar Ofício' : 'Novo Ofício'}</span>
@@ -94,7 +95,7 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos }) 
           <button className="btn btn-primary" onClick={handleSubmit}>{oficio ? 'Salvar' : 'Registrar Ofício'}</button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
