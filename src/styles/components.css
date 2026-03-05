@@ -272,9 +272,10 @@
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0,0,0,0.7);
   display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+  padding: 24px 20px;
   animation: fadeInFast 0.15s ease;
   backdrop-filter: blur(4px);
+  overflow-y: auto;
 }
 .modal {
   background: var(--color-surface);
@@ -282,10 +283,11 @@
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 640px;
-  max-height: 90vh;
+  max-height: calc(100vh - 48px);
   overflow-y: auto;
   animation: fadeIn 0.2s ease;
   box-shadow: var(--shadow-xl);
+  margin: auto;
 }
 .modal-lg { max-width: 900px; }
 .modal-sm { max-width: 440px; }
