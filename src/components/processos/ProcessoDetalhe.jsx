@@ -109,7 +109,10 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
           <Campo label="Serviço / Espécie">
             {editando
               ? <select className="form-select" value={proc.especie || ''} onChange={e => onChange('especie', e.target.value)} style={{ fontSize: 12 }}>
-                  <option value="">—</option>{especies.map(s => <option key={s}>{s}</option>)}
+                  <option value="">—</option>
+                  {/* Garante que o valor atual apareça mesmo se não estiver na lista filtrada */}
+                  {proc.especie && !especies.includes(proc.especie) && <option value={proc.especie}>{proc.especie}</option>}
+                  {especies.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               : <div style={{ fontSize: 13, padding: '6px 0' }}>{proc.especie || '—'}</div>
             }
@@ -164,20 +167,15 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
           <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
           <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
           <Campo label="Natureza do Ato">{inp(proc.esc_natureza, 'esc_natureza', { ph: 'Ex: Compra e Venda' })}</Campo>
-          <Campo label="Livro Escritura">{inp(proc.esc_livro, 'esc_livro')}</Campo>
-          <Campo label="Folha(s) Escritura">{inp(proc.esc_folhas, 'esc_folhas')}</Campo>
-          <Campo label="Data do Ato">{inp(proc.esc_data, 'esc_data')}</Campo>
-          <Campo label="Matrícula / Transcrição">{inp(proc.esc_matricula, 'esc_matricula')}</Campo>
-          <Campo label="Cartório de Registro">{inp(proc.esc_cartorio_reg, 'esc_cartorio_reg', { ph: '' })}</Campo>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-          <Campo label="Descrição do Imóvel / Objeto" full>
+          <Campo label="Descrição do Ato / Dados do Imóvel" full>
             {editando
-              ? <textarea className="form-input" value={proc.esc_descricao || ''} onChange={e => onChange('esc_descricao', e.target.value)} rows={3} style={{ resize: 'vertical', fontSize: 12 }} placeholder="Descrição completa do bem ou objeto do ato" />
-              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.esc_descricao ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.esc_descricao || '—'}</div>
+              ? <textarea className="form-input" value={proc.esc_descricao || ''} onChange={e => onChange('esc_descricao', e.target.value)} rows={5} style={{ resize: 'vertical', fontSize: 12 }} placeholder="Ex: Imóvel urbano, matrícula nº 15000, RGI de Paranatinga-MT. Cartório: 1º Ofício. Descrição: lote nº 12, quadra 5..." />
+              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.esc_descricao ? 'var(--color-text)' : 'var(--color-text-faint)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{proc.esc_descricao || '—'}</div>
             }
           </Campo>
-          <Campo label="Observações" full>
+          <Campo label="Observações do Processo" full>
             {editando
               ? <textarea className="form-input" value={proc.obs || ''} onChange={e => onChange('obs', e.target.value)} rows={2} style={{ resize: 'vertical', fontSize: 12 }} />
               : <div style={{ fontSize: 13, padding: '6px 0', color: proc.obs ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.obs || '—'}</div>
