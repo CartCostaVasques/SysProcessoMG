@@ -69,7 +69,7 @@ export function Configuracoes() {
             </div>
             <div className="form-group">
               <label className="form-label">Nome Simples / Fantasia</label>
-              <input className="form-input" value={form.nomeSimples} onChange={e => set('nomeSimples', e.target.value)} />
+              <input className="form-input" value={form.nome_simples} onChange={e => set('nome_simples', e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Responsável / Tabelião</label>
@@ -101,17 +101,17 @@ export function Configuracoes() {
               <label className="form-label">Logomarca</label>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <div style={{ width: 80, height: 80, background: 'var(--color-surface-2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'var(--color-text-faint)' }}>
-                  {form.logo ? <img src={form.logo} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : '🏛'}
+                  {form.logo_url ? <img src={form.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : '🏛'}
                 </div>
                 <div>
                   <input type="file" accept="image/*" id="logo-upload" style={{ display: 'none' }}
                     onChange={e => {
                       const f = e.target.files?.[0];
-                      if (f) { const r = new FileReader(); r.onload = (ev) => set('logo', ev.target.result); r.readAsDataURL(f); }
+                      if (f) { const r = new FileReader(); r.onload = (ev) => set('logo_url', ev.target.result); r.readAsDataURL(f); }
                     }}
                   />
                   <label htmlFor="logo-upload" className="btn btn-secondary" style={{ display: 'inline-flex', cursor: 'pointer' }}>Carregar Logo</label>
-                  {form.logo && <button className="btn btn-ghost btn-sm" onClick={() => set('logo', null)} style={{ marginLeft: 8 }}>Remover</button>}
+                  {form.logo_url && <button className="btn btn-ghost btn-sm" onClick={() => set('logo_url', null)} style={{ marginLeft: 8 }}>Remover</button>}
                   <div className="form-hint" style={{ marginTop: 6 }}>PNG, SVG ou JPG. Recomendado: fundo transparente.</div>
                 </div>
               </div>
