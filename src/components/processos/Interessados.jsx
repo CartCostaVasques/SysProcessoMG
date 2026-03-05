@@ -7,7 +7,7 @@ export default function Interessados() {
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow]   = useState({});
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm]         = useState({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', obs: '' });
+  const [form, setForm]         = useState({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', cidade: '', cep: '', obs: '' });
 
   const set    = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setEd  = (k, v) => setEditRow(p => ({ ...p, [k]: v }));
@@ -20,7 +20,7 @@ export default function Interessados() {
   const handleAdd = async () => {
     if (!form.nome.trim()) { addToast('Nome é obrigatório.', 'error'); return; }
     await addInteressado(form);
-    setForm({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', obs: '' });
+    setForm({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', cidade: '', cep: '', obs: '' });
     setShowForm(false);
   };
 
@@ -76,6 +76,14 @@ export default function Interessados() {
             <div className="form-group form-full">
               <label className="form-label">Endereço</label>
               <input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Cidade</label>
+              <input className="form-input" value={form.cidade || ''} onChange={e => set('cidade', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">CEP</label>
+              <input className="form-input" value={form.cep || ''} onChange={e => set('cep', e.target.value)} placeholder="00000-000" />
             </div>
             <div className="form-group form-full">
               <label className="form-label">Obs.</label>
