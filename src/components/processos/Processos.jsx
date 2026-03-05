@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ProcessoDetalhe from './ProcessoDetalhe.jsx';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
@@ -279,6 +280,7 @@ export default function Processos() {
   const [newRow, setNewRow]             = useState(null);
   const [modalNovoInt, setModalNovoInt] = useState(null);
   const [modalRapido, setModalRapido]   = useState(false);
+  const [processoDetalhe, setProcessoDetalhe] = useState(null);
   const [busca, setBusca]               = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroResp, setFiltroResp]     = useState('');
@@ -508,7 +510,7 @@ export default function Processos() {
                 </div></td>
               </tr>
             ) : (
-              <tr key={p.id} style={{ opacity: p.status === 'Concluído' ? 0.75 : 1 }}>
+              <tr key={p.id} style={{ opacity: p.status === 'Concluído' ? 0.75 : 1, cursor: 'pointer' }} onClick={() => setProcessoDetalhe(p)}>
                 <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.numero_interno}</span></td>
                 <td style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(p.dt_abertura)}</td>
                 <td><span className="badge badge-neutral">{p.categoria}</span></td>
@@ -532,10 +534,10 @@ export default function Processos() {
                 <td>
                   <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end' }}>
                     {p.status !== 'Concluído' && (
-                      <button className="btn-icon btn-sm" onClick={() => handleConcluir(p)} title="Concluir" style={{ color: 'var(--color-success)', fontSize: 14 }}>✓</button>
+                      <button className="btn-icon btn-sm" onClick={e => { e.stopPropagation(); handleConcluir(p); }} title="Concluir" style={{ color: 'var(--color-success)', fontSize: 14 }}>✓</button>
                     )}
-                    <button className="btn-icon btn-sm" onClick={() => startEdit(p)} title="Editar">✎</button>
-                    <button className="btn-icon btn-sm" onClick={() => handleDelete(p)} title="Remover" style={{ color: 'var(--color-danger)' }}>✕</button>
+                    <button className="btn-icon btn-sm" onClick={e => { e.stopPropagation(); startEdit(p); }} title="Editar">✎</button>
+                    <button className="btn-icon btn-sm" onClick={e => { e.stopPropagation(); handleDelete(p); }} title="Remover" style={{ color: 'var(--color-danger)' }}>✕</button>
                   </div>
                 </td>
               </tr>
@@ -546,6 +548,12 @@ export default function Processos() {
 
       {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
+      {processoDetalhe && (
+        <ProcessoDetalhe
+          processo={processoDetalhe}
+          onClose={() => setProcessoDetalhe(null)}
+        />
+      )}
     </div>
   );
 }
