@@ -98,6 +98,14 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
               : <div style={{ fontSize: 13, padding: '6px 0' }}>{proc.status || '—'}</div>
             }
           </Campo>
+          {(editando || proc.dt_conclusao) && (
+            <Campo label="Dt. Conclusão">
+              {editando
+                ? <input className="form-input" type="date" value={proc.dt_conclusao || ''} onChange={e => onChange('dt_conclusao', e.target.value)} style={{ fontSize: 12 }} />
+                : <div style={{ fontSize: 13, padding: '6px 0', color: 'var(--color-success)', fontWeight: 600 }}>{formatDate(proc.dt_conclusao)}</div>
+              }
+            </Campo>
+          )}
           <Campo label="Categoria">
             {editando
               ? <select className="form-select" value={proc.categoria || ''} onChange={e => { onChange('categoria', e.target.value); onChange('especie', ''); }} style={{ fontSize: 12 }}>
@@ -417,6 +425,105 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
   setTimeout(() => w.print(), 500);
 }
 
+function gerarArquivoAtos(proc, interessados, cartorio) {
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+
+  const nomeCartorio  = cartorio?.nomeSimples || cartorio?.nome || '2º Serviço de Paranatinga';
+  const nomeCompleto  = cartorio?.nome || '';
+  const endereco      = cartorio?.endereco || '';
+  const cidade        = cartorio?.cidade || 'Paranatinga-MT';
+  const telefone      = cartorio?.telefone || '';
+  const email         = cartorio?.email || '';
+  const logo          = cartorio?.logo || '';
+
+  const dtConc = proc.dt_conclusao
+    ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR')
+    : '';
+
+  const linhasPartes = partes.map(p => {
+    const int = interessados.find(i => String(i.id) === String(p.id));
+    const nome = int?.nome || p.nome || '';
+    const vinculo = p.vinculo || 'Parte';
+    return `<tr>
+      <td style="border:1px solid #ccc;padding:5px 10px;font-size:12px;width:160px;background:#f5f5f5;">${vinculo}</td>
+      <td style="border:1px solid #ccc;padding:5px 10px;font-size:12px;">${nome}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 30px 40px; color: #000; }
+  .cabecalho { display: flex; align-items: center; gap: 24px; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+  .logo-box { width: 90px; height: 70px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .cab-info { flex: 1; text-align: center; }
+  .cab-nome { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+  .cab-sub { font-size: 11px; color: #333; line-height: 1.6; }
+  .titulo-doc { text-align: center; background: #b8cce4; font-size: 14px; font-weight: bold; padding: 7px; letter-spacing: 2px; margin-bottom: 20px; }
+  .separador { border: none; border-top: 1px solid #999; margin: 12px 0; }
+  .proc-num { float: right; border: 1px solid #999; padding: 4px 14px; font-size: 12px; margin-bottom: 12px; }
+  .proc-num strong { font-size: 16px; margin-left: 10px; }
+  .label-campo { font-size: 10px; color: #555; margin-bottom: 3px; }
+  .caixa { border: 1px solid #999; padding: 5px 10px; min-height: 26px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 12px; }
+  .tabela-partes { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .descricao-box { border: 1px solid #999; padding: 6px 10px; font-size: 12px; min-height: 40px; margin-bottom: 20px; }
+  .livro-table { float: right; border-collapse: collapse; margin-top: 20px; }
+  .livro-table td { border: 1px solid #999; padding: 5px 12px; font-size: 12px; }
+  .livro-table .label { background: #f0f0f0; font-weight: normal; width: 90px; }
+  .livro-table .valor { font-weight: bold; text-align: right; min-width: 100px; }
+  .rodape-linha { clear: both; border-top: 1px solid #999; margin-top: 40px; padding-top: 6px; }
+  @media print { body { padding: 10px 20px; } }
+</style>
+</head><body>
+
+<div class="cabecalho">
+  <div class="logo-box">
+    ${logo ? `<img src="${logo}" alt="Logo" />` : '<span style="font-size:10px;color:#aaa;">Logo</span>'}
+  </div>
+  <div class="cab-info">
+    <div class="cab-nome">${nomeCartorio}</div>
+    <div class="cab-sub">
+      ${endereco}<br>
+      ${telefone}${telefone && email ? ' - ' : ''}${email}<br>
+      ${cidade}
+    </div>
+  </div>
+</div>
+
+<div class="titulo-doc">Controle de Acervo Extrajudicial</div>
+<hr class="separador">
+<hr class="separador" style="margin-top:2px;">
+
+<div style="overflow:hidden;margin-bottom:12px;">
+  <div class="proc-num">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
+  <div style="clear:both;"></div>
+</div>
+
+<div class="label-campo">Especie</div>
+<div class="caixa">${proc.especie || ''}</div>
+
+<table class="tabela-partes">${linhasPartes}</table>
+
+<div class="label-campo">Descrição Ato</div>
+<div class="descricao-box">${proc.esc_descricao || proc.obs || ''}</div>
+
+<table class="livro-table">
+  <tr><td class="label">Livro Ato</td><td class="valor">${proc.livro_ato || ''}</td></tr>
+  <tr><td class="label">Folhas Ato</td><td class="valor">${proc.folhas_ato || ''}</td></tr>
+  <tr><td class="label">Data</td><td class="valor">${dtConc}</td></tr>
+</table>
+
+<div class="rodape-linha"></div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=800,height=900');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio }) {
   const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
 
@@ -580,7 +687,22 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
           </div>
 
           {/* Footer */}
-          <div className="modal-footer" style={{ flexShrink: 0 }}>
+          <div className="modal-footer" style={{ flexShrink: 0, gap: 8, flexWrap: 'wrap' }}>
+            {/* Botão Arquivo de Atos — sempre visível na aba dados */}
+            {aba === 'dados' && !editando && (
+              <button className="btn btn-secondary btn-sm" onClick={() => gerarArquivoAtos(form, interessados, cartorio)} style={{ marginRight: 'auto' }}>
+                🖨 Arquivo de Atos
+              </button>
+            )}
+            {/* Botão Concluir processo */}
+            {aba === 'dados' && !editando && form.status !== 'Concluído' && (
+              <button className="btn btn-success btn-sm" onClick={async () => {
+                const hoje = new Date().toISOString().split('T')[0];
+                await editProcesso(processo.id, { ...form, status: 'Concluído', dt_conclusao: form.dt_conclusao || hoje });
+              }}>
+                ✓ Concluir Processo
+              </button>
+            )}
             {editando ? (
               <>
                 <button className="btn btn-secondary" onClick={descartar}>✕ Descartar</button>
