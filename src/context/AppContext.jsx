@@ -185,15 +185,34 @@ export function AppProvider({ children }) {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: d.email,
         password: d.senha,
-        options: { data: { nome_simples: d.nome_simples || d.nome_completo } }
       });
       if (authError) throw authError;
       const uid = authData?.user?.id;
       if (!uid) throw new Error('Falha ao obter UID do usuário criado.');
-      // 2. Insere perfil na tabela usuarios (sem senha — email é coluna da tabela)
-      // Nota: desative "Confirm email" em Supabase > Authentication > Providers > Email
+      // 2. Verifica se já existe na tabela usuarios (evita duplicate key)
+      const { data: existente } = await supabase.from('usuarios').select('id').eq('id', uid).single();
+      if (existente) {
+        addToast('Este e-mail já está cadastrado no sistema.', 'error');
+        return;
+      }
+      // 3. Monta perfil sem senha e sem campos que não existem na tabela
       const { senha: _s, ...perfil } = d;
-      const { data, error } = await supabase.from('usuarios').insert({ ...perfil, id: uid }).select().single();
+      const { data, error } = await supabase.from('usuarios')
+        .insert({
+          id: uid,
+          nome_completo: perfil.nome_completo,
+          nome_simples:  perfil.nome_simples,
+          email:         perfil.email,
+          cpf:           perfil.cpf    || null,
+          rg:            perfil.rg     || null,
+          celular:       perfil.celular|| null,
+          cargo:         perfil.cargo  || null,
+          setor:         perfil.setor  || null,
+          perfil:        perfil.perfil || 'Operador',
+          permissoes:    perfil.permissoes || [],
+          ativo:         true,
+        })
+        .select().single();
       if (error) throw error;
       setUsuarios(p => [...p, data]);
       addToast('Usuário cadastrado com sucesso!', 'success');
