@@ -203,24 +203,33 @@ export function AppProvider({ children }) {
       const uid = authData?.user?.id;
       if (!uid) throw new Error('Falha ao criar acesso no Auth.');
 
-      // Insere perfil na tabela usuarios com o uid do Auth
-      const { senha: _s, ...perfil } = d;
-      const { data, error } = await supabase.from('usuarios').insert({
+      // Monta perfil explicitamente (evita passar campos errados)
+      const perfil = {
         id:            uid,
-        nome_completo: perfil.nome_completo,
-        nome_simples:  perfil.nome_simples || perfil.nome_completo.split(' ')[0],
-        email:         perfil.email,
-        cargo:         perfil.cargo   || null,
-        setor:         perfil.setor   || null,
-        celular:       perfil.celular  || null,
-        cpf:           perfil.cpf     || null,
-        rg:            perfil.rg      || null,
-        perfil:        perfil.perfil  || 'Operador',
-        permissoes:    perfil.permissoes || [],
+        nome_completo: d.nome_completo,
+        nome_simples:  d.nome_simples || d.nome_completo.split(' ')[0],
+        email:         d.email,
+        cargo:         d.cargo    || null,
+        setor:         d.setor    || null,
+        celular:       d.celular  || null,
+        cpf:           d.cpf      || null,
+        rg:            d.rg       || null,
+        perfil:        d.perfil   || 'Operador',
+        permissoes:    d.permissoes || [],
         ativo:         true,
-      }).select().single();
+      };
+
+      // Verifica se uid já existe na tabela (tentativa anterior falhou no meio)
+      const { data: jaExiste } = await supabase.from('usuarios').select('id').eq('id', uid).maybeSingle();
+      let data, error;
+      if (jaExiste) {
+        // Atualiza o registro incompleto
+        ({ data, error } = await supabase.from('usuarios').update(perfil).eq('id', uid).select().single());
+      } else {
+        ({ data, error } = await supabase.from('usuarios').insert(perfil).select().single());
+      }
       if (error) throw error;
-      setUsuarios(p => [...p, data]);
+      setUsuarios(p => jaExiste ? p.map(u => u.id === uid ? data : u) : [...p, data]);
       addToast('Usuário cadastrado com sucesso!', 'success');
       return data;
     } catch(e) { addToast(e.message, 'error'); }
