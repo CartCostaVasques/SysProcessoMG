@@ -103,7 +103,7 @@ export default function Dashboard({ setPage }) {
       return new Date(t.dt_fim) < hoje;
     }).length;
 
-    return { total, emAndamento, concluidos, tarefasPendentes, oficiosPendentes, tarefasVencidas };
+    return { total, emAndamento, concluidos, tarefasPendentes, oficiosPendentes, oficiosEnviados, tarefasVencidas };
   }, [processos, tarefas, oficios]);
 
   const porCategoria = useMemo(() => {
