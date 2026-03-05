@@ -11,9 +11,16 @@ const EMPTY = {
 };
 
 function gerarNumeroOficio(oficios, mesAno, numeroInicial = 0) {
+  const ano = mesAno.split('/')[1];
   const doMes = oficios.filter(o => o.mes_ano === mesAno);
-  const proximo = numeroInicial + doMes.length + 1;
-  return String(proximo).padStart(4, '0') + '/' + mesAno.split('/')[1];
+  // Extrai o maior número já registrado no mês/ano
+  const maiorRegistrado = doMes.reduce((max, o) => {
+    const num = parseInt((o.numero || '').split('/')[0], 10) || 0;
+    return Math.max(max, num);
+  }, 0);
+  // Próximo = maior entre (numeroInicial e maiorRegistrado) + 1
+  const proximo = Math.max(numeroInicial, maiorRegistrado) + 1;
+  return String(proximo).padStart(4, '0') + '/' + ano;
 }
 
 function mesAnoAtual() {
@@ -128,6 +135,10 @@ export default function Oficios() {
       && (!filtroMesAno || o.mes_ano === filtroMesAno)
       && (!filtroStatus || o.status === filtroStatus)
       && (!filtroResp || o.responsavel === filtroResp);
+  }).sort((a, b) => {
+    const numA = parseInt((a.numero || '').split('/')[0], 10) || 0;
+    const numB = parseInt((b.numero || '').split('/')[0], 10) || 0;
+    return numB - numA;
   });
 
   const handleSave = (form) => {
