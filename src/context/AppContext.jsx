@@ -35,9 +35,7 @@ export function AppProvider({ children }) {
 
   // ── AUTH ────────────────────────────────────────────────
   useEffect(() => {
-    console.log('[Auth] Iniciando verificação de sessão...');
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('[Auth] Sessão:', session ? 'existe' : 'nenhuma', error || '');
       if (session?.user) {
         carregarPerfil(session.user.id);
       } else {
@@ -46,7 +44,6 @@ export function AppProvider({ children }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth] Evento:', event);
       if (event === 'SIGNED_IN' && session?.user) {
         carregarPerfil(session.user.id);
       } else if (event === 'SIGNED_OUT') {
@@ -59,7 +56,6 @@ export function AppProvider({ children }) {
   }, []);
 
   const carregarPerfil = async (uid) => {
-    console.log('[Perfil] Carregando perfil para uid:', uid);
     try {
       const { data, error } = await supabase
         .from('usuarios')
@@ -67,14 +63,11 @@ export function AppProvider({ children }) {
         .eq('id', uid)
         .single();
 
-      console.log('[Perfil] Resultado:', data, 'Erro:', error);
 
       if (data) {
         setUsuario(data);
-        console.log('[Perfil] Usuário definido:', data.nome_simples);
       } else {
         // Perfil não encontrado — cria um mínimo para não travar
-        console.warn('[Perfil] Não encontrado, criando perfil mínimo...');
         const { data: authUser } = await supabase.auth.getUser();
         const perfilMinimo = {
           id: uid,
@@ -105,7 +98,6 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     if (usuario) {
-      console.log('[App] Usuário logado, carregando dados...');
       carregarTudo();
     }
   }, [usuario?.id]);
@@ -126,10 +118,8 @@ export function AppProvider({ children }) {
   };
 
   const login = useCallback(async (email, senha) => {
-    console.log('[Login] Tentando login:', email);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-      console.log('[Login] Resultado:', data?.user ? 'OK' : 'Falhou', error?.message || '');
       if (error) {
         addToast(error.message || 'Credenciais inválidas.', 'error');
         return false;
