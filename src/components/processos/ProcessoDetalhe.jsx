@@ -454,26 +454,26 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 <html><head><meta charset="UTF-8">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 12px; padding: 30px 40px; color: #000; }
-  .cabecalho { display: flex; align-items: center; gap: 24px; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 20px; }
+  body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px 36px; color: #000; }
+  .cabecalho { display: flex; align-items: center; gap: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
   .logo-box { width: 90px; height: 70px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .cab-info { flex: 1; text-align: center; }
-  .cab-nome { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-  .cab-sub { font-size: 11px; color: #333; line-height: 1.6; }
-  .titulo-doc { text-align: center; background: #b8cce4; font-size: 14px; font-weight: bold; padding: 7px; letter-spacing: 2px; margin-bottom: 20px; }
-  .separador { border: none; border-top: 1px solid #999; margin: 12px 0; }
-  .proc-num { float: right; border: 1px solid #999; padding: 4px 14px; font-size: 12px; margin-bottom: 12px; }
+  .cab-nome { font-size: 18px; font-weight: bold; margin-bottom: 3px; }
+  .cab-sub { font-size: 11px; color: #333; line-height: 1.5; }
+  .titulo-doc { text-align: center; background: #b8cce4; font-size: 13px; font-weight: bold; padding: 6px; letter-spacing: 2px; margin: 10px 0 8px 0; }
+  .separador { border: none; border-top: 1px solid #999; margin: 4px 0; }
+  .proc-num { float: right; border: 1px solid #999; padding: 3px 12px; font-size: 12px; margin-bottom: 8px; }
   .proc-num strong { font-size: 16px; margin-left: 10px; }
-  .label-campo { font-size: 10px; color: #555; margin-bottom: 3px; }
-  .caixa { border: 1px solid #999; padding: 5px 10px; min-height: 26px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 12px; }
-  .tabela-partes { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  .descricao-box { border: 1px solid #999; padding: 6px 10px; font-size: 12px; min-height: 40px; margin-bottom: 20px; }
-  .livro-table { float: right; border-collapse: collapse; margin-top: 20px; }
-  .livro-table td { border: 1px solid #999; padding: 5px 12px; font-size: 12px; }
-  .livro-table .label { background: #f0f0f0; font-weight: normal; width: 90px; }
-  .livro-table .valor { font-weight: bold; text-align: right; min-width: 100px; }
-  .rodape-linha { clear: both; border-top: 1px solid #999; margin-top: 40px; padding-top: 6px; }
+  .label-campo { font-size: 10px; color: #555; margin-bottom: 2px; margin-top: 8px; }
+  .caixa { border: 1px solid #999; padding: 4px 10px; min-height: 24px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 6px; }
+  .tabela-partes { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .descricao-box { border: 1px solid #999; padding: 5px 10px; font-size: 12px; min-height: 36px; margin-bottom: 12px; }
+  .livro-table { float: right; border-collapse: collapse; margin-top: 8px; }
+  .livro-table td { border: 1px solid #999; padding: 4px 10px; font-size: 12px; }
+  .livro-table .label { background: #f0f0f0; font-weight: normal; width: 80px; }
+  .livro-table .valor { font-weight: bold; text-align: right; min-width: 90px; }
+  .rodape-linha { clear: both; border-top: 1px solid #999; margin-top: 28px; }
   @media print { body { padding: 10px 20px; } }
 </style>
 </head><body>
