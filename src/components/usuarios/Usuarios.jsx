@@ -24,9 +24,10 @@ const EMPTY = {
   endereco: '', cidade: '', uf: 'MT', ativo: true, permissoes: ['dashboard','processos','tarefas'],
 };
 
-function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
+function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando }) {
   const [form, setForm] = useState(usuario ? { ...usuario } : { ...EMPTY });
   const [tab, setTab] = useState('dados');
+  const [editando, setEditando] = useState(isNovo || iniciarEditando || false);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -42,6 +43,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
   };
 
   const handleSubmit = () => {
+    if (!editando) return;
     if (!form.nome_completo || !form.email) { alert('Nome completo e e-mail são obrigatórios.'); return; }
     if (isNovo && !form.senha) { alert('Senha obrigatória para novo usuário.'); return; }
     if (isNovo && form.senha && form.senha.length < 6) { alert('Senha deve ter no mínimo 6 caracteres.'); return; }
@@ -52,8 +54,13 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
     <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
-          <span className="modal-title">{usuario ? 'Editar Usuário' : 'Novo Usuário'}</span>
-          <button className="btn-icon" onClick={onClose}>✕</button>
+          <span className="modal-title">{isNovo ? 'Novo Usuário' : (editando ? 'Editando Usuário' : usuario?.nome_simples || usuario?.nome_completo)}</span>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {!isNovo && !editando && (
+              <button className="btn btn-secondary btn-sm" onClick={() => setEditando(true)}>✎ Editar</button>
+            )}
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
         </div>
         <div className="modal-body">
           <div className="tabs">
@@ -66,7 +73,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
             <div className="form-grid form-grid-2">
               <div className="form-group form-full">
                 <label className="form-label">Nome Completo *</label>
-                <input className="form-input" value={form.nome_completo} onChange={e => set('nome_completo', e.target.value)} placeholder="Nome conforme documento" />
+                <input className="form-input" value={form.nome_completo} onChange={e => set('nome_completo', e.target.value)} placeholder="Nome conforme documento" readOnly={!editando} style={!editando ? {opacity:0.75,cursor:'default'} : {}} />
               </div>
               <div className="form-group">
                 <label className="form-label">Nome Simples</label>
@@ -176,10 +183,23 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            {usuario ? 'Salvar Alterações' : 'Cadastrar Usuário'}
-          </button>
+          {editando ? (
+            <>
+              <button className="btn btn-secondary" onClick={() => isNovo ? onClose() : setEditando(false)}>
+                {isNovo ? 'Cancelar' : '✕ Descartar'}
+              </button>
+              <button className="btn btn-primary" onClick={handleSubmit}>
+                {isNovo ? 'Cadastrar Usuário' : '✓ Salvar Alterações'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-secondary" onClick={() => redefinirSenha(usuario.email)}>
+                🔑 Redefinir Senha
+              </button>
+              <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+            </>
+          )}
         </div>
       </div>
     </div></Portal>
@@ -187,7 +207,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo }) {
 }
 
 export default function Usuarios() {
-  const { usuarios, addUsuario, editUsuario, deleteUsuario, setores, addToast } = useApp();
+  const { usuarios, addUsuario, editUsuario, deleteUsuario, redefinirSenha, setores, addToast } = useApp();
   const [modal, setModal] = useState(null); // null | 'novo' | usuario
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
