@@ -438,7 +438,7 @@ function gerarRequerimento(proc, certidoes, interessados, cartorio) {
 
 function gerarArquivoAtos(proc, interessados, cartorio) {
   const partes      = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
-  const nomeSimples = cartorio?.nomeSimples || cartorio?.nome || '';
+  const nomeSimples = cartorio?.nome_simples || cartorio?.nome || '';
   const endereco    = cartorio?.endereco || '';
   const cidade      = cartorio?.cidade   || '';
   const telefone    = cartorio?.telefone || '';
