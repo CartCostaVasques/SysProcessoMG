@@ -188,7 +188,27 @@ export function AppProvider({ children }) {
   const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
   // ── CRUD ───────────────────────────────────────────────
-  const addUsuario    = useCallback(async () => { addToast('Crie usuários no painel Supabase > Authentication', 'warning', 6000); }, []);
+  const addUsuario    = useCallback(async (d) => {
+    try {
+      if (!d.senha) { addToast('Senha obrigatória para novo usuário.', 'error'); return; }
+      // 1. Cria no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: d.email,
+        password: d.senha,
+        options: { data: { nome_simples: d.nome_simples || d.nome_completo } }
+      });
+      if (authError) throw authError;
+      const uid = authData?.user?.id;
+      if (!uid) throw new Error('Falha ao obter UID do usuário criado.');
+      // 2. Insere perfil na tabela usuarios
+      const { senha: _s, ...perfil } = d;
+      const { data, error } = await supabase.from('usuarios').insert({ ...perfil, id: uid }).select().single();
+      if (error) throw error;
+      setUsuarios(p => [...p, data]);
+      addToast('Usuário cadastrado com sucesso!', 'success');
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, []);
   const editUsuario   = useCallback(async (id, d) => { try { const { email, ...dadosSemEmail } = d; const {data,error} = await supabase.from('usuarios').update(dadosSemEmail).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
