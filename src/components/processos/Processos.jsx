@@ -419,15 +419,15 @@ export default function Processos() {
         <table className="data-table" style={{ fontSize: 12 }}>
           <thead>
             <tr>
-              <th style={{ width: 70 }}>Nº Interno</th>
+              <th style={{ width: 55 }}>Nº</th>
               <th style={{ width: 82 }}>Dt. Cadastro</th>
               <th style={{ width: 95 }}>Categoria</th>
               <th style={{ minWidth: 150 }}>Serviço</th>
               <th style={{ minWidth: 220 }}>Interessados</th>
-              <th style={{ width: 90 }}>Responsável</th>
-              <th style={{ width: 80 }}>Valor</th>
+              <th style={{ width: 60 }}>Resp.</th>
+              <th style={{ width: 110 }}>Valor</th>
               <th style={{ width: 100 }}>Status</th>
-              <th style={{ width: 95 }}>Dt. Conclusão</th>
+              <th style={{ width: 75 }}>Conclusão</th>
               <th style={{ width: 75 }}></th>
             </tr>
           </thead>
