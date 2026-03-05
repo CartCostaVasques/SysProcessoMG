@@ -114,6 +114,7 @@ export default function Oficios() {
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroResp, setFiltroResp] = useState('');
   const [busca, setBusca] = useState('');
+  const [modoVis, setModoVis] = useState('lista'); // 'lista' | 'responsavel'
 
   const mesesAnos = useMemo(() => {
     const set = new Set(oficios.map(o => o.mes_ano));
@@ -161,7 +162,19 @@ export default function Oficios() {
           <div className="page-title">Ofícios</div>
           <div className="page-sub">{estatisticas.total} ofícios registrados · {mesesAnos.length} meses</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('novo')}>+ Novo Ofício</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+            {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
+              <button key={id} onClick={() => setModoVis(id)} style={{
+                padding: '6px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: modoVis === id ? 700 : 400,
+                background: modoVis === id ? 'var(--color-surface-3)' : 'transparent',
+                color: modoVis === id ? 'var(--color-text)' : 'var(--color-text-muted)',
+                borderRight: id === 'lista' ? '1px solid var(--color-border)' : 'none',
+              }}>{label}</button>
+            ))}
+          </div>
+          <button className="btn btn-primary" onClick={() => setModal('novo')}>+ Novo Ofício</button>
+        </div>
       </div>
 
       {/* Resumo por mês */}
@@ -206,48 +219,127 @@ export default function Oficios() {
         </select>
       </div>
 
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Número</th>
-              <th>Mês/Ano</th>
-              <th>Data</th>
-              <th>Destinatário</th>
-              <th>Assunto</th>
-              <th>Expedido por</th>
-              <th>Processo</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {lista.length === 0 && (
-              <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✉</div><div className="empty-state-text">Nenhum ofício encontrado</div></div></td></tr>
-            )}
-            {lista.map(o => (
-              <tr key={o.id}>
-                <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{o.numero}</span></td>
-                <td><span className="badge badge-neutral">{o.mes_ano}</span></td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatDate(o.dt_oficio)}</td>
-                <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.destinatario}</td>
-                <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>{o.assunto}</td>
-                <td>{o.responsavel || '—'}</td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-faint)' }}>
-                  {o.processo_id ? processos.find(p => p.id === o.processo_id)?.numero_interno || '—' : '—'}
-                </td>
-                <td>{statusBadge(o.status)}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button className="btn-icon btn-sm" onClick={() => setModal(o)}>✎</button>
-                    <button className="btn-icon btn-sm" onClick={() => { if (window.confirm('Remover?')) { deleteOficio(o.id); addToast('Removido.', 'info'); } }} style={{ color: 'var(--color-danger)' }}>✕</button>
-                  </div>
-                </td>
+      {/* ── Modo Lista ───────────────────────────────────────── */}
+      {modoVis === 'lista' && (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Mês/Ano</th>
+                <th>Data</th>
+                <th>Destinatário</th>
+                <th>Assunto</th>
+                <th>Expedido por</th>
+                <th>Processo</th>
+                <th>Status</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {lista.length === 0 && (
+                <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">✉</div><div className="empty-state-text">Nenhum ofício encontrado</div></div></td></tr>
+              )}
+              {lista.map(o => (
+                <tr key={o.id}>
+                  <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{o.numero}</span></td>
+                  <td><span className="badge badge-neutral">{o.mes_ano}</span></td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatDate(o.dt_oficio)}</td>
+                  <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.destinatario}</td>
+                  <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>{o.assunto}</td>
+                  <td>{o.responsavel || '—'}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-faint)' }}>
+                    {o.processo_id ? processos.find(p => p.id === o.processo_id)?.numero_interno || '—' : '—'}
+                  </td>
+                  <td>{statusBadge(o.status)}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <button className="btn-icon btn-sm" onClick={() => setModal(o)}>✎</button>
+                      <button className="btn-icon btn-sm" onClick={() => { if (window.confirm('Remover?')) { deleteOficio(o.id); addToast('Removido.', 'info'); } }} style={{ color: 'var(--color-danger)' }}>✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Modo Por Responsável ─────────────────────────────── */}
+      {modoVis === 'responsavel' && (() => {
+        // Agrupar lista filtrada por responsável
+        const grupos = lista.reduce((acc, o) => {
+          const key = o.responsavel || '— Sem responsável';
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(o);
+          return acc;
+        }, {});
+        const ordemGrupos = Object.keys(grupos).sort();
+
+        if (ordemGrupos.length === 0) return (
+          <div className="table-wrapper">
+            <table className="data-table"><tbody>
+              <tr><td colSpan={8}><div className="empty-state"><div className="empty-state-icon">✉</div><div className="empty-state-text">Nenhum ofício encontrado</div></div></td></tr>
+            </tbody></table>
+          </div>
+        );
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {ordemGrupos.map(resp => {
+              const itens = grupos[resp];
+              return (
+                <div key={resp}>
+                  {/* Cabeçalho do grupo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginBottom: 6 }}>
+                    <div className="avatar avatar-sm">{resp.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,3)}</div>
+                    <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{resp}</span>
+                    <span className="badge badge-neutral">{itens.length} ofício{itens.length !== 1 ? 's' : ''} expedido{itens.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  {/* Tabela do grupo */}
+                  <div className="table-wrapper" style={{ marginBottom: 0 }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Número</th>
+                          <th>Mês/Ano</th>
+                          <th>Data</th>
+                          <th>Destinatário</th>
+                          <th>Assunto</th>
+                          <th>Processo</th>
+                          <th>Status</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itens.map(o => (
+                          <tr key={o.id}>
+                            <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{o.numero}</span></td>
+                            <td><span className="badge badge-neutral">{o.mes_ano}</span></td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatDate(o.dt_oficio)}</td>
+                            <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.destinatario}</td>
+                            <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-text-muted)' }}>{o.assunto}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-faint)' }}>
+                              {o.processo_id ? processos.find(p => p.id === o.processo_id)?.numero_interno || '—' : '—'}
+                            </td>
+                            <td>{statusBadge(o.status)}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                <button className="btn-icon btn-sm" onClick={() => setModal(o)}>✎</button>
+                                <button className="btn-icon btn-sm" onClick={() => { if (window.confirm('Remover?')) { deleteOficio(o.id); addToast('Removido.', 'info'); } }} style={{ color: 'var(--color-danger)' }}>✕</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {modal && (
         <ModalOficio
