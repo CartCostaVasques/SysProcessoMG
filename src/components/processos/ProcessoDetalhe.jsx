@@ -474,29 +474,29 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
   .cab-sub  { font-size: 11px; color: #222; line-height: 1.6; }
 
   /* === FAIXA: 3cm abaixo do cabeçalho === */
-  .titulo { margin-top: 3cm; background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 6px 0; }
+  .titulo { margin-top: 1.5cm; background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 6px 0; }
   .sep { border: none; border-top: 1px solid #888; margin: 3px 0; }
 
   /* === Nº INTERNO: 2.5cm abaixo da faixa === */
-  .proc-row { margin-top: 2.5cm; display: flex; justify-content: flex-end; }
+  .proc-row { margin-top: 1.25cm; display: flex; justify-content: flex-end; }
   .proc-box { border: 1px solid #888; padding: 4px 16px 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 10px; }
   .proc-box strong { font-size: 18px; font-weight: bold; }
 
   /* === ESPÉCIE: 3cm abaixo do Nº interno === */
-  .bloco-especie { margin-top: 3cm; }
+  .bloco-especie { margin-top: 1.5cm; }
   .label { font-size: 10px; color: #555; margin-bottom: 3px; }
   .caixa { border: 1px solid #888; padding: 5px 10px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; }
 
   /* === INTERESSADOS: 2.5cm abaixo da espécie === */
-  .bloco-partes { margin-top: 2.5cm; }
+  .bloco-partes { margin-top: 1.25cm; }
   .tab-partes { width: 100%; border-collapse: collapse; }
 
   /* === DESCRIÇÃO: 3cm abaixo dos interessados === */
-  .bloco-desc { margin-top: 3cm; }
+  .bloco-desc { margin-top: 1.5cm; }
   .desc-box { border: 1px solid #888; padding: 7px 10px; font-size: 12px; min-height: 48px; width: 100%; }
 
   /* === QUADRO ATO: 3.5cm abaixo da descrição === */
-  .bloco-ato { margin-top: 3.5cm; display: flex; justify-content: flex-end; }
+  .bloco-ato { margin-top: 1.75cm; display: flex; justify-content: flex-end; }
   .livro-tab { border-collapse: collapse; }
   .livro-tab td { border: 1px solid #888; padding: 5px 14px; font-size: 12px; }
   .livro-tab .lbl { background: #f0f0f0; width: 80px; }
