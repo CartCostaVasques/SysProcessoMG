@@ -45,6 +45,8 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
   const handleSubmit = () => {
     if (!editando) return;
     if (!form.nome_completo || !form.email) { alert('Nome completo e e-mail são obrigatórios.'); return; }
+    if (isNovo && !form.senha) { alert('Senha obrigatória para novo usuário.'); return; }
+    if (isNovo && form.senha && form.senha.length < 6) { alert('Senha deve ter no mínimo 6 caracteres.'); return; }
     onSave(form);
   };
 
@@ -82,10 +84,10 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                 <input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               {isNovo && (
-                <div className="form-group form-full">
-                  <div style={{ padding: '10px 14px', background: 'var(--color-surface-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                    🔑 Após cadastrar, use o botão <strong>"Redefinir Senha"</strong> para enviar o link de acesso ao e-mail do usuário.
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">Senha *</label>
+                  <input className="form-input" type="password" value={form.senha || ''} onChange={e => set('senha', e.target.value)} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
+                  <div className="form-hint">Senha de acesso ao sistema.</div>
                 </div>
               )}
               <div className="form-group">
