@@ -10,9 +10,10 @@ const EMPTY = {
   processo_id: null, status: 'Enviado',
 };
 
-function gerarNumeroOficio(oficios, mesAno) {
+function gerarNumeroOficio(oficios, mesAno, numeroInicial = 0) {
   const doMes = oficios.filter(o => o.mes_ano === mesAno);
-  return String(doMes.length + 1).padStart(4, '0') + '/' + mesAno.split('/')[1];
+  const proximo = numeroInicial + doMes.length + 1;
+  return String(proximo).padStart(4, '0') + '/' + mesAno.split('/')[1];
 }
 
 function mesAnoAtual() {
@@ -20,17 +21,17 @@ function mesAnoAtual() {
   return String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
 }
 
-function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos }) {
+function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, numeroInicial }) {
   const [form, setForm] = useState(() => {
     if (oficio) return { ...oficio };
     const ma = mesAnoAtual();
-    return { ...EMPTY, mes_ano: ma, numero: gerarNumeroOficio(oficios, ma) };
+    return { ...EMPTY, mes_ano: ma, numero: gerarNumeroOficio(oficios, ma, numeroInicial) };
   });
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleMesAno = (v) => {
     set('mes_ano', v);
-    set('numero', gerarNumeroOficio(oficios, v));
+    set('numero', gerarNumeroOficio(oficios, v, numeroInicial));
   };
 
   const handleSubmit = () => {
@@ -100,7 +101,7 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos }) 
 }
 
 export default function Oficios() {
-  const { oficios, addOficio, editOficio, deleteOficio, usuarios, processos, addToast } = useApp();
+  const { oficios, addOficio, editOficio, deleteOficio, usuarios, processos, cartorio, addToast } = useApp();
   const [modal, setModal] = useState(null);
   const [filtroMesAno, setFiltroMesAno] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
@@ -245,6 +246,7 @@ export default function Oficios() {
           oficios={oficios}
           usuarios={usuarios}
           processos={processos}
+          numeroInicial={cartorio?.oficio_numero_inicial ?? 0}
         />
       )}
     </div>
