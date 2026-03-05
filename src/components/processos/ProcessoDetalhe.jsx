@@ -379,7 +379,7 @@ function TabCertidoes({ proc, editando, onChange }) {
 }
 
 // ── Modal Principal ───────────────────────────────────────────
-export default function ProcessoDetalhe({ processo, onClose }) {
+export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const { editProcesso, usuarios, servicos, interessados, addInteressado, addToast } = useApp();
   const [aba, setAba]         = useState('dados');
   const [editando, setEditando] = useState(false);
@@ -413,10 +413,8 @@ export default function ProcessoDetalhe({ processo, onClose }) {
   const andsDoProcesso = useApp().andamentos.filter(a => a.processo_id === processo.id);
   const andsPendentes  = andsDoProcesso.filter(a => !a.concluido).length;
 
-  return (
-    <Portal>
-      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="modal modal-lg" style={{ width: 'min(900px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+  const inner = (
+    <div style={inline ? { display: 'flex', flexDirection: 'column' } : { width: 'min(900px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} className={inline ? '' : 'modal modal-lg'}>
 
           {/* Header */}
           <div className="modal-header" style={{ flexShrink: 0 }}>
@@ -485,7 +483,14 @@ export default function ProcessoDetalhe({ processo, onClose }) {
             )}
           </div>
 
-        </div>
+    </div>
+  );
+
+  if (inline) return inner;
+  return (
+    <Portal>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        {inner}
       </div>
     </Portal>
   );
