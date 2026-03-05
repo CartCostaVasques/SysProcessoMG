@@ -568,7 +568,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 }
 
 
-function TabCertidoes({ proc, editando, onChange, interessados, cartorio }) {
+function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios }) {
   const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
 
   const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
@@ -726,7 +726,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabAndamentos processoId={processo.id} usuarios={usuarios} />
             )}
             {aba === 'certidoes' && (
-              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} />
+              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} />
             )}
           </div>
 
