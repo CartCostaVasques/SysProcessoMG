@@ -117,7 +117,6 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
               : <div style={{ fontSize: 13, padding: '6px 0' }}>{proc.especie || '—'}</div>
             }
           </Campo>
-          <Campo label="Município">{inp(proc.municipio, 'municipio')}</Campo>
           <Campo label="Valor do Ato">
             {editando
               ? <input className="form-input" defaultValue={formatBRL(proc.valor_ato)} onBlur={e => onChange('valor_ato', parseBRL(e.target.value))} style={{ fontSize: 12, textAlign: 'right' }} />
@@ -162,11 +161,10 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
       </Secao>
 
       <Secao titulo="Escritura / Procuração / Conclusão" defaultOpen={!!(proc.livro_ato || proc.esc_natureza || proc.dt_conclusao || proc.obs)}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <Campo label="Livro / Ato">{inp(proc.livro_ato, 'livro_ato')}</Campo>
           <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
           <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
-          <Campo label="Natureza do Ato">{inp(proc.esc_natureza, 'esc_natureza', { ph: 'Ex: Compra e Venda' })}</Campo>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           <Campo label="Descrição do Ato / Dados do Imóvel" full>
