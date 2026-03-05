@@ -267,9 +267,16 @@ export default function Processos() {
   const [filtroResp, setFiltroResp]     = useState('');
   const [filtroCateg, setFiltroCateg]   = useState('');
   const numRef = useRef(null);
+  const focadoRef = useRef(false);
 
-  // Foco automático no Nº Interno ao abrir nova linha
-  useEffect(() => { if (newRow && numRef.current) numRef.current.focus(); }, [newRow]);
+  // Foco automático no Nº Interno apenas ao ABRIR nova linha (não a cada digitação)
+  useEffect(() => {
+    if (newRow && !focadoRef.current && numRef.current) {
+      numRef.current.focus();
+      focadoRef.current = true;
+    }
+    if (!newRow) focadoRef.current = false;
+  }, [newRow]);
 
   const categorias  = [...new Set(servicos.map(s => s.categoria))];
   const parsePartes = (v) => { try { return JSON.parse(v || '[]'); } catch { return []; } };
@@ -337,10 +344,22 @@ export default function Processos() {
     addToast('Processo registrado!', 'success');
   };
 
-  const statusBadge = (s) => {
-    const m = { 'Em andamento': 'badge-warning', 'Concluído': 'badge-success', 'Devolvido': 'badge-danger', 'Suspenso': 'badge-neutral' };
-    return <span className={`badge ${m[s] || 'badge-neutral'}`}>{s}</span>;
+  const STATUS_CONF = {
+    'Em andamento': { cor: 'var(--color-warning)', sigla: 'EA' },
+    'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
+    'Devolvido':    { cor: 'var(--color-danger)',  sigla: 'DV' },
+    'Suspenso':     { cor: '#8a8a96',              sigla: 'SP' },
   };
+  const statusBadge = (s) => {
+    const conf = STATUS_CONF[s] || { cor: 'var(--color-text-faint)', sigla: s?.slice(0,2).toUpperCase() };
+    return (
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title={s}>
+        <div style={{ width: 22, height: 22, borderRadius: '50%', background: conf.cor + '22', border: `2px solid ${conf.cor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: conf.cor, letterSpacing: '-0.5px', flexShrink: 0 }}>{conf.sigla}</div>
+      </div>
+    );
+  };
+
+  const doisPrimNomes = (nome = '') => nome.trim().split(/\s+/).slice(0, 2).join(' ');
 
   const renderPartes = (partes) => {
     const arr = toSel(partes);
@@ -349,8 +368,7 @@ export default function Processos() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {arr.map((i, idx) => (
           <span key={idx} style={{ fontSize: 11 }}>
-            {i.vinculo && <span style={{ color: 'var(--color-text-faint)', fontSize: 10, marginRight: 3 }}>{i.vinculo}:</span>}
-            <strong>{i.nome}</strong>
+            <strong>{doisPrimNomes(i.nome)}</strong>
           </span>
         ))}
       </div>
@@ -480,10 +498,14 @@ export default function Processos() {
                 <td style={{ fontSize: 11 }}>{p.especie}</td>
                 <td style={{ maxWidth: 200 }}>{renderPartes(p.partes)}</td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div className="avatar avatar-sm">{usuarios.find(u => u.id === p.responsavel_id)?.nome_simples?.[0]?.toUpperCase() || '?'}</div>
-                    <span style={{ fontSize: 11 }}>{usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '—'}</span>
-                  </div>
+                  {(() => {
+                    const u = usuarios.find(u => u.id === p.responsavel_id);
+                    if (!u) return <span style={{ color: 'var(--color-text-faint)' }}>—</span>;
+                    const iniciais = u.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 3);
+                    return (
+                      <div className="avatar avatar-sm" title={u.nome_simples} style={{ cursor: 'default' }}>{iniciais}</div>
+                    );
+                  })()}
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right', color: 'var(--color-text-muted)' }}>
                   {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
