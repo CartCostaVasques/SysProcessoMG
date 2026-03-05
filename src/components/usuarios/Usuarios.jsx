@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { getInitials, formatDate, PERFIS } from '../../data/mockData.js';
 
@@ -46,7 +47,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
           <span className="modal-title">{usuario ? 'Editar Usuário' : 'Novo Usuário'}</span>
@@ -172,7 +173,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores }) {
           </button>
         </div>
       </div>
-    </div>
+    </div></Portal>
   );
 }
 
