@@ -239,13 +239,16 @@ export function AppProvider({ children }) {
       const { data: existente } = await supabase.from('usuarios').select('id').eq('email', d.email).maybeSingle();
       if (existente) { addToast('E-mail já cadastrado no sistema.', 'error'); return; }
 
-      const { data: authData, error: authError } = await anonClient.auth.signUp({
-        email: d.email,
-        password: d.senha,
+      // Cria usuário direto no auth via função admin (já confirmado, sem email)
+      const { data: authResult, error: authError } = await supabase.rpc('admin_criar_usuario', {
+        p_email: d.email,
+        p_senha: d.senha,
+        p_nome:  d.nome_completo,
       });
       if (authError) throw authError;
-      const uid = authData?.user?.id;
-      if (!uid) throw new Error('Falha ao criar acesso no Auth.');
+      if (!authResult?.ok) throw new Error(authResult?.erro || 'Falha ao criar acesso.');
+      const uid = authResult.id;
+      if (!uid) throw new Error('Falha ao obter ID do usuário.');
 
       // Monta perfil explicitamente (evita passar campos errados)
       const perfil = {
