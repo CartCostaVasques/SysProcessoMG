@@ -10,18 +10,20 @@ export function Configuracoes() {
   const [corTema,   setCorTema]   = useState('padrao');
   const [corAccent, setCorAccent] = useState('#e0e0e6');
   const [form, setForm] = useState({ ...cartorio });
+  const [iniciado,  setIniciado]  = useState(false);
   const [tab, setTab] = useState('cartorio');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // Sincroniza quando usuario e cartorio carregarem do banco
+  // Carrega UMA VEZ quando usuario chegar do banco — não sobrescreve depois
   useEffect(() => {
-    if (usuario?.pref_cor_tema)   setCorTema(usuario.pref_cor_tema);
-    if (usuario?.pref_cor_accent) setCorAccent(usuario.pref_cor_accent);
-    else if (cartorio?.cor_primaria) setCorAccent(cartorio.cor_primaria);
-  }, [usuario?.id, usuario?.pref_cor_tema, usuario?.pref_cor_accent]);
+    if (!usuario?.id || iniciado) return;
+    setIniciado(true);
+    if (usuario.pref_cor_tema)   setCorTema(usuario.pref_cor_tema);
+    if (usuario.pref_cor_accent) setCorAccent(usuario.pref_cor_accent);
+  }, [usuario?.id]);
 
   useEffect(() => {
-    setForm({ ...cartorio });
+    if (cartorio?.id) setForm({ ...cartorio });
   }, [cartorio?.id]);
 
   const handleSave = () => {
