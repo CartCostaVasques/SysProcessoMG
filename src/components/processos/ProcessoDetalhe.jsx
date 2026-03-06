@@ -323,13 +323,13 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
   const usr = usuarios.find(u => u.nome_completo?.toLowerCase().trim() === primeiraNome.toLowerCase().trim())
            || usuarios.find(u => u.nome_simples?.toLowerCase().trim() === primeiraNome.toLowerCase().trim());
   const req = usr
-    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: '', email: usr.email||'', telefone: usr.celular||'' }
+    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: usr.cep||'', email: usr.email||'', telefone: usr.celular||'' }
     : { nome: primeiraNome, cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
 
   const hoje         = new Date().toLocaleDateString('pt-BR');
   const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
   const nomeCartorio = cartorio?.nome || '';
-  const oficial      = cartorio?.responsavel || 'Oficial Registrador';
+  const oficial      = 'Oficial Registrador';
 
   const linhasCert = certidoes.map(c => {
     const matriculas = (c.descricao || c.obs || '').split('\n').filter(l => l.trim());
