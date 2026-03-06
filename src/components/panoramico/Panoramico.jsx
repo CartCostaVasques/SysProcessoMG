@@ -448,25 +448,15 @@ function TabelaComparacao({ titulo, labelA, labelB, linhas, maxValor, agrupado }
                   </td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>{l.vA.qtd||'—'}</td>
                   <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pA}%`, background: 'var(--color-accent)', borderRadius: 3, transition: 'width .3s' }} />
-                      </div>
-                      <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pB}%`, background: '#94a3b8', borderRadius: 3, transition: 'width .3s' }} />
-                      </div>
+                    <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pA}%`, background: 'var(--color-accent)', borderRadius: 3, transition: 'width .3s' }} />
                     </div>
                   </td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{fmtVal(l.vA.valor)}</td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#94a3b8' }}>{l.vB.qtd||'—'}</td>
                   <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pA}%`, background: 'var(--color-accent)', borderRadius: 3 }} />
-                      </div>
-                      <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pB}%`, background: '#94a3b8', borderRadius: 3 }} />
-                      </div>
+                    <div style={{ height: 6, background: 'var(--color-surface-2)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pB}%`, background: '#94a3b8', borderRadius: 3, transition: 'width .3s' }} />
                     </div>
                   </td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, color: '#94a3b8' }}>{fmtVal(l.vB.valor)}</td>
