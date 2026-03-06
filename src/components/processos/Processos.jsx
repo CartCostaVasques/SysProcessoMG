@@ -13,11 +13,13 @@ const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vende
 
 // Formatação de valor BR
 function formatBRL(v) {
-  const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+  const n = parseFloat(v) || 0;
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function parseBRL(s) {
-  return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+  const str = String(s || '').trim();
+  if (str.includes(',')) return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  return parseFloat(str) || 0;
 }
 function InputValor({ value, onChange, style }) {
   const [display, setDisplay] = useState(formatBRL(value || 0));
