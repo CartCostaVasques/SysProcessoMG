@@ -19,6 +19,7 @@ import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
 import Oficios from './components/oficios/Oficios.jsx';
 import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
+import RelatorioServicos from './components/relatorios/RelatorioServicos.jsx';
 import { Configuracoes, LogsAcesso } from './components/configuracoes/Config.jsx';
 
 function AppShell() {
@@ -43,6 +44,7 @@ function AppShell() {
       case 'oficios':       return <Oficios />;
       case 'servicos':      return <Servicos />;
       case 'setores':       return <Setores />;
+      case 'relservicos':   return <RelatorioServicos />;
       case 'configuracoes': return <Configuracoes />;
       case 'logs':          return <LogsAcesso />;
       default:              return <Dashboard setPage={setPage} />;
