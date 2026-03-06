@@ -7,7 +7,17 @@ const formatBRL = v => {
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-function gerarRelatorio(titulo, grupos, cartorio) {
+function primeirosNomes(partes) {
+  try {
+    const arr = JSON.parse(partes || '[]');
+    return arr.slice(0, 2).map(p => {
+      const palavras = (p.nome || '').trim().split(' ');
+      return palavras.slice(0, 2).join(' ');
+    }).join(', ');
+  } catch { return ''; }
+}
+
+function gerarRelatorio(titulo, grupos, cartorio, isConcluido) {
   const nomeCartorio = cartorio?.nome_simples || cartorio?.nome || '';
   const endereco     = cartorio?.endereco || '';
   const cidade       = cartorio?.cidade   || '';
@@ -18,15 +28,22 @@ function gerarRelatorio(titulo, grupos, cartorio) {
   const totalGeral   = grupos.reduce((s, g) => s + g.total, 0);
   const qtdGeral     = grupos.reduce((s, g) => s + g.processos.length, 0);
 
+  const thData = isConcluido ? 'Dt. Conclusão' : 'Dt. Abertura';
+
   const linhasGrupos = grupos.map(g => {
-    const linhasProc = g.processos.map(p => `
-      <tr>
+    const linhasProc = g.processos.map(p => {
+      const dtExibir = isConcluido
+        ? (p.dt_conclusao ? formatDate(p.dt_conclusao) : '—')
+        : formatDate(p.dt_abertura);
+      const partes = primeirosNomes(p.partes);
+      return `<tr>
         <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${p.numero_interno||''}</td>
+        <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${dtExibir}</td>
         <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${p.especie||'—'}</td>
-        <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${formatDate(p.dt_abertura)}</td>
-        <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${p.dt_conclusao ? formatDate(p.dt_conclusao) : '—'}</td>
+        <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;">${partes}</td>
         <td style="padding:4px 8px;border:1px solid #ddd;font-size:11px;text-align:right;">R$ ${formatBRL(p.valor_ato)}</td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
     return `
       <tr>
         <td colspan="5" style="padding:6px 10px;background:#dde6f0;font-size:12px;font-weight:bold;border:1px solid #aab;">
@@ -68,11 +85,11 @@ function gerarRelatorio(titulo, grupos, cartorio) {
 <div class="subtitulo">Emitido em ${hoje} &nbsp;|&nbsp; ${qtdGeral} processo(s)</div>
 <table>
   <thead><tr>
-    <th style="width:90px;">Nº Interno</th>
-    <th>Espécie</th>
-    <th style="width:85px;">Dt. Abertura</th>
-    <th style="width:85px;">Dt. Conclusão</th>
-    <th style="width:95px;text-align:right;">Valor</th>
+    <th style="width:85px;">Nº Interno</th>
+    <th style="width:85px;">${thData}</th>
+    <th style="width:130px;">Espécie</th>
+    <th>Interessados</th>
+    <th style="width:90px;text-align:right;">Valor</th>
   </tr></thead>
   <tbody>${linhasGrupos}</tbody>
 </table>
@@ -85,6 +102,7 @@ function gerarRelatorio(titulo, grupos, cartorio) {
   w.document.close();
   setTimeout(() => w.print(), 600);
 }
+
 
 export default function RelatorioServicos() {
   const { processos, cartorio, usuarios } = useApp();
@@ -103,7 +121,8 @@ export default function RelatorioServicos() {
       const cat = p.categoria || 'Sem Categoria';
       if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0 };
       const usr = usuarios.find(u => u.id === p.responsavel_id);
-      mapa[cat].processos.push({ ...p, _resp: usr?.nome_simples || '—' });
+      const _partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x => (x.nome||'').split(' ').slice(0,2).join(' ')).filter(Boolean).join(', '); } catch { return ''; } })();
+      mapa[cat].processos.push({ ...p, _resp: usr?.nome_simples || '—', _partes });
       mapa[cat].total += parseFloat(p.valor_ato || 0);
     });
     return Object.values(mapa).sort((a, b) => a.categoria.localeCompare(b.categoria));
@@ -126,7 +145,7 @@ export default function RelatorioServicos() {
           </div>
         </div>
         <button className="btn btn-secondary btn-sm"
-          onClick={() => gerarRelatorio(tituloRel, grupos, cartorio)}
+          onClick={() => gerarRelatorio(tituloRel, grupos, cartorio, filtro === 'Concluído')}
           disabled={qtdGeral === 0}>
           🖨 Imprimir Relatório
         </button>
@@ -173,7 +192,7 @@ export default function RelatorioServicos() {
                     R$ {formatBRL(g.total)}
                   </span>
                   <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
-                    onClick={() => gerarRelatorio(`${tituloRel} — ${g.categoria}`, [g], cartorio)}>
+                    onClick={() => gerarRelatorio(`${tituloRel} — ${g.categoria}`, [g], cartorio, filtro === 'Concluído')}>
                     🖨 Setor
                   </button>
                 </div>
@@ -183,7 +202,7 @@ export default function RelatorioServicos() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--color-surface-2)' }}>
-                    {['Nº Interno','Espécie','Responsável','Dt. Abertura','Dt. Conclusão','Valor'].map(h => (
+                    {['Nº Interno', filtro === 'Concluído' ? 'Dt. Conclusão' : 'Dt. Abertura', 'Espécie', 'Interessados', 'Valor'].map(h => (
                       <th key={h} style={{ padding: '6px 12px', fontSize: 10, fontWeight: 700,
                         color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em',
                         textAlign: h === 'Valor' ? 'right' : 'left', borderBottom: '1px solid var(--color-border)' }}>{h}</th>
@@ -195,13 +214,11 @@ export default function RelatorioServicos() {
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)',
                       background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)' }}>
                       <td style={{ padding: '7px 12px', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>{p.numero_interno}</td>
-                      <td style={{ padding: '7px 12px', fontSize: 12 }}>{p.especie || '—'}</td>
-                      <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>{p._resp || '—'}</td>
-                      <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)' }}>{formatDate(p.dt_abertura)}</td>
-                      <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)',
-                        color: p.dt_conclusao ? 'var(--color-success)' : 'var(--color-text-faint)' }}>
-                        {p.dt_conclusao ? formatDate(p.dt_conclusao) : '—'}
+                      <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+                        {filtro === 'Concluído' ? (p.dt_conclusao ? formatDate(p.dt_conclusao) : '—') : formatDate(p.dt_abertura)}
                       </td>
+                      <td style={{ padding: '7px 12px', fontSize: 12 }}>{p.especie || '—'}</td>
+                      <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>{p._partes || '—'}</td>
                       <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)', textAlign: 'right',
                         fontWeight: p.valor_ato > 0 ? 600 : 400,
                         color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
