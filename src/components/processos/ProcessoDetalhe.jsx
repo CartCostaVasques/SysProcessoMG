@@ -584,76 +584,81 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
 
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso }) {
-  const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
+  const [certLocal, setCertLocal] = React.useState(
+    () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
+  );
+
+  // Sincroniza quando proc.certidoes muda externamente
+  React.useEffect(() => {
+    try { setCertLocal(JSON.parse(proc.certidoes || '[]')); } catch { setCertLocal([]); }
+  }, [proc.certidoes]);
 
   const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
 
   const salvarCertidoes = (nova) => {
+    setCertLocal(nova);
     const json = JSON.stringify(nova);
     onChange('certidoes', json);
     editProcesso(processoId, { ...proc, certidoes: json });
   };
-  // add e remove salvam direto; update só atualiza estado local (salva no onBlur)
-  const add    = () => salvarCertidoes([...certidoes, { ...EMPTY_CERT }]);
-  const remove = (idx) => salvarCertidoes(certidoes.filter((_, i) => i !== idx));
-  const update = (idx, k, v) => {
-    const nova = certidoes.map((c, i) => i === idx ? { ...c, [k]: v } : c);
-    onChange('certidoes', JSON.stringify(nova));
+
+  const add    = () => salvarCertidoes([...certLocal, { ...EMPTY_CERT }]);
+  const remove = (idx) => salvarCertidoes(certLocal.filter((_, i) => i !== idx));
+
+  // update local sem salvar ainda (evita requisição por tecla)
+  const updateLocal = (idx, k, v) => {
+    setCertLocal(prev => prev.map((c, i) => i === idx ? { ...c, [k]: v } : c));
   };
+  // flush: salva no banco ao sair do campo
   const flush = () => {
-    // chamado no onBlur de cada campo — persiste no banco
-    const json = proc.certidoes; // já atualizado pelo onChange acima
+    const json = JSON.stringify(certLocal);
+    onChange('certidoes', json);
     editProcesso(processoId, { ...proc, certidoes: json });
   };
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certidoes.length} pedido(s) de certidão</span>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {certidoes.length > 0 && (
-            <button className="btn btn-secondary btn-sm" onClick={() => gerarRequerimento(proc, certidoes, usuarios, cartorio)}>
-              🖨 Imprimir Requerimento
-            </button>
-          )}
-          <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
-        </div>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certLocal.length} pedido(s) de certidão</span>
+        <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
       </div>
 
-      {certidoes.length === 0 && (
+      {certLocal.length === 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
           Clique em "+ Adicionar" para registrar um pedido.
         </div>
       )}
 
-      {certidoes.length > 0 && (
+      {certLocal.length > 0 && (
         <div>
           {/* Cabeçalho */}
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {certidoes.map((c, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
-                <input className="form-input" type="date" value={c.dt_pedido} onChange={e => update(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
-                <select className="form-select" value={c.tipo} onChange={e => { update(idx, 'tipo', e.target.value); setTimeout(flush, 50); }} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
+            {certLocal.map((c, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
+                <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
+                <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
                   <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
                 </select>
                 <textarea
-                      className="form-input"
-                      value={c.descricao || ''}
-                      onChange={e => update(idx, 'descricao', e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          update(idx, 'descricao', (c.descricao || '') + '\n');
-                        }
-                      }}
-                      rows={Math.max(1, (c.descricao || '').split('\n').length)}
-                      style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
-                      placeholder="Ex: Matrícula nº 123, do livro 02-A, datada de 05/03/2026&#10;Enter para nova matrícula"
-                      onBlur={flush}
-                    />
+                  className="form-input"
+                  value={c.descricao || ''}
+                  onChange={e => updateLocal(idx, 'descricao', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + '
+'); } }}
+                  rows={Math.max(1, (c.descricao || '').split('
+').length)}
+                  style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
+                  placeholder={"Ex: Matrícula nº 123, livro 02-A
+Enter para nova matrícula"}
+                  onBlur={flush}
+                />
+                <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
+                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio)}>
+                  🖨 Imprimir
+                </button>
                 <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
               </div>
             ))}
