@@ -105,6 +105,15 @@ export function AppProvider({ children }) {
     if (usuario) {
       carregarTudo();
     }
+  // Aplica preferências visuais do usuário ao logar
+  useEffect(() => {
+    if (!usuario?.id) return;
+    try {
+      const prefs = JSON.parse(localStorage.getItem(`prefs_${usuario.id}`) || '{}');
+      if (prefs.corTema && prefs.corTema !== 'padrao') document.documentElement.setAttribute('data-color', prefs.corTema);
+      else document.documentElement.removeAttribute('data-color');
+      if (prefs.corAccent) document.documentElement.style.setProperty('--color-accent', prefs.corAccent);
+    } catch {}
   }, [usuario?.id]);
 
   const carregarTudo = async () => {
