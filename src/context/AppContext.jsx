@@ -179,7 +179,7 @@ export function AppProvider({ children }) {
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
-  const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) { setCartorio(data); if(data.cor_primaria) document.documentElement.style.setProperty('--color-accent', data.cor_primaria); } } catch(e){} };
+  const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) { setCartorio(data); if(data.cor_primaria) document.documentElement.style.setProperty('--color-accent', data.cor_primaria); if(data.tema && data.tema !== 'padrao') document.documentElement.setAttribute('data-color', data.tema); else document.documentElement.removeAttribute('data-color'); } } catch(e){} };
   const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
   // ── CRUD ───────────────────────────────────────────────
