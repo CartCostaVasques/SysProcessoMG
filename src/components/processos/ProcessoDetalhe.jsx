@@ -10,11 +10,19 @@ const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protoco
 const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
 function formatBRL(v) {
-  const n = parseFloat(String(v || 0).replace(/\./g, '').replace(',', '.')) || 0;
+  // v vem do banco como número (ex: 143.54) — formata direto sem manipular string
+  const n = parseFloat(v) || 0;
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function parseBRL(s) {
-  return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+  // Usuário digita estilo BR (1.234,56) ou US (1234.56) — normaliza ambos
+  const str = String(s || '').trim();
+  // Se tem vírgula, trata como BR: remove pontos de milhar, troca vírgula por ponto
+  if (str.includes(',')) {
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Sem vírgula: número direto (ex: 143.54)
+  return parseFloat(str) || 0;
 }
 
 // ── Seção colapsável ─────────────────────────────────────────
