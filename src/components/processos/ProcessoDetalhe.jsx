@@ -583,16 +583,27 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 }
 
 
-function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios }) {
+function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso }) {
   const certidoes = (() => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } })();
 
   const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
 
-  const add    = () => onChange('certidoes', JSON.stringify([...certidoes, { ...EMPTY_CERT }]));
-  const remove = (idx) => onChange('certidoes', JSON.stringify(certidoes.filter((_, i) => i !== idx)));
+  const salvarCertidoes = (nova) => {
+    const json = JSON.stringify(nova);
+    onChange('certidoes', json);
+    editProcesso(processoId, { ...proc, certidoes: json });
+  };
+  // add e remove salvam direto; update só atualiza estado local (salva no onBlur)
+  const add    = () => salvarCertidoes([...certidoes, { ...EMPTY_CERT }]);
+  const remove = (idx) => salvarCertidoes(certidoes.filter((_, i) => i !== idx));
   const update = (idx, k, v) => {
-    const arr = certidoes.map((c, i) => i === idx ? { ...c, [k]: v } : c);
-    onChange('certidoes', JSON.stringify(arr));
+    const nova = certidoes.map((c, i) => i === idx ? { ...c, [k]: v } : c);
+    onChange('certidoes', JSON.stringify(nova));
+  };
+  const flush = () => {
+    // chamado no onBlur de cada campo — persiste no banco
+    const json = proc.certidoes; // já atualizado pelo onChange acima
+    editProcesso(processoId, { ...proc, certidoes: json });
   };
 
   return (
@@ -605,37 +616,30 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
               🖨 Imprimir Requerimento
             </button>
           )}
-          {editando && <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>}
+          <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
         </div>
       </div>
 
       {certidoes.length === 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
-          {editando ? 'Clique em "+ Adicionar" para registrar um pedido.' : 'Nenhum pedido de certidão registrado.'}
+          Clique em "+ Adicionar" para registrar um pedido.
         </div>
       )}
 
       {certidoes.length > 0 && (
         <div>
           {/* Cabeçalho */}
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 90px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span style={{ textAlign: 'center' }}>Concluído</span><span></span>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {certidoes.map((c, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 90px 28px', gap: 8, padding: '8px 10px', background: c.concluido ? 'transparent' : 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'center', opacity: c.concluido ? 0.65 : 1 }}>
-                {editando
-                  ? <input className="form-input" type="date" value={c.dt_pedido} onChange={e => update(idx, 'dt_pedido', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
-                  : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{formatDate(c.dt_pedido)}</span>
-                }
-                {editando
-                  ? <select className="form-select" value={c.tipo} onChange={e => update(idx, 'tipo', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
-                      <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                  : <span style={{ fontSize: 12, fontWeight: 500 }}>{c.tipo || '—'}</span>
-                }
-                {editando
-                  ? <textarea
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
+                <input className="form-input" type="date" value={c.dt_pedido} onChange={e => update(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
+                <select className="form-select" value={c.tipo} onChange={e => { update(idx, 'tipo', e.target.value); setTimeout(flush, 50); }} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
+                  <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
+                </select>
+                <textarea
                       className="form-input"
                       value={c.descricao || ''}
                       onChange={e => update(idx, 'descricao', e.target.value)}
@@ -648,16 +652,9 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                       rows={Math.max(1, (c.descricao || '').split('\n').length)}
                       style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
                       placeholder="Ex: Matrícula nº 123, do livro 02-A, datada de 05/03/2026&#10;Enter para nova matrícula"
+                      onBlur={flush}
                     />
-                  : <div style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'pre-line', lineHeight: '1.6' }}>{c.descricao || '—'}</div>
-                }
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <input type="checkbox" checked={!!c.concluido} onChange={e => update(idx, 'concluido', e.target.checked)} disabled={!editando} style={{ width: 16, height: 16, cursor: editando ? 'pointer' : 'default' }} />
-                </div>
-                {editando
-                  ? <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
-                  : <span></span>
-                }
+                <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
               </div>
             ))}
           </div>
@@ -754,7 +751,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabAndamentos processoId={processo.id} usuarios={usuarios} />
             )}
             {aba === 'certidoes' && (
-              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} />
+              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} />
             )}
           </div>
 
@@ -766,15 +763,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
                 🖨 Arquivo de Atos
               </button>
             )}
-            {/* Botão Concluir processo */}
-            {aba === 'dados' && !editando && form.status !== 'Concluído' && (
-              <button className="btn btn-success btn-sm" onClick={async () => {
-                const hoje = new Date().toISOString().split('T')[0];
-                await editProcesso(processo.id, { ...form, status: 'Concluído', dt_conclusao: form.dt_conclusao || hoje });
-              }}>
-                ✓ Concluir Processo
-              </button>
-            )}
+
             {editando ? (
               <>
                 <button className="btn btn-secondary" onClick={descartar}>✕ Descartar</button>
