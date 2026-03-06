@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import ProcessoDetalhe from './ProcessoDetalhe.jsx';
 import { formatDate } from '../../data/mockData.js';
@@ -23,7 +23,7 @@ function NomesPartes({ partes, interessados }) {
   const arr = parsePartes(partes);
   if (!arr.length) return <span style={{ color: 'var(--color-text-faint)' }}>—</span>;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {arr.slice(0, 2).map((p, i) => {
         const int = interessados.find(x => x.id === p.id);
         const nome = int?.nome || p.nome || '';
@@ -35,66 +35,93 @@ function NomesPartes({ partes, interessados }) {
   );
 }
 
+// Colunas fixas — mesmas em todos os quadros
+const COLS = [
+  { key: 'num',       label: 'Nº',           w: '60px'  },
+  { key: 'dt',        label: 'Dt. Cadastro', w: '96px'  },
+  { key: 'cat',       label: 'Categoria',    w: '120px' },
+  { key: 'servico',   label: 'Serviço',      w: 'auto'  },
+  { key: 'partes',    label: 'Interessados', w: '180px' },
+  { key: 'resp',      label: 'Resp.',        w: '60px'  },
+  { key: 'valor',     label: 'Valor',        w: '110px' },
+  { key: 'and',       label: 'Andamentos',   w: '90px'  },
+  { key: 'status',    label: 'Status',       w: '70px'  },
+];
+
 function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecionar }) {
   return (
-    <div className="table-wrapper">
-      <table className="data-table" style={{ fontSize: 12 }}>
-        <thead>
-          <tr>
-            <th style={{ width: 55 }}>Nº</th>
-            <th style={{ width: 90 }}>Dt. Cadastro</th>
-            <th style={{ width: 110 }}>Categoria</th>
-            <th style={{ minWidth: 120 }}>Serviço</th>
-            <th style={{ minWidth: 130 }}>Interessados</th>
-            <th style={{ width: 70 }}>Resp.</th>
-            <th style={{ width: 110 }}>Valor</th>
-            <th style={{ width: 80 }}>Andamentos</th>
-            <th style={{ width: 90 }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lista.length === 0 && (
-            <tr><td colSpan={9}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
-          )}
-          {lista.map(p => {
-            const conf = STATUS_CONF[p.status] || { cor: 'var(--color-text-faint)', sigla: '??' };
-            const resp = usuarios.find(u => u.id === p.responsavel_id);
-            const pend = andamentos.filter(a => a.processo_id === p.id && !a.concluido).length;
-            return (
-              <tr key={p.id} onClick={() => onSelecionar(p)} style={{ cursor: 'pointer', opacity: p.status === 'Concluído' ? 0.7 : 1 }} title="Clique para abrir o detalhe">
-                <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.numero_interno}</span></td>
-                <td style={{ color: 'var(--color-text-muted)' }}>{formatDate(p.dt_abertura)}</td>
-                <td><span className="badge badge-neutral">{p.categoria}</span></td>
-                <td>{p.especie || '—'}</td>
-                <td><NomesPartes partes={p.partes} interessados={interessados} /></td>
-                <td>
-                  {resp
-                    ? <div className="avatar avatar-sm" title={resp.nome_simples}>{resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,3)}</div>
-                    : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
-                  }
-                </td>
-                <td style={{ fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--color-text-muted)' }}>
-                  {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  {pend > 0
-                    ? <span className="badge badge-warning">{pend} pend.</span>
-                    : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
-                  }
-                </td>
-                <td>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: conf.cor + '22', border: `2px solid ${conf.cor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: conf.cor }}>
-                      {conf.sigla}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 12 }}>
+      <colgroup>
+        {COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}
+      </colgroup>
+      <thead>
+        <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+          {COLS.map(c => (
+            <th key={c.key} style={{
+              padding: '5px 10px', fontSize: 10, fontWeight: 700,
+              color: 'var(--color-text-faint)', textTransform: 'uppercase',
+              letterSpacing: '0.06em', textAlign: c.key === 'valor' ? 'right' : 'left',
+            }}>{c.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {lista.length === 0 && (
+          <tr><td colSpan={9}>
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <div className="empty-state-text">Nenhum processo encontrado</div>
+            </div>
+          </td></tr>
+        )}
+        {lista.map((p, i) => {
+          const conf = STATUS_CONF[p.status] || { cor: 'var(--color-text-faint)', sigla: '??' };
+          const resp = usuarios.find(u => u.id === p.responsavel_id);
+          const pend = andamentos.filter(a => a.processo_id === p.id && !a.concluido).length;
+          return (
+            <tr key={p.id} onClick={() => onSelecionar(p)}
+              style={{ cursor: 'pointer', borderBottom: '1px solid var(--color-border)',
+                background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)',
+                opacity: p.status === 'Concluído' ? 0.75 : 1 }}>
+              <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.numero_interno}</td>
+              <td style={{ padding: '6px 10px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{formatDate(p.dt_abertura)}</td>
+              <td style={{ padding: '6px 10px', overflow: 'hidden' }}>
+                <span className="badge badge-neutral" style={{ fontSize: 10, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{p.categoria}</span>
+              </td>
+              <td style={{ padding: '6px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.especie || '—'}</td>
+              <td style={{ padding: '6px 10px', overflow: 'hidden' }}>
+                <NomesPartes partes={p.partes} interessados={interessados} />
+              </td>
+              <td style={{ padding: '6px 10px' }}>
+                {resp
+                  ? <div className="avatar avatar-sm" title={resp.nome_simples}>{resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2)}</div>
+                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
+                }
+              </td>
+              <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', textAlign: 'right',
+                color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
+                fontWeight: p.valor_ato > 0 ? 600 : 400 }}>
+                {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
+              </td>
+              <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                {pend > 0
+                  ? <span className="badge badge-warning">{pend} pend.</span>
+                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
+                }
+              </td>
+              <td style={{ padding: '6px 10px' }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%',
+                  background: conf.cor + '22', border: `2px solid ${conf.cor}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 9, fontWeight: 800, color: conf.cor }}>
+                  {conf.sigla}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
@@ -104,13 +131,13 @@ export default function ProcessoDetalhePage() {
   const [selecionado,  setSelecionado]  = useState(null);
   const [busca,        setBusca]        = useState('');
   const [filtroStatus, setFiltroStatus] = useState('Em andamento');
-  const [modoVis,      setModoVis]      = useState('lista'); // 'lista' | 'responsavel'
+  const [modoVis,      setModoVis]      = useState('lista');
 
   const processoAtual = selecionado
     ? processos.find(p => p.id === selecionado.id) || selecionado
     : null;
 
-  const lista = processos.filter(p => {
+  const lista = useMemo(() => processos.filter(p => {
     const partes = parsePartes(p.partes);
     const nomesPartes = partes.map(pt => {
       const int = interessados.find(x => x.id === pt.id);
@@ -119,7 +146,21 @@ export default function ProcessoDetalhePage() {
     const txt = (p.numero_interno + p.especie + p.categoria + nomesPartes).toLowerCase();
     return (!busca || txt.includes(busca.toLowerCase()))
         && (!filtroStatus || p.status === filtroStatus);
-  });
+  }), [processos, busca, filtroStatus, interessados]);
+
+  const totalGeral = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
+
+  const grupos = useMemo(() => {
+    const mapa = {};
+    lista.forEach(p => {
+      const resp = usuarios.find(u => u.id === p.responsavel_id);
+      const key  = resp?.nome_simples || '— Sem responsável';
+      if (!mapa[key]) mapa[key] = { nome: key, avatar: resp ? resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2) : '?', processos: [], total: 0 };
+      mapa[key].processos.push(p);
+      mapa[key].total += parseFloat(p.valor_ato || 0);
+    });
+    return Object.values(mapa).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [lista, usuarios]);
 
   if (processoAtual) {
     return (
@@ -132,24 +173,20 @@ export default function ProcessoDetalhePage() {
     );
   }
 
-  // Agrupamento por responsável
-  const grupos = lista.reduce((acc, p) => {
-    const resp = usuarios.find(u => u.id === p.responsavel_id);
-    const key  = resp?.nome_simples || '— Sem responsável';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(p);
-    return acc;
-  }, {});
-  const ordemGrupos = Object.keys(grupos).sort();
-
   return (
     <div className="fade-in">
       <div className="page-header">
         <div>
           <div className="page-title">Processos — Detalhe</div>
-          <div className="page-sub">{lista.length} processo(s) · clique para abrir o detalhe</div>
+          <div className="page-sub">
+            {lista.length} processo(s)
+            {modoVis === 'lista' && totalGeral > 0 && (
+              <span style={{ marginLeft: 8, fontFamily: 'var(--font-mono)', color: 'var(--color-success)', fontWeight: 600 }}>
+                · R$ {formatBRL(totalGeral)}
+              </span>
+            )}
+          </div>
         </div>
-        {/* Alternância de modo */}
         <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
           {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
             <button key={id} onClick={() => setModoVis(id)} style={{
@@ -175,29 +212,41 @@ export default function ProcessoDetalhePage() {
           <option value="Devolvido">Devolvido</option>
           <option value="Suspenso">Suspenso</option>
         </select>
-        {(busca || filtroStatus) && (
+        {(busca || filtroStatus !== 'Em andamento') && (
           <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroStatus('Em andamento'); }}>↺ Limpar</button>
         )}
       </div>
 
       {/* ── Modo Lista ── */}
       {modoVis === 'lista' && (
-        <TabelaProcessos lista={lista} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <TabelaProcessos lista={lista} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+        </div>
       )}
 
       {/* ── Modo Por Responsável ── */}
       {modoVis === 'responsavel' && (
-        ordemGrupos.length === 0
-          ? <TabelaProcessos lista={[]} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
-          : <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {ordemGrupos.map(resp => (
-                <div key={resp}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', marginBottom: 6 }}>
-                    <div className="avatar avatar-sm">{resp.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,3)}</div>
-                    <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{resp}</span>
-                    <span className="badge badge-neutral">{grupos[resp].length} processo{grupos[resp].length !== 1 ? 's' : ''}</span>
+        grupos.length === 0
+          ? <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <TabelaProcessos lista={[]} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+            </div>
+          : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {grupos.map(g => (
+                <div key={g.nome} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                  {/* Cabeçalho do grupo com total */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 16px', background: 'var(--color-surface-2)',
+                    borderBottom: '1px solid var(--color-border)' }}>
+                    <div className="avatar avatar-sm">{g.avatar}</div>
+                    <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{g.nome}</span>
+                    <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length} processo{g.processos.length !== 1 ? 's' : ''}</span>
+                    {g.total > 0 && (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-success)', marginLeft: 8 }}>
+                        R$ {formatBRL(g.total)}
+                      </span>
+                    )}
                   </div>
-                  <TabelaProcessos lista={grupos[resp]} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+                  <TabelaProcessos lista={g.processos} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
                 </div>
               ))}
             </div>
