@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 const MESES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -115,6 +115,18 @@ export default function Panoramico() {
     return Array.from(s).sort();
   }, [processos, anoB]);
 
+  // Se o mês selecionado não existe nos disponíveis, ajusta para o mais recente
+  useEffect(() => {
+    if (mesesDispA.length && !mesesDispA.includes(mesA)) {
+      setMesA(mesesDispA[mesesDispA.length - 1]);
+    }
+  }, [mesesDispA]);
+  useEffect(() => {
+    if (mesesDispB.length && !mesesDispB.includes(mesB)) {
+      setMesB(mesesDispB[mesesDispB.length - 1]);
+    }
+  }, [mesesDispB]);
+
   // Dados dos dois períodos
   const listaA = useMemo(() => filtrarProcessos(processos, anoA, modoVis === 'anual' ? 'todos' : mesA), [processos, anoA, mesA, modoVis]);
   const listaB = useMemo(() => filtrarProcessos(processos, anoB, modoVis === 'anual' ? 'todos' : mesB), [processos, anoB, mesB, modoVis]);
@@ -197,7 +209,7 @@ export default function Panoramico() {
             )}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
-              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoA} onChange={e => setAnoA(e.target.value)}>
+              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoA} onChange={e => { setAnoA(e.target.value); setMesA(mesAtual); }}>
                 {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
@@ -220,7 +232,7 @@ export default function Panoramico() {
             )}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
-              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoB} onChange={e => setAnoB(e.target.value)}>
+              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoB} onChange={e => { setAnoB(e.target.value); setMesB(mesAtual); }}>
                 {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
