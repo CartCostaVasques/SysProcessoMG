@@ -584,12 +584,12 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
 
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso }) {
-  const [certLocal, setCertLocal] = React.useState(
+  const [certLocal, setCertLocal] = useState(
     () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
   );
 
   // Sincroniza quando proc.certidoes muda externamente
-  React.useEffect(() => {
+  useEffect(() => {
     try { setCertLocal(JSON.parse(proc.certidoes || '[]')); } catch { setCertLocal([]); }
   }, [proc.certidoes]);
 
