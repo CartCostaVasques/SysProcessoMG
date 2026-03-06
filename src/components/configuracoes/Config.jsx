@@ -152,10 +152,14 @@ export function Configuracoes() {
               <div className="form-label" style={{ marginBottom: 10 }}>Paleta de Cores</div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {[
-                  { id: 'padrao', label: '⬛ Cinza Escuro', preview: '#18181b' },
-                  { id: 'azul',   label: '🔵 Azul Escuro',  preview: '#0d1528' },
-                  { id: 'verde',  label: '🟢 Verde Escuro', preview: '#0a1610' },
-                  { id: 'roxo',   label: '🟣 Roxo Escuro',  preview: '#120f1e' },
+                  { id: 'padrao',     label: '⬛ Cinza Escuro',   preview: '#18181b' },
+                  { id: 'cinza-medio',label: '▪️ Cinza Médio',    preview: '#2a2a2e' },
+                  { id: 'azul',       label: '🔵 Azul Escuro',    preview: '#0d1528' },
+                  { id: 'azul-medio', label: '🩵 Azul Médio',     preview: '#0f1e38' },
+                  { id: 'verde',      label: '🟢 Verde Escuro',   preview: '#0a1610' },
+                  { id: 'verde-medio',label: '🍃 Verde Médio',    preview: '#0f2218' },
+                  { id: 'roxo',       label: '🟣 Roxo Escuro',    preview: '#120f1e' },
+                  { id: 'marrom',     label: '🟫 Marrom Escuro',  preview: '#1a1208' },
                 ].map(c => (
                   <button key={c.id} onClick={() => aplicarCorTema(c.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: corTema === c.id ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: `2px solid ${corTema === c.id ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 13, color: corTema === c.id ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: corTema === c.id ? 600 : 400 }}
