@@ -107,13 +107,19 @@ export function Servicos() {
             <span className="badge badge-neutral">{g.items.length} subcategorias</span>
           </div>
           <div className="table-wrapper">
-            <table className="data-table">
+            <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <colgroup>
+                <col style={{ width: '220px' }} />
+                <col />
+                <col style={{ width: '90px' }} />
+                <col style={{ width: '72px' }} />
+              </colgroup>
               <thead><tr><th>Subcategoria</th><th>Descrição</th><th>Status</th><th></th></tr></thead>
               <tbody>
                 {g.items.map(s => (
                   <tr key={s.id}>
-                    <td style={{ fontWeight: 500 }}>{s.subcategoria}</td>
-                    <td style={{ color: 'var(--color-text-muted)' }}>{s.descricao || '—'}</td>
+                    <td style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.subcategoria}</td>
+                    <td style={{ color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.descricao || '—'}</td>
                     <td><span className={`badge ${s.ativo ? 'badge-success' : 'badge-neutral'}`}>{s.ativo ? 'Ativo' : 'Inativo'}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
