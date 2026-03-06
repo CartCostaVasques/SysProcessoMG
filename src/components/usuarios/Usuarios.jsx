@@ -21,7 +21,7 @@ const TODOS_MODULOS = MODULOS.map(m => m.id);
 const EMPTY = {
   nome_completo: '', nome_simples: '', email: '', cpf: '', rg: '',
   celular: '', cargo: '', perfil: 'Escrevente', setor: '',
-  endereco: '', cidade: '', uf: 'MT', ativo: true, permissoes: ['dashboard','processos','tarefas'],
+  endereco: '', cidade: '', uf: 'MT', cep: '', ativo: true, permissoes: ['dashboard','processos','tarefas'],
 };
 
 function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando, onRedefinirSenha }) {
@@ -120,6 +120,10 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
               <div className="form-group">
                 <label className="form-label">Cidade</label>
                 <input className="form-input" value={form.cidade} onChange={e => set('cidade', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">CEP</label>
+                <input className="form-input" value={form.cep || ''} onChange={e => set('cep', e.target.value)} placeholder="00000-000" />
               </div>
               <div className="form-group">
                 <label className="form-label">UF</label>
