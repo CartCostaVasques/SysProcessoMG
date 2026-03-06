@@ -105,6 +105,8 @@ export function AppProvider({ children }) {
     if (usuario) {
       carregarTudo();
     }
+  }, [usuario?.id]);
+
   // Aplica preferências visuais do usuário ao logar
   useEffect(() => {
     if (!usuario?.id) return;
