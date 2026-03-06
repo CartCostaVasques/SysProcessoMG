@@ -40,7 +40,7 @@ const COLS = [
   { key: 'num',       label: 'Nº',           w: '60px'  },
   { key: 'dt',        label: 'Dt. Cadastro', w: '96px'  },
   { key: 'cat',       label: 'Categoria',    w: '120px' },
-  { key: 'servico',   label: 'Serviço',      w: 'auto'  },
+  { key: 'servico',   label: 'Serviço',      w: '226px' },
   { key: 'partes',    label: 'Interessados', w: '180px' },
   { key: 'resp',      label: 'Resp.',        w: '60px'  },
   { key: 'valor',     label: 'Valor',        w: '110px' },
