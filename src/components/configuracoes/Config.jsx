@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 // ─────────────────────────────────────────────
@@ -7,11 +7,22 @@ import { useApp } from '../../context/AppContext.jsx';
 export function Configuracoes() {
   const { cartorio, salvarCartorio, tema, toggleTema, addToast, usuario, salvarPrefsUsuario } = useApp();
 
-  const [corTema,   setCorTema]   = useState(() => usuario?.pref_cor_tema   || document.documentElement.getAttribute('data-color') || 'padrao');
-  const [corAccent, setCorAccent] = useState(() => usuario?.pref_cor_accent || cartorio?.cor_primaria || '#e0e0e6');
+  const [corTema,   setCorTema]   = useState('padrao');
+  const [corAccent, setCorAccent] = useState('#e0e0e6');
   const [form, setForm] = useState({ ...cartorio });
   const [tab, setTab] = useState('cartorio');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // Sincroniza quando usuario e cartorio carregarem do banco
+  useEffect(() => {
+    if (usuario?.pref_cor_tema)   setCorTema(usuario.pref_cor_tema);
+    if (usuario?.pref_cor_accent) setCorAccent(usuario.pref_cor_accent);
+    else if (cartorio?.cor_primaria) setCorAccent(cartorio.cor_primaria);
+  }, [usuario?.id, usuario?.pref_cor_tema, usuario?.pref_cor_accent]);
+
+  useEffect(() => {
+    setForm({ ...cartorio });
+  }, [cartorio?.id]);
 
   const handleSave = () => {
     const { tema: _t, ...formSemTema } = form;
