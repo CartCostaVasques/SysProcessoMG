@@ -71,6 +71,14 @@ export function AppProvider({ children }) {
 
       if (data) {
         setUsuario(data);
+        if (data.pref_cor_tema && data.pref_cor_tema !== 'padrao') {
+          document.documentElement.setAttribute('data-color', data.pref_cor_tema);
+        } else {
+          document.documentElement.removeAttribute('data-color');
+        }
+        if (data.pref_cor_accent) {
+          document.documentElement.style.setProperty('--color-accent', data.pref_cor_accent);
+        }
       } else {
         // Perfil não encontrado — cria um mínimo para não travar
         const { data: authUser } = await supabase.auth.getUser();
@@ -107,16 +115,7 @@ export function AppProvider({ children }) {
     }
   }, [usuario?.id]);
 
-  // Aplica preferências visuais do usuário ao logar
-  useEffect(() => {
-    if (!usuario?.id) return;
-    try {
-      const prefs = JSON.parse(localStorage.getItem(`prefs_${usuario.id}`) || '{}');
-      if (prefs.corTema && prefs.corTema !== 'padrao') document.documentElement.setAttribute('data-color', prefs.corTema);
-      else document.documentElement.removeAttribute('data-color');
-      if (prefs.corAccent) document.documentElement.style.setProperty('--color-accent', prefs.corAccent);
-    } catch {}
-  }, [usuario?.id]);
+
 
   const carregarTudo = async () => {
     await Promise.allSettled([
@@ -181,6 +180,14 @@ export function AppProvider({ children }) {
   }, [usuario]);
 
   // ── FETCH ──────────────────────────────────────────────
+  const salvarPrefsUsuario = async (prefs) => {
+    if (!usuario?.id) return;
+    try {
+      await supabase.from('usuarios').update(prefs).eq('id', usuario.id);
+      setUsuario(prev => ({ ...prev, ...prefs }));
+    } catch(e) { console.error(e); }
+  };
+
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
   const fetchInteressados = async () => { try { const {data} = await supabase.from('interessados').select('*').order('nome'); if(data) setInteressados(data); } catch(e){console.error('interessados',e)} };
   const fetchProcessos = async () => { try { const [{data:procs},{data:ands}] = await Promise.all([supabase.from('processos').select('*').order('dt_abertura',{ascending:false}), supabase.from('andamentos').select('processo_id')]); if(procs) { const counts = (ands||[]).reduce((acc,a)=>{acc[a.processo_id]=(acc[a.processo_id]||0)+1;return acc;},{}); setProcessos(procs.map(p=>({...p,total_andamentos:counts[p.id]||0}))); } } catch(e){console.error('processos',e)} };
@@ -327,7 +334,7 @@ export function AppProvider({ children }) {
       loading,
       temPermissao,
       interessados, addInteressado, editInteressado, deleteInteressado,
-      carregarTudo, fetchProcessos, fetchAndamentos,
+      carregarTudo, fetchProcessos, fetchAndamentos, salvarPrefsUsuario,
     }}>
       {children}
     </AppContext.Provider>
