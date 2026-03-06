@@ -5,25 +5,18 @@ import { useApp } from '../../context/AppContext.jsx';
 //  CONFIGURAÇÕES DO CARTÓRIO
 // ─────────────────────────────────────────────
 export function Configuracoes() {
-  const { cartorio, salvarCartorio, tema, toggleTema, addToast, usuario } = useApp();
+  const { cartorio, salvarCartorio, tema, toggleTema, addToast, usuario, salvarPrefsUsuario } = useApp();
 
-  // Preferências visuais salvas por usuário no localStorage
-  const prefKey = usuario?.id ? `prefs_${usuario.id}` : 'prefs_guest';
-  const loadPrefs = () => { try { return JSON.parse(localStorage.getItem(prefKey) || '{}'); } catch { return {}; } };
-  const savePrefs = (obj) => localStorage.setItem(prefKey, JSON.stringify({ ...loadPrefs(), ...obj }));
-
-  const [corTema, setCorTema] = useState(() => loadPrefs().corTema || document.documentElement.getAttribute('data-color') || 'padrao');
-  const [corAccent, setCorAccent] = useState(() => loadPrefs().corAccent || cartorio?.cor_primaria || '#e0e0e6');
+  const [corTema,   setCorTema]   = useState(() => usuario?.pref_cor_tema   || document.documentElement.getAttribute('data-color') || 'padrao');
+  const [corAccent, setCorAccent] = useState(() => usuario?.pref_cor_accent || cartorio?.cor_primaria || '#e0e0e6');
   const [form, setForm] = useState({ ...cartorio });
   const [tab, setTab] = useState('cartorio');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleSave = () => {
-    // Salva dados do cartório sem incluir tema (evita constraint)
     const { tema: _t, ...formSemTema } = form;
     salvarCartorio({ ...formSemTema, cor_primaria: corAccent });
-    // Preferências visuais ficam só no localStorage por usuário
-    savePrefs({ corTema, corAccent });
+    salvarPrefsUsuario({ pref_cor_tema: corTema, pref_cor_accent: corAccent });
     addToast('Configurações salvas!', 'success');
   };
 
@@ -42,7 +35,7 @@ export function Configuracoes() {
   const handleReset = () => {
     aplicarCorTema('padrao');
     aplicarCorAccent('#e0e0e6');
-    savePrefs({ corTema: 'padrao', corAccent: '#e0e0e6' });
+    salvarPrefsUsuario({ pref_cor_tema: 'padrao', pref_cor_accent: '#e0e0e6' });
     addToast('Cores restauradas ao padrão.', 'info');
   };
 
