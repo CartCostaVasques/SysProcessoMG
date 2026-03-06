@@ -87,7 +87,7 @@ function gerarRelatorio(titulo, grupos, cartorio) {
 }
 
 export default function RelatorioServicos() {
-  const { processos, cartorio } = useApp();
+  const { processos, cartorio, usuarios } = useApp();
   const [filtro, setFiltro] = useState('Em andamento');
   const [busca, setBusca]   = useState('');
 
@@ -102,7 +102,8 @@ export default function RelatorioServicos() {
     lista.forEach(p => {
       const cat = p.categoria || 'Sem Categoria';
       if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0 };
-      mapa[cat].processos.push(p);
+      const usr = usuarios.find(u => u.id === p.responsavel_id);
+      mapa[cat].processos.push({ ...p, _resp: usr?.nome_simples || '—' });
       mapa[cat].total += parseFloat(p.valor_ato || 0);
     });
     return Object.values(mapa).sort((a, b) => a.categoria.localeCompare(b.categoria));
@@ -195,7 +196,7 @@ export default function RelatorioServicos() {
                       background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)' }}>
                       <td style={{ padding: '7px 12px', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600 }}>{p.numero_interno}</td>
                       <td style={{ padding: '7px 12px', fontSize: 12 }}>{p.especie || '—'}</td>
-                      <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>{p.responsavel || '—'}</td>
+                      <td style={{ padding: '7px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>{p._resp || '—'}</td>
                       <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)' }}>{formatDate(p.dt_abertura)}</td>
                       <td style={{ padding: '7px 12px', fontSize: 12, fontFamily: 'var(--font-mono)',
                         color: p.dt_conclusao ? 'var(--color-success)' : 'var(--color-text-faint)' }}>
