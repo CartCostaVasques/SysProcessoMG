@@ -134,15 +134,21 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (email, senha) => {
     try {
+      console.log('[LOGIN] Tentando login para:', email);
+      console.log('[LOGIN] URL Supabase:', SUPABASE_URL);
+      console.log('[LOGIN] ANON Key (primeiros 20 chars):', SUPABASE_ANON?.substring(0, 20));
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      console.log('[LOGIN] Resposta data:', data);
+      console.log('[LOGIN] Resposta error:', error);
       if (error) {
-        addToast(error.message || 'Credenciais inválidas.', 'error');
+        console.error('[LOGIN] Erro completo:', JSON.stringify(error));
+        addToast(`Erro: ${error.message} (status: ${error.status})`, 'error');
         return false;
       }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
     } catch (err) {
-      console.error('[Login] Exceção:', err);
+      console.error('[LOGIN] Exceção:', err);
       addToast('Erro ao conectar. Tente novamente.', 'error');
       return false;
     }
