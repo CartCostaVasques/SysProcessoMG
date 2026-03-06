@@ -79,6 +79,10 @@ export function AppProvider({ children }) {
         if (data.pref_cor_accent) {
           document.documentElement.style.setProperty('--color-accent', data.pref_cor_accent);
         }
+        if (data.pref_tema_base) {
+          setTema(data.pref_tema_base);
+          document.documentElement.setAttribute('data-theme', data.pref_tema_base);
+        }
       } else {
         // Perfil não encontrado — cria um mínimo para não travar
         const { data: authUser } = await supabase.auth.getUser();
@@ -179,6 +183,18 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  const setTemaBase = useCallback(async (novoTema) => {
+    setTema(novoTema);
+    document.documentElement.setAttribute('data-theme', novoTema);
+    // Persiste como preferência do usuário
+    if (usuario?.id) {
+      try {
+        await supabase.from('usuarios').update({ pref_tema_base: novoTema }).eq('id', usuario.id);
+        setUsuario(prev => ({ ...prev, pref_tema_base: novoTema }));
+      } catch(e) { console.error(e); }
+    }
+  }, [usuario?.id]);
+
   const temPermissao = useCallback((modulo) => {
     if (!usuario) return false;
     if (usuario.perfil === 'Administrador') return true;
@@ -263,7 +279,33 @@ export function AppProvider({ children }) {
     } catch(e) { addToast(e.message, 'error'); }
   }, []);
   const editUsuario   = useCallback(async (id, d) => { try { const { senha: _s, ...dadosSenha } = d; const {data,error} = await supabase.from('usuarios').update(dadosSenha).eq('id',id).select().single(); if(error) throw error; setUsuarios(p=>p.map(u=>u.id===id?data:u)); if(usuario?.id===id) setUsuario(data); addToast('Salvo!','success'); } catch(e){ addToast(e.message,'error'); } }, [usuario]);
-  const redefinirSenha = useCallback(async (email) => { try { const {error} = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }); if(error) throw error; addToast('E-mail de redefinição enviado para ' + email, 'success'); } catch(e){ addToast(e.message,'error'); } }, []);
+  const alterarSenha = useCallback(async (userId, novaSenha) => {
+    if (!novaSenha || novaSenha.length < 6) {
+      addToast('Senha deve ter mínimo 6 caracteres.', 'error'); return false;
+    }
+    try {
+      const { data, error } = await supabase.rpc('admin_alterar_senha', {
+        p_user_id: userId,
+        p_nova_senha: novaSenha,
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.erro || 'Erro ao alterar senha');
+      addToast('Senha alterada com sucesso!', 'success');
+      return true;
+    } catch(e) { addToast(e.message, 'error'); return false; }
+  }, []);
+
+  const minhaSenha = useCallback(async (novaSenha) => {
+    if (!novaSenha || novaSenha.length < 6) {
+      addToast('Senha deve ter mínimo 6 caracteres.', 'error'); return false;
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: novaSenha });
+      if (error) throw error;
+      addToast('Sua senha foi alterada!', 'success');
+      return true;
+    } catch(e) { addToast(e.message, 'error'); return false; }
+  }, []);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
@@ -330,7 +372,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
-      usuarios, addUsuario, editUsuario, deleteUsuario, redefinirSenha,
+      usuarios, addUsuario, editUsuario, deleteUsuario, alterarSenha, minhaSenha,
       processos, addProcesso, editProcesso, deleteProcesso,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
@@ -340,7 +382,7 @@ export function AppProvider({ children }) {
       logs, cartorio, salvarCartorio,
       dashStats, fetchDashboard,
       getProximoNumeroOficio,
-      tema, toggleTema,
+      tema, toggleTema, setTemaBase,
       sidebarCollapsed, setSidebarCollapsed,
       toasts, addToast,
       loading,
