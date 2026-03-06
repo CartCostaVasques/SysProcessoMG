@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'oficios',        label: 'Ofícios',          icon: '✉',  section: 'Operacional' },
   { id: 'servicos',       label: 'Tipo de Serviços', icon: '⊞',  section: 'Cadastros' },
   { id: 'setores',        label: 'Setores',          icon: '▦',  section: 'Cadastros' },
+  { id: 'relservicos',    label: 'Serviços por Setor',icon: '📊', section: 'Relatórios' },
   { id: 'usuarios',       label: 'Usuários',         icon: '◉',  section: 'Cadastros' },
   { id: 'configuracoes',  label: 'Configurações',    icon: '⚙',  section: 'Sistema' },
   { id: 'logs',           label: 'Logs de Acesso',   icon: '◎',  section: 'Sistema' },
@@ -79,7 +80,7 @@ export function Header({ page, setPage }) {
   const PAGE_LABELS = {
     dashboard: 'Dashboard', processos: 'Processos', andamentos: 'Andamentos', interessados: 'Interessados',
     tarefas: 'Tarefas', oficios: 'Ofícios', servicos: 'Tipo de Serviços',
-    setores: 'Setores', usuarios: 'Usuários', configuracoes: 'Configurações',
+    setores: 'Setores', relservicos: 'Serviços por Setor', usuarios: 'Usuários', configuracoes: 'Configurações',
     logs: 'Logs de Acesso',
   };
 
