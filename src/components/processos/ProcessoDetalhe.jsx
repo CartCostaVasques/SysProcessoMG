@@ -331,12 +331,27 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
   const nomeCartorio = cartorio?.nome || '';
   const oficial      = cartorio?.responsavel || 'Oficial Registrador';
 
-  const linhasCert = certidoes.map(c => `
-    <tr>
-      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
-      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
-      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${c.descricao||c.obs||''}</td>
+  const linhasCert = certidoes.map(c => {
+    const matriculas = (c.descricao || c.obs || '').split('\n').filter(l => l.trim());
+    const totalLinhas = Math.max(1, matriculas.length);
+    if (totalLinhas <= 1) {
+      return `<tr>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+      </tr>`;
+    }
+    // Múltiplas matrículas: primeira linha com rowspan para data e tipo
+    const primeiraLinha = `<tr>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${c.tipo||''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]}</td>
+    </tr>`;
+    const demaisLinhas = matriculas.slice(1).map(m => `<tr>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td>
     </tr>`).join('');
+    return primeiraLinha + demaisLinhas;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
@@ -620,8 +635,21 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   : <span style={{ fontSize: 12, fontWeight: 500 }}>{c.tipo || '—'}</span>
                 }
                 {editando
-                  ? <input className="form-input" value={c.descricao || ''} onChange={e => update(idx, 'descricao', e.target.value)} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} placeholder="Ex: Matrícula nº 123, do livro 02-A, datada de 05/03/2026" />
-                  : <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{c.descricao || '—'}</span>
+                  ? <textarea
+                      className="form-input"
+                      value={c.descricao || ''}
+                      onChange={e => update(idx, 'descricao', e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          update(idx, 'descricao', (c.descricao || '') + '\n');
+                        }
+                      }}
+                      rows={Math.max(1, (c.descricao || '').split('\n').length)}
+                      style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
+                      placeholder="Ex: Matrícula nº 123, do livro 02-A, datada de 05/03/2026&#10;Enter para nova matrícula"
+                    />
+                  : <div style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'pre-line', lineHeight: '1.6' }}>{c.descricao || '—'}</div>
                 }
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <input type="checkbox" checked={!!c.concluido} onChange={e => update(idx, 'concluido', e.target.checked)} disabled={!editando} style={{ width: 16, height: 16, cursor: editando ? 'pointer' : 'default' }} />
