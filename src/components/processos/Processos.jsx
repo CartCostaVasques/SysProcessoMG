@@ -49,61 +49,78 @@ const SERVICOS_RAPIDOS = [
 ];
 
 // ─── Modal Cadastro Rápido ───────────────────────────────────
+const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
+
 function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [selecionado, setSelecionado] = useState(null);
-  const [numero, setNumero]           = useState('');
   const [respId, setRespId]           = useState('');
   const [data, setData]               = useState('hoje');
-  const [valor, setValor]             = useState('0,00');
-  const numRef = useRef(null);
+  const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
+  const primeiroRef = useRef(null);
 
-  useEffect(() => { numRef.current?.focus(); }, []);
+  useEffect(() => { primeiroRef.current?.focus(); }, []);
 
-  const salvar = () => {
-    if (!numero.trim()) { alert('Nº Interno obrigatório'); return; }
-    if (!selecionado)   { alert('Selecione um tipo de serviço'); return; }
+  const setLinha = (idx, k, v) => setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
+  const addLinha = () => setLinhas(prev => [...prev, LINHA_VAZIA()]);
+  const remLinha = (idx) => setLinhas(prev => prev.filter((_, i) => i !== idx));
+
+  const handleKeyDown = (e, idx) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // avança para próximo campo ou adiciona linha
+      const inputs = document.querySelectorAll('.rapido-input');
+      const curIdx = Array.from(inputs).indexOf(e.target);
+      if (curIdx < inputs.length - 1) inputs[curIdx + 1].focus();
+      else addLinha();
+    }
+  };
+
+  const salvar = async () => {
+    if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
+    const validas = linhas.filter(l => l.numero.trim());
+    if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
     const dt = data === 'ontem' ? ONTEM() : HOJE();
-    onSalvar({
-      numero_interno: numero.trim(),
+    await onSalvar(validas.map(l => ({
+      numero_interno: l.numero.trim(),
       categoria:      selecionado.categoria,
       especie:        selecionado.especie,
       responsavel_id: respId || null,
       dt_abertura:    dt,
       dt_conclusao:   dt,
       status:         'Concluído',
-      valor_ato:      parseBRL(valor),
+      valor_ato:      parseBRL(l.valor),
       partes:         '[]',
       municipio:      'Paranatinga',
       obs:            '',
-    });
+    })));
   };
+
+  const btnStyle = (ativo) => ({
+    padding: '10px 14px', textAlign: 'left', cursor: 'pointer',
+    background: ativo ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+    border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
+    borderRadius: 'var(--radius-md)', color: ativo ? 'var(--color-text)' : 'var(--color-text-muted)',
+    fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: ativo ? 600 : 400,
+    display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.12s',
+  });
 
   return (
     <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" style={{ maxWidth: 560 }}>
         <div className="modal-header">
           <span className="modal-title">⚡ Cadastro Rápido</span>
           <button className="btn-icon" onClick={onClose}>✕</button>
         </div>
-        <div className="modal-body">
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Grade de serviços — option buttons */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Tipo de Serviço *</div>
+          {/* Tipo de serviço */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Tipo de Serviço *</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {SERVICOS_RAPIDOS.map((s, i) => {
                 const ativo = selecionado?.label === s.label;
                 return (
-                  <button key={i} onClick={() => setSelecionado(s)} style={{
-                    padding: '11px 14px', textAlign: 'left', cursor: 'pointer',
-                    background: ativo ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
-                    border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                    borderRadius: 'var(--radius-md)',
-                    color: ativo ? 'var(--color-text)' : 'var(--color-text-muted)',
-                    fontFamily: 'var(--font-sans)', fontSize: 13,
-                    fontWeight: ativo ? 600 : 400, transition: 'all 0.12s',
-                    display: 'flex', alignItems: 'center', gap: 8,
-                  }}>
+                  <button key={i} onClick={() => setSelecionado(s)} style={btnStyle(ativo)}>
                     <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, color: 'var(--color-bg)' }}>
                       {ativo ? '✓' : ''}
                     </span>
@@ -114,21 +131,21 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             </div>
           </div>
 
-          {/* Nº Interno + Data + Responsável */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="form-group">
-              <label className="form-label">Nº Interno *</label>
-              <input ref={numRef} className="form-input" value={numero}
-                onChange={e => setNumero(e.target.value)}
-                placeholder="Ex: 001"
-                onKeyDown={e => e.key === 'Enter' && salvar()} />
+          {/* Responsável + Data — escolha única */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Responsável</label>
+              <select className="form-select" value={respId} onChange={e => setRespId(e.target.value)}>
+                <option value="">—</option>
+                {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome_simples}</option>)}
+              </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Data</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 {[['hoje','Hoje'],['ontem','Ontem']].map(([v,l]) => (
                   <button key={v} onClick={() => setData(v)} style={{
-                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-md)',
+                    padding: '8px 16px', borderRadius: 'var(--radius-md)',
                     border: `1px solid ${data===v ? 'var(--color-accent)' : 'var(--color-border)'}`,
                     background: data===v ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
                     color: data===v ? 'var(--color-text)' : 'var(--color-text-muted)',
@@ -137,37 +154,53 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
                 ))}
               </div>
             </div>
-            <div className="form-group" style={{ gridColumn: '1/-1' }}>
-              <label className="form-label">Responsável</label>
-              <select className="form-select" value={respId} onChange={e => setRespId(e.target.value)}>
-                <option value="">—</option>
-                {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome_simples}</option>)}
-              </select>
-            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Valor do Ato (R$)</label>
-              <input
-                className="form-input"
-                value={valor}
-                onChange={e => setValor(e.target.value)}
-                onBlur={e => setValor(formatBRL(parseBRL(e.target.value)))}
-                style={{ textAlign: 'right' }}
-                placeholder="0,00"
-              />
+          {/* Grade de lançamentos */}
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, marginBottom: 6, padding: '0 4px' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Nº Interno</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Valor (R$)</span>
+              <span></span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-              <div style={{ padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)', width: '100%' }}>
-                Status: Concluído · Dt. Cadastro = Dt. Conclusão
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {linhas.map((l, idx) => (
+                <div key={l._id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, alignItems: 'center' }}>
+                  <input
+                    ref={idx === 0 ? primeiroRef : null}
+                    className="form-input rapido-input"
+                    value={l.numero}
+                    onChange={e => setLinha(idx, 'numero', e.target.value)}
+                    onKeyDown={e => handleKeyDown(e, idx)}
+                    placeholder={`Nº ${idx + 1}`}
+                    style={{ fontSize: 13 }}
+                  />
+                  <input
+                    className="form-input rapido-input"
+                    value={l.valor}
+                    onChange={e => setLinha(idx, 'valor', e.target.value)}
+                    onBlur={e => setLinha(idx, 'valor', formatBRL(parseBRL(e.target.value)))}
+                    onKeyDown={e => handleKeyDown(e, idx)}
+                    style={{ fontSize: 13, textAlign: 'right' }}
+                    placeholder="0,00"
+                  />
+                  <button onClick={() => remLinha(idx)} style={{ background: 'none', border: 'none', color: linhas.length > 1 ? 'var(--color-danger)' : 'var(--color-text-faint)', cursor: linhas.length > 1 ? 'pointer' : 'default', fontSize: 16, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    disabled={linhas.length <= 1}>✕</button>
+                </div>
+              ))}
             </div>
+            <button onClick={addLinha} style={{ marginTop: 8, background: 'none', border: `1px dashed var(--color-border)`, borderRadius: 'var(--radius-md)', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 12, padding: '6px 12px', width: '100%' }}>
+              + Adicionar linha
+            </button>
+          </div>
+
+          <div style={{ padding: '6px 10px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)' }}>
+            Status: Concluído · Dt. Cadastro = Dt. Conclusão · Enter avança entre campos
           </div>
         </div>
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={salvar}>✓ Salvar</button>
+          <button className="btn btn-primary" onClick={salvar}>✓ Salvar Todos</button>
         </div>
       </div>
     </div></Portal>
@@ -354,13 +387,19 @@ export default function Processos() {
     setModalNovoInt(null);
   };
 
-  const handleSalvarRapido = async (dados) => {
-    if (processos.find(p => p.numero_interno.trim() === dados.numero_interno.trim())) {
-      addToast(`Nº "${dados.numero_interno}" já existe!`, 'error'); return;
+  const handleSalvarRapido = async (lista) => {
+    let salvos = 0, erros = [];
+    for (const dados of lista) {
+      if (processos.find(p => p.numero_interno.trim() === dados.numero_interno.trim())) {
+        erros.push(dados.numero_interno);
+      } else {
+        await addProcesso(dados);
+        salvos++;
+      }
     }
-    await addProcesso(dados);
     setModalRapido(false);
-    addToast('Processo registrado!', 'success');
+    if (salvos > 0) addToast(`${salvos} processo(s) registrado(s)!`, 'success');
+    if (erros.length > 0) addToast(`Nº já existente: ${erros.join(', ')}`, 'error');
   };
 
   const STATUS_CONF = {
