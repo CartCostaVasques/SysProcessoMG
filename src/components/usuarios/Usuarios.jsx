@@ -201,6 +201,13 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
               <button className="btn btn-secondary" onClick={() => onRedefinirSenha(usuario.email)}>
                 🔑 Redefinir Senha
               </button>
+              <button className="btn btn-warning" style={{ fontSize: 12 }} onClick={() => {
+                if (window.confirm(`Enviar e-mail de redefinição de senha para ${usuario.email}?`)) {
+                  onRedefinirSenha(usuario.email);
+                }
+              }}>
+                📧 Reenviar Acesso
+              </button>
               <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
             </>
           )}
