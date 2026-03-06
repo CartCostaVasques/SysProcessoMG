@@ -181,11 +181,17 @@ export function AppProvider({ children }) {
 
   // ── FETCH ──────────────────────────────────────────────
   const salvarPrefsUsuario = async (prefs) => {
-    if (!usuario?.id) return;
+    console.log('[PREFS] Iniciando salvar:', prefs, 'usuario.id:', usuario?.id);
+    if (!usuario?.id) { console.warn('[PREFS] Sem usuario.id, abortando'); return; }
     try {
-      await supabase.from('usuarios').update(prefs).eq('id', usuario.id);
-      setUsuario(prev => ({ ...prev, ...prefs }));
-    } catch(e) { console.error(e); }
+      const { data, error } = await supabase.from('usuarios').update(prefs).eq('id', usuario.id).select();
+      if (error) {
+        console.error('[PREFS] Erro Supabase:', error);
+      } else {
+        console.log('[PREFS] Salvo com sucesso:', data);
+        setUsuario(prev => ({ ...prev, ...prefs }));
+      }
+    } catch(e) { console.error('[PREFS] Exceção:', e); }
   };
 
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
