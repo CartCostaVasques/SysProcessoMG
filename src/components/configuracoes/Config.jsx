@@ -29,26 +29,27 @@ export function Configuracoes() {
   const handleSave = () => {
     const { tema: _t, ...formSemTema } = form;
     salvarCartorio({ ...formSemTema, cor_primaria: corAccent });
-    salvarPrefsUsuario({ pref_cor_tema: corTema, pref_cor_accent: corAccent });
-    addToast('Configurações salvas!', 'success');
   };
 
   const aplicarCorTema = (cor) => {
     setCorTema(cor);
     if (cor === 'padrao') document.documentElement.removeAttribute('data-color');
     else document.documentElement.setAttribute('data-color', cor);
+    // Salva imediatamente — não depende do botão Salvar
+    salvarPrefsUsuario({ pref_cor_tema: cor });
   };
 
   const aplicarCorAccent = (cor) => {
     setCorAccent(cor);
     set('cor_primaria', cor);
     document.documentElement.style.setProperty('--color-accent', cor);
+    // Salva imediatamente
+    salvarPrefsUsuario({ pref_cor_accent: cor });
   };
 
   const handleReset = () => {
     aplicarCorTema('padrao');
     aplicarCorAccent('#e0e0e6');
-    salvarPrefsUsuario({ pref_cor_tema: 'padrao', pref_cor_accent: '#e0e0e6' });
     addToast('Cores restauradas ao padrão.', 'info');
   };
 
