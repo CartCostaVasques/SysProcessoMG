@@ -392,6 +392,7 @@ export function AppProvider({ children }) {
       temPermissao,
       interessados, addInteressado, editInteressado, deleteInteressado,
       carregarTudo, fetchProcessos, fetchAndamentos, salvarPrefsUsuario,
+      supabaseClient: supabase,
     }}>
       {children}
     </AppContext.Provider>
