@@ -179,7 +179,7 @@ export function AppProvider({ children }) {
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
-  const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) setCartorio(data); } catch(e){} };
+  const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) { setCartorio(data); if(data.cor_primaria) document.documentElement.style.setProperty('--color-accent', data.cor_primaria); } } catch(e){} };
   const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
   // ── CRUD ───────────────────────────────────────────────
@@ -268,7 +268,7 @@ export function AppProvider({ children }) {
   const editServico   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('servicos').update(d).eq('id',id).select().single(); if(error) throw error; setServicos(p=>p.map(s=>s.id===id?{...s,...data}:s)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteServico = useCallback(async (id) => { try { await supabase.from('servicos').delete().eq('id',id); setServicos(p=>p.filter(s=>s.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const salvarCartorio = useCallback(async (d) => { try { const {data,error} = await supabase.from('cartorio').upsert({id:1,...d}).select().single(); if(error) throw error; setCartorio(data); addToast('Configurações salvas!','success'); } catch(e){ addToast(e.message,'error'); } }, []);
+  const salvarCartorio = useCallback(async (d) => { try { const {data,error} = await supabase.from('cartorio').upsert({id:1,...d}).select().single(); if(error) throw error; setCartorio(data); if(data.cor_primaria) document.documentElement.style.setProperty('--color-accent', data.cor_primaria); addToast('Configurações salvas!','success'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const getProximoNumeroOficio = useCallback(async (mesAno) => {
     try { const {data} = await supabase.rpc('proximo_numero_oficio', {p_mes_ano: mesAno}); return data; }
