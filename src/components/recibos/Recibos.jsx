@@ -3,6 +3,17 @@ import { useApp } from '../../context/AppContext.jsx';
 import Portal from '../layout/Portal.jsx';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const TIPOS = ['Cliente','Colaborador','Fornecedor','Outros'];
+const TIPO_COLORS = {
+  'Colaborador': { bg: '#dbeafe', color: '#1e40af' },
+  'Fornecedor':  { bg: '#dcfce7', color: '#15803d' },
+  'Outros':      { bg: '#f3f4f6', color: '#6b7280' },
+  'Cliente':     { bg: '#fef9c3', color: '#854d0e' },
+};
+const TipoBadge = ({ tipo }) => {
+  const s = TIPO_COLORS[tipo] || TIPO_COLORS['Cliente'];
+  return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color }}>{tipo||'Cliente'}</span>;
+};
 
 const EMPTY = {
   descricao: '', valor: '',
@@ -292,6 +303,11 @@ export default function Recibos() {
   const [filtroMes,     setFiltroMes]    = useState(mesAtual);
   const [filtroAno,     setFiltroAno]    = useState(anoAtual);
   const [buscaHist,     setBuscaHist]    = useState('');
+  // Lote
+  const [loteTipo,      setLoteTipo]     = useState('Colaborador');
+  const [loteSelecionados, setLoteSelecionados] = useState({});
+  const [loteForm,      setLoteForm]     = useState({ descricao: '', valor: '', dt_recibo: new Date().toISOString().slice(0,10), numero_os: '', obs: '', primeira_via: true, segunda_via: true, recibo_futuro: false });
+  const [loteProcessando, setLoteProcessando] = useState(false);
 
   const carregarTodosRecibos = async () => {
     if (!sb) return;
@@ -398,6 +414,44 @@ export default function Recibos() {
     if (novo) { selecionarCliente(novo); setShowNovo(false); setNovoForm({ nome: '', cpf: '' }); }
   };
 
+  // Lote
+  const loteInteressados = useMemo(() =>
+    interessados.filter(i => (i.tipo || 'Cliente') === loteTipo)
+  , [interessados, loteTipo]);
+
+  const toggleLote = (id) => setLoteSelecionados(p => ({ ...p, [id]: !p[id] }));
+  const toggleTodosLote = () => {
+    const todos = loteInteressados.every(i => loteSelecionados[i.id]);
+    const novo = {};
+    loteInteressados.forEach(i => { novo[i.id] = !todos; });
+    setLoteSelecionados(novo);
+  };
+  const selecionadosLote = loteInteressados.filter(i => loteSelecionados[i.id]);
+
+  const emitirLote = async () => {
+    if (!sb) { addToast('Erro de conexão.', 'error'); return; }
+    if (selecionadosLote.length === 0) { addToast('Selecione ao menos um destinatário.', 'error'); return; }
+    if (!loteForm.descricao.trim()) { addToast('Descrição obrigatória.', 'error'); return; }
+    const valor = parseFloat(String(loteForm.valor).replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) { addToast('Valor inválido.', 'error'); return; }
+    if (!window.confirm(`Emitir ${selecionadosLote.length} recibo(s) de ${fmtValor(valor)} cada?`)) return;
+    setLoteProcessando(true);
+    let ok = 0, erros = 0;
+    for (const int of selecionadosLote) {
+      try {
+        const { data, error } = await sb.from('recibos').insert({
+          ...loteForm, valor, interessado_id: int.id, criado_por: usuario?.id
+        }).select().single();
+        if (error) throw error;
+        imprimirRecibo(data, int, cartorio);
+        ok++;
+      } catch(e) { console.error(e); erros++; }
+    }
+    setLoteProcessando(false);
+    addToast(`${ok} recibo(s) emitido(s)${erros ? `, ${erros} erro(s)` : ''}.`, erros ? 'error' : 'success');
+    setLoteSelecionados({});
+  };
+
   return (
     <div className="page-content">
       <div className="page-header">
@@ -408,7 +462,7 @@ export default function Recibos() {
       </div>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
-        {[['emitir','🧾 Emitir Recibo'],['historico','📋 Histórico Geral']].map(([id, label]) => (
+        {[['emitir','🧾 Emitir Recibo'],['lote','📤 Emissão em Lote'],['historico','📋 Histórico Geral']].map(([id, label]) => (
           <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
         ))}
       </div>
@@ -499,6 +553,122 @@ export default function Recibos() {
                   onDeletar={deletarRecibo} mostrarCliente={false} />
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── ABA LOTE ── */}
+      {aba === 'lote' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+
+          {/* Lista de destinatários */}
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+              <div className="card-title">👥 Destinatários</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <select className="form-select" style={{ fontSize: 12, height: 32, padding: '0 8px' }} value={loteTipo} onChange={e => { setLoteTipo(e.target.value); setLoteSelecionados({}); }}>
+                  {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{selecionadosLote.length} selecionado(s)</span>
+              </div>
+            </div>
+            <div className="table-wrapper">
+              <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup><col style={{ width: 44 }} /><col /><col style={{ width: 150 }} /><col style={{ width: 130 }} /></colgroup>
+                <thead>
+                  <tr>
+                    <th>
+                      <input type="checkbox"
+                        checked={loteInteressados.length > 0 && loteInteressados.every(i => loteSelecionados[i.id])}
+                        onChange={toggleTodosLote} />
+                    </th>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Telefone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loteInteressados.length === 0 ? (
+                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: 28, color: 'var(--color-text-faint)' }}>
+                      Nenhum interessado do tipo <strong>{loteTipo}</strong>.<br/>
+                      <span style={{ fontSize: 12 }}>Cadastre em Interessados e defina o tipo.</span>
+                    </td></tr>
+                  ) : loteInteressados.map(i => (
+                    <tr key={i.id} onClick={() => toggleLote(i.id)} style={{ cursor: 'pointer', background: loteSelecionados[i.id] ? 'var(--color-surface-2)' : '' }}>
+                      <td onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" checked={!!loteSelecionados[i.id]} onChange={() => toggleLote(i.id)} />
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{i.nome}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--color-text-muted)' }}>{i.cpf||'—'}</td>
+                      <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{i.telefone||'—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Painel do recibo */}
+          <div className="card">
+            <div className="card-header"><div className="card-title">📄 Dados do Recibo</div></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Nº Interno / OS</label>
+                <input className="form-input" value={loteForm.numero_os||''} onChange={e => setLoteForm(p => ({ ...p, numero_os: e.target.value }))} placeholder="Ex: 000123" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Data *</label>
+                <input className="form-input" type="date" value={loteForm.dt_recibo} onChange={e => setLoteForm(p => ({ ...p, dt_recibo: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Descrição *</label>
+                <input className="form-input" value={loteForm.descricao} onChange={e => setLoteForm(p => ({ ...p, descricao: e.target.value }))} placeholder="Ex: Pagamento de pro-labore, Gratificação..." autoFocus />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Valor (R$) *</label>
+                <input className="form-input" value={loteForm.valor} onChange={e => setLoteForm(p => ({ ...p, valor: e.target.value }))} placeholder="0,00" style={{ fontFamily: 'var(--font-mono)' }} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Observações</label>
+                <textarea className="form-input" rows={2} value={loteForm.obs||''} onChange={e => setLoteForm(p => ({ ...p, obs: e.target.value }))} style={{ resize: 'vertical' }} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vias</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                  {[['primeira_via','1ª Via (Cartório)'],['segunda_via','2ª Via (Colaborador)'],['recibo_futuro','Recibo Futuro']].map(([key, label]) => (
+                    <label key={key} className="checkbox-wrapper" style={{ cursor: 'pointer' }}>
+                      <input type="checkbox" checked={!!loteForm[key]} onChange={e => setLoteForm(p => ({ ...p, [key]: e.target.checked }))} />
+                      <div className="checkbox-box">{loteForm[key] && <span style={{ fontSize: 9, color: 'var(--color-bg)', fontWeight: 800 }}>✓</span>}</div>
+                      <span className="checkbox-label">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumo */}
+              {selecionadosLote.length > 0 && loteForm.valor && !isNaN(parseFloat(String(loteForm.valor).replace(',','.'))) && (
+                <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: 12, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Destinatários:</span>
+                    <strong>{selecionadosLote.length}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Valor unitário:</span>
+                    <strong>{fmtValor(parseFloat(String(loteForm.valor).replace(',','.')))}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: 8, marginTop: 4 }}>
+                    <span style={{ fontWeight: 700 }}>Total:</span>
+                    <strong style={{ color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+                      {fmtValor(selecionadosLote.length * parseFloat(String(loteForm.valor).replace(',','.')))}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              <button className="btn btn-primary" onClick={emitirLote} disabled={loteProcessando || selecionadosLote.length === 0} style={{ marginTop: 4 }}>
+                {loteProcessando ? '⏳ Emitindo...' : `📤 Emitir ${selecionadosLote.length > 0 ? selecionadosLote.length : ''} Recibo(s)`}
+              </button>
+            </div>
           </div>
         </div>
       )}
