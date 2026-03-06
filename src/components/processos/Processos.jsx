@@ -55,7 +55,7 @@ const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [selecionado, setSelecionado] = useState(null);
   const [respId, setRespId]           = useState('');
-  const [data, setData]               = useState('hoje');
+  const [data, setData]               = useState(HOJE());
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const primeiroRef = useRef(null);
 
@@ -80,7 +80,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
     if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
     const validas = linhas.filter(l => l.numero.trim());
     if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
-    const dt = data === 'ontem' ? ONTEM() : HOJE();
+    const dt = data || HOJE();
     await onSalvar(validas.map(l => ({
       numero_interno: l.numero.trim(),
       categoria:      selecionado.categoria,
@@ -143,16 +143,18 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Data</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[['hoje','Hoje'],['ontem','Ontem']].map(([v,l]) => (
-                  <button key={v} onClick={() => setData(v)} style={{
-                    padding: '8px 16px', borderRadius: 'var(--radius-md)',
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {[['Hoje', HOJE()],['Ontem', ONTEM()]].map(([l, v]) => (
+                  <button key={l} onClick={() => setData(v)} style={{
+                    padding: '8px 14px', borderRadius: 'var(--radius-md)',
                     border: `1px solid ${data===v ? 'var(--color-accent)' : 'var(--color-border)'}`,
                     background: data===v ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
                     color: data===v ? 'var(--color-text)' : 'var(--color-text-muted)',
                     cursor: 'pointer', fontSize: 13, fontWeight: data===v ? 600 : 400,
                   }}>{l}</button>
                 ))}
+                <input type="date" className="form-input" value={data} onChange={e => setData(e.target.value)}
+                  style={{ fontSize: 13, height: 36, width: 140, padding: '0 8px' }} />
               </div>
             </div>
           </div>
