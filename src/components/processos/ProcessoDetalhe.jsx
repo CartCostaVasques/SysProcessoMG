@@ -646,13 +646,10 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   className="form-input"
                   value={c.descricao || ''}
                   onChange={e => updateLocal(idx, 'descricao', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + '
-'); } }}
-                  rows={Math.max(1, (c.descricao || '').split('
-').length)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + String.fromCharCode(10)); } }}
+                  rows={Math.max(1, (c.descricao || '').split(String.fromCharCode(10)).length)}
                   style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
-                  placeholder={"Ex: Matrícula nº 123, livro 02-A
-Enter para nova matrícula"}
+                  placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
                   onBlur={flush}
                 />
                 <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
