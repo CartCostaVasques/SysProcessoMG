@@ -482,13 +482,3 @@ function TabelaComparacao({ titulo, labelA, labelB, linhas, maxValor, agrupado }
     </div>
   );
 }
-
-// Re-export DeltaBadge para uso interno
-function DeltaBadge({ atual, anterior }) {
-  if (anterior === undefined || anterior === null) return null;
-  const pct = anterior === 0 ? (atual > 0 ? Infinity : 0) : ((atual - anterior) / anterior) * 100;
-  const cor  = pct > 0 ? '#15803d' : pct < 0 ? '#dc2626' : '#6b7280';
-  const bg   = pct > 0 ? '#dcfce7' : pct < 0 ? '#fee2e2' : '#f3f4f6';
-  const label = pct === Infinity ? '+∞%' : (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
-  return <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: bg, color: cor, whiteSpace: 'nowrap' }}>{label}</span>;
-}
