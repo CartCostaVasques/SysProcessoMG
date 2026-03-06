@@ -37,11 +37,19 @@ export function Configuracoes() {
 
   const CORES_PRESET = [
     { label: 'Cinza Claro (Padrão)', valor: '#e0e0e6' },
-    { label: 'Cinza Médio', valor: '#8a8a96' },
-    { label: 'Branco Puro', valor: '#ffffff' },
-    { label: 'Azul Escuro', valor: '#60a5fa' },
-    { label: 'Verde', valor: '#4ade80' },
-    { label: 'Âmbar', valor: '#fbbf24' },
+    { label: 'Cinza Suave',          valor: '#c8c8d4' },
+    { label: 'Cinza Médio',          valor: '#8a8a96' },
+    { label: 'Branco Puro',          valor: '#ffffff' },
+    { label: 'Azul Celeste',         valor: '#93c5fd' },
+    { label: 'Azul Médio',           valor: '#60a5fa' },
+    { label: 'Azul Royal',           valor: '#3b82f6' },
+    { label: 'Verde Menta',          valor: '#6ee7b7' },
+    { label: 'Verde Claro',          valor: '#86efac' },
+    { label: 'Verde',                valor: '#4ade80' },
+    { label: 'Âmbar',                valor: '#fbbf24' },
+    { label: 'Laranja',              valor: '#fb923c' },
+    { label: 'Rosa',                 valor: '#f472b6' },
+    { label: 'Lilás',                valor: '#c084fc' },
   ];
 
   return (
