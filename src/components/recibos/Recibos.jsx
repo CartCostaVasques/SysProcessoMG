@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
-import Portal from '../ui/Portal.jsx';
+import Portal from '../layout/Portal.jsx';
 
 const EMPTY = { descricao: '', valor: '', dt_recibo: new Date().toISOString().slice(0,10), numero_os: '', obs: '' };
 
