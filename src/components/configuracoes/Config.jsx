@@ -6,18 +6,16 @@ import { useApp } from '../../context/AppContext.jsx';
 // ─────────────────────────────────────────────
 export function Configuracoes() {
   const { cartorio, salvarCartorio, tema, toggleTema, addToast } = useApp();
-  const [corTema, setCorTema] = useState(document.documentElement.getAttribute('data-color') || 'padrao');
+  const [corTema, setCorTema] = useState(cartorio?.tema || document.documentElement.getAttribute('data-color') || 'padrao');
   const [form, setForm] = useState({ ...cartorio });
   const [tab, setTab] = useState('cartorio');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handleSave = () => {
-    salvarCartorio(form);
-    // Aplica cor primária customizada se definida
+    salvarCartorio({ ...form, tema: corTema });
     if (form.cor_primaria) {
       document.documentElement.style.setProperty('--color-accent', form.cor_primaria);
     }
-    addToast('Configurações salvas!', 'success');
   };
 
   const aplicarCorTema = (cor) => {
