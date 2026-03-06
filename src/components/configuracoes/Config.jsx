@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext.jsx';
 //  CONFIGURAÇÕES DO CARTÓRIO
 // ─────────────────────────────────────────────
 export function Configuracoes() {
-  const { cartorio, salvarCartorio, tema, toggleTema, addToast, usuario, salvarPrefsUsuario } = useApp();
+  const { cartorio, salvarCartorio, tema, toggleTema, setTemaBase, addToast, usuario, salvarPrefsUsuario } = useApp();
 
   const [corTema,   setCorTema]   = useState('padrao');
   const [corAccent, setCorAccent] = useState('#e0e0e6');
@@ -157,9 +157,9 @@ export function Configuracoes() {
             <div>
               <div className="form-label" style={{ marginBottom: 10 }}>Tema Base</div>
               <div style={{ display: 'flex', gap: 12 }}>
-                {[['dark', '◑ Escuro'], ['light', '☀ Claro']].map(([id, label]) => (
-                  <button key={id} onClick={() => { if (tema !== id) toggleTema(); }}
-                    style={{ padding: '12px 20px', background: tema === id ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: `1px solid ${tema === id ? 'var(--color-accent-dim)' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', color: tema === id ? 'var(--color-text)' : 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: tema === id ? 600 : 400 }}
+                {[['dark', '🌙 Escuro'], ['light', '☀️ Claro']].map(([id, label]) => (
+                  <button key={id} onClick={() => setTemaBase(id)}
+                    style={{ padding: '12px 20px', background: tema === id ? 'var(--color-surface-3)' : 'var(--color-surface-2)', border: `2px solid ${tema === id ? 'var(--color-accent)' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', color: tema === id ? 'var(--color-text)' : 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: tema === id ? 600 : 400 }}
                   >{label}</button>
                 ))}
               </div>
