@@ -66,7 +66,7 @@ function agrupar(processos, usuarios, dtRef) {
 // Filtra processos por ano+mes (mes = '01'..'12' ou 'todos')
 function filtrarProcessos(processos, ano, mes) {
   return processos.filter(p => {
-    const dt = p.dt_conclusao || p.dt_abertura;
+    const dt = p.dt_conclusao;   // apenas concluídos
     if (!dt) return false;
     if (!dt.startsWith(ano)) return false;
     if (mes !== 'todos' && dt.substring(5,7) !== mes) return false;
@@ -100,18 +100,18 @@ export default function Panoramico() {
   // Anos disponíveis
   const anosDisp = useMemo(() => {
     const s = new Set();
-    processos.forEach(p => { const dt = p.dt_conclusao || p.dt_abertura; if (dt) s.add(dt.substring(0,4)); });
+    processos.forEach(p => { if (p.dt_conclusao) s.add(p.dt_conclusao.substring(0,4)); });
     if (!s.size) s.add(anoAtual);
     return Array.from(s).sort((a,b) => b - a);
   }, [processos]);
 
   // Meses disponíveis por ano
   const mesesDispA = useMemo(() => {
-    const s = new Set(processos.filter(p => (p.dt_conclusao||p.dt_abertura||'').startsWith(anoA)).map(p => (p.dt_conclusao||p.dt_abertura).substring(5,7)));
+    const s = new Set(processos.filter(p => p.dt_conclusao?.startsWith(anoA)).map(p => p.dt_conclusao.substring(5,7)));
     return Array.from(s).sort();
   }, [processos, anoA]);
   const mesesDispB = useMemo(() => {
-    const s = new Set(processos.filter(p => (p.dt_conclusao||p.dt_abertura||'').startsWith(anoB)).map(p => (p.dt_conclusao||p.dt_abertura).substring(5,7)));
+    const s = new Set(processos.filter(p => p.dt_conclusao?.startsWith(anoB)).map(p => p.dt_conclusao.substring(5,7)));
     return Array.from(s).sort();
   }, [processos, anoB]);
 
