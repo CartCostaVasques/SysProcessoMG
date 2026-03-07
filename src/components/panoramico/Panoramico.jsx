@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 const MESES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -90,12 +90,20 @@ export default function Panoramico() {
   const anoAtual = String(new Date().getFullYear());
   const mesAtual = String(new Date().getMonth() + 1).padStart(2,'0');
 
-  const [modoVis,  setModoVis]  = useState('mensal');   // 'mensal' | 'anual'
+  const [modoVis,  setModoVis]  = useState('mensal');   // 'mensal' | 'anual' | 'sequencia'
   const [anoA,     setAnoA]     = useState(anoAtual);
   const [mesA,     setMesA]     = useState(mesAtual);
   const [anoB,     setAnoB]     = useState(String(Number(anoAtual) - 1));
   const [mesB,     setMesB]     = useState(mesAtual);
   const [secao,    setSecao]    = useState('todos');     // 'todos' | 'categoria' | 'especie' | 'setor'
+
+  // Estados do modo Sequência
+  const [seqAno,      setSeqAno]      = useState(anoAtual);
+  const [seqMeses,    setSeqMeses]    = useState(6);     // quantos meses exibir
+  const [seqAgrup,    setSeqAgrup]    = useState('especie'); // 'categoria' | 'especie' | 'setor'
+  const [seqMesInicio,setSeqMesInicio]= useState(
+    String(Math.max(1, new Date().getMonth() + 1 - 5)).padStart(2,'0')
+  );
 
   // Anos disponíveis
   const anosDisp = useMemo(() => {
@@ -137,6 +145,39 @@ export default function Panoramico() {
   // Dados mensais para comparação ano a ano
   const mensaisA = useMemo(() => dadosMensais(processos, usuarios, anoA), [processos, usuarios, anoA]);
   const mensaisB = useMemo(() => dadosMensais(processos, usuarios, anoB), [processos, usuarios, anoB]);
+
+  // ── Dados do modo Sequência ──────────────────────────────────
+  const seqColunas = useMemo(() => {
+    const cols = [];
+    let ano = parseInt(seqAno);
+    let mes = parseInt(seqMesInicio);
+    for (let i = 0; i < seqMeses; i++) {
+      const mesStr = String(mes).padStart(2,'0');
+      cols.push({ ano: String(ano), mes: mesStr, label: `${MESES_LABEL[mes-1]}/${ano}` });
+      mes++;
+      if (mes > 12) { mes = 1; ano++; }
+    }
+    return cols;
+  }, [seqAno, seqMesInicio, seqMeses]);
+
+  const seqDados = useMemo(() => {
+    // Para cada coluna, agrupa os processos
+    return seqColunas.map(col => {
+      const lista = filtrarProcessos(processos, col.ano, col.mes);
+      return agrupar(lista, usuarios);
+    });
+  }, [seqColunas, processos, usuarios]);
+
+  const seqChaves = useMemo(() => {
+    const s = new Set();
+    seqDados.forEach(d => {
+      const fonte = seqAgrup === 'categoria' ? d.porCategoria
+                  : seqAgrup === 'setor'     ? d.porSetor
+                  :                            d.porEspecie;
+      Object.keys(fonte).forEach(k => s.add(k));
+    });
+    return Array.from(s).sort();
+  }, [seqDados, seqAgrup]);
 
   const labelA = modoVis === 'anual' ? anoA : `${MESES_FULL[parseInt(mesA)-1]}/${anoA}`;
   const labelB = modoVis === 'anual' ? anoB : `${MESES_FULL[parseInt(mesB)-1]}/${anoB}`;
@@ -185,62 +226,98 @@ export default function Panoramico() {
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Modo</label>
             <div style={{ display: 'flex', gap: 0, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-              {[['mensal','Mensal'],['anual','Anual']].map(([id, label]) => (
+              {[['mensal','Mensal'],['anual','Anual'],['sequencia','Sequência']].map(([id, label]) => (
                 <button key={id} onClick={() => setModoVis(id)}
-                  style={{ padding: '6px 18px', fontSize: 13, fontWeight: modoVis===id ? 700 : 400, background: modoVis===id ? 'var(--color-accent)' : 'var(--color-surface)', color: modoVis===id ? '#fff' : 'var(--color-text)', border: 'none', cursor: 'pointer' }}>
+                  style={{ padding: '6px 16px', fontSize: 13, fontWeight: modoVis===id ? 700 : 400, background: modoVis===id ? 'var(--color-accent)' : 'var(--color-surface)', color: modoVis===id ? '#fff' : 'var(--color-text)', border: 'none', borderRight: id !== 'sequencia' ? '1px solid var(--color-border)' : 'none', cursor: 'pointer' }}>
                   {label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Período A */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: '8px 12px', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', marginBottom: 4, alignSelf: 'center' }}>Período A</div>
-            {modoVis === 'mensal' && (
+          {/* Controles Mensal / Anual */}
+          {modoVis !== 'sequencia' && (<>
+            {/* Período A */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: '8px 12px', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', marginBottom: 4, alignSelf: 'center' }}>Período A</div>
+              {modoVis === 'mensal' && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
+                  <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={mesA} onChange={e => setMesA(e.target.value)}>
+                    {(mesesDispA.length ? mesesDispA : Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'))).map(m => (
+                      <option key={m} value={m}>{MESES_FULL[parseInt(m)-1]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
-                <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={mesA} onChange={e => setMesA(e.target.value)}>
-                  {(mesesDispA.length ? mesesDispA : Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'))).map(m => (
-                    <option key={m} value={m}>{MESES_FULL[parseInt(m)-1]}</option>
-                  ))}
+                <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
+                <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoA} onChange={e => { setAnoA(e.target.value); setMesA(mesAtual); }}>
+                  {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
-            )}
+            </div>
+
+            <div style={{ fontSize: 18, color: 'var(--color-text-faint)', alignSelf: 'center', paddingBottom: 2 }}>vs</div>
+
+            {/* Período B */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: '8px 12px', background: 'rgba(148,163,184,0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(148,163,184,0.3)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4, alignSelf: 'center' }}>Período B</div>
+              {modoVis === 'mensal' && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
+                  <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={mesB} onChange={e => setMesB(e.target.value)}>
+                    {(mesesDispB.length ? mesesDispB : Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'))).map(m => (
+                      <option key={m} value={m}>{MESES_FULL[parseInt(m)-1]}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
+                <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoB} onChange={e => { setAnoB(e.target.value); setMesB(mesAtual); }}>
+                  {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            </div>
+          </>)}
+
+          {/* Controles Sequência */}
+          {modoVis === 'sequencia' && (<>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
-              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoA} onChange={e => { setAnoA(e.target.value); setMesA(mesAtual); }}>
+              <label className="form-label">Agrupar por</label>
+              <select className="form-select" value={seqAgrup} onChange={e => setSeqAgrup(e.target.value)}>
+                <option value="especie">Tipo de Serviço</option>
+                <option value="categoria">Categoria</option>
+                <option value="setor">Setor</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Mês inicial</label>
+              <select className="form-select" value={seqMesInicio} onChange={e => setSeqMesInicio(e.target.value)}>
+                {Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0')).map(m => (
+                  <option key={m} value={m}>{MESES_FULL[parseInt(m)-1]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Ano</label>
+              <select className="form-select" value={seqAno} onChange={e => setSeqAno(e.target.value)}>
                 {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
-          </div>
-
-          <div style={{ fontSize: 18, color: 'var(--color-text-faint)', alignSelf: 'center', paddingBottom: 2 }}>vs</div>
-
-          {/* Período B */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: '8px 12px', background: 'rgba(148,163,184,0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(148,163,184,0.3)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4, alignSelf: 'center' }}>Período B</div>
-            {modoVis === 'mensal' && (
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
-                <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={mesB} onChange={e => setMesB(e.target.value)}>
-                  {(mesesDispB.length ? mesesDispB : Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'))).map(m => (
-                    <option key={m} value={m}>{MESES_FULL[parseInt(m)-1]}</option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
-              <select className="form-select" style={{ fontSize: 13, height: 34, padding: '0 8px' }} value={anoB} onChange={e => { setAnoB(e.target.value); setMesB(mesAtual); }}>
-                {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+              <label className="form-label">Nº de meses</label>
+              <select className="form-select" value={seqMeses} onChange={e => setSeqMeses(Number(e.target.value))}>
+                {[3,4,5,6,8,10,12].map(n => <option key={n} value={n}>{n} meses</option>)}
               </select>
             </div>
-          </div>
+          </>)}
         </div>
       </div>
 
-      {/* ── Cards resumo ── */}
+      {/* ── Resumo cards (só nos modos mensal/anual) ── */}
+      {modoVis !== 'sequencia' && (<>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
           { label: 'Total de Processos', vA: dadosA.qtd,   vB: dadosB.qtd,   fmt: v => v, mono: false },
@@ -394,6 +471,17 @@ export default function Panoramico() {
           maxValor={maxSetValor}
         />
       )}
+      </> )} {/* fim modoVis !== sequencia */}
+
+      {/* ══ MODO SEQUÊNCIA ══════════════════════════════════════ */}
+      {modoVis === 'sequencia' && (
+        <TabelaSequencia
+          colunas={seqColunas}
+          dados={seqDados}
+          chaves={seqChaves}
+          agrup={seqAgrup}
+        />
+      )}
     </div>
   );
 }
@@ -477,6 +565,155 @@ function TabelaComparacao({ titulo, labelA, labelB, linhas, maxValor, agrupado }
               <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '8px 10px', color: '#94a3b8' }}>{fmtVal(totalB.valor)}</td>
               <td style={{ textAlign: 'center' }}><DeltaBadge atual={totalA.qtd} anterior={totalB.qtd} /></td>
               <td style={{ textAlign: 'center' }}><DeltaBadge atual={totalA.valor} anterior={totalB.valor} /></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Tabela Sequência Mensal ──────────────────────────────────
+function TabelaSequencia({ colunas, dados, chaves, agrup }) {
+  const fmtV  = (v) => Number(v||0) > 0 ? `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+  const fmtDV = (v) => v === 0 ? '—' : (v > 0 ? `+R$ ${Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `-R$ ${Number(Math.abs(v)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`);
+  const fmtDQ = (v) => v === 0 ? '—' : (v > 0 ? `+${v}` : `${v}`);
+
+  const getDado = (dadoMes, chave) => {
+    const fonte = agrup === 'categoria' ? dadoMes.porCategoria
+                : agrup === 'setor'     ? dadoMes.porSetor
+                :                         dadoMes.porEspecie;
+    return fonte[chave] || { qtd: 0, valor: 0 };
+  };
+
+  const getLabelChave = (chave) => {
+    if (agrup === 'especie') {
+      const partes = chave.split(' › ');
+      return { label: partes[1] || chave, sub: partes[0] || '' };
+    }
+    return { label: chave, sub: '' };
+  };
+
+  // Totais por coluna
+  const totaisCols = colunas.map((_, ci) => ({
+    qtd:   chaves.reduce((s, k) => s + getDado(dados[ci], k).qtd,   0),
+    valor: chaves.reduce((s, k) => s + getDado(dados[ci], k).valor, 0),
+  }));
+
+  const AGRUP_LABEL = { especie: 'Tipo de Serviço', categoria: 'Categoria', setor: 'Setor' };
+
+  // Cabeçalho de colunas: cada mês ocupa 2 colunas (Qtd + Valor) + 1 Δ (menos na última)
+  // Layout: [Serviço] [Qtd M1] [Val M1] [Δ] [Qtd M2] [Val M2] [Δ] ... [Qtd Mn] [Val Mn]
+  const n = colunas.length;
+
+  return (
+    <div className="card" style={{ padding: 0, marginBottom: 20, overflowX: 'auto' }}>
+      <div className="card-header">
+        <div>
+          <div className="card-title">📊 Evolução Mensal — {AGRUP_LABEL[agrup]}</div>
+          <div className="card-subtitle" style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
+            Δ = diferença em relação ao mês anterior &nbsp;·&nbsp; verde = crescimento &nbsp;·&nbsp; vermelho = queda
+          </div>
+        </div>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="data-table" style={{ minWidth: 200 + n * 260, fontSize: 12 }}>
+          <thead>
+            {/* Linha 1 — Meses */}
+            <tr style={{ background: 'var(--color-surface-2)' }}>
+              <th rowSpan={2} style={{ minWidth: 180, position: 'sticky', left: 0, background: 'var(--color-surface-2)', zIndex: 2, borderRight: '2px solid var(--color-border)' }}>
+                {AGRUP_LABEL[agrup]}
+              </th>
+              {colunas.map((col, ci) => (
+                <th key={ci} colSpan={ci < n - 1 ? 3 : 2}
+                  style={{ textAlign: 'center', borderLeft: '1px solid var(--color-border)', padding: '6px 4px', fontSize: 11, fontWeight: 700, color: ci === n - 1 ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+            {/* Linha 2 — Qtd / Valor / Δ */}
+            <tr style={{ background: 'var(--color-surface-2)' }}>
+              {colunas.map((_, ci) => (
+                <React.Fragment key={ci}>
+                  <th style={{ textAlign: 'right', fontSize: 10, color: 'var(--color-text-faint)', borderLeft: '1px solid var(--color-border)', minWidth: 50 }}>Qtd</th>
+                  <th style={{ textAlign: 'right', fontSize: 10, color: 'var(--color-text-faint)', minWidth: 130 }}>Valor</th>
+                  {ci < n - 1 && <th style={{ textAlign: 'center', fontSize: 10, color: 'var(--color-text-faint)', minWidth: 80, background: 'var(--color-surface-3)' }}>Δ vs ant.</th>}
+                </React.Fragment>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {chaves.length === 0 ? (
+              <tr><td colSpan={1 + n * 3} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-faint)' }}>Sem dados no período selecionado</td></tr>
+            ) : chaves.map(chave => {
+              const { label, sub } = getLabelChave(chave);
+              const temQualquerDado = dados.some(d => getDado(d, chave).qtd > 0);
+              return (
+                <tr key={chave} style={{ opacity: temQualquerDado ? 1 : 0.3 }}>
+                  <td style={{ position: 'sticky', left: 0, background: 'var(--color-surface)', borderRight: '2px solid var(--color-border)', zIndex: 1 }}>
+                    <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 176 }}>{label}</div>
+                    {sub && <div style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>{sub}</div>}
+                  </td>
+                  {colunas.map((_, ci) => {
+                    const cur  = getDado(dados[ci],    chave);
+                    const prev = ci > 0 ? getDado(dados[ci-1], chave) : null;
+                    const dq   = prev !== null ? cur.qtd   - prev.qtd   : null;
+                    const dv   = prev !== null ? cur.valor - prev.valor : null;
+                    const corDQ = dq === null ? '' : dq > 0 ? '#15803d' : dq < 0 ? '#dc2626' : '#6b7280';
+                    const corDV = dv === null ? '' : dv > 0 ? '#15803d' : dv < 0 ? '#dc2626' : '#6b7280';
+                    const bgDelta = dv === null ? 'var(--color-surface-3)' : dv > 0 ? 'rgba(21,128,61,0.07)' : dv < 0 ? 'rgba(220,38,38,0.07)' : 'var(--color-surface-3)';
+                    return (
+                      <React.Fragment key={ci}>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', borderLeft: '1px solid var(--color-border)', fontWeight: cur.qtd > 0 ? 600 : 400, color: cur.qtd > 0 ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
+                          {cur.qtd || '—'}
+                        </td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: cur.valor > 0 ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
+                          {fmtV(cur.valor)}
+                        </td>
+                        {ci < n - 1 && (
+                          <td style={{ textAlign: 'center', background: bgDelta, padding: '4px 6px' }}>
+                            {dq !== null && dq !== 0 && (
+                              <div style={{ fontSize: 10, fontWeight: 700, color: corDQ, whiteSpace: 'nowrap' }}>{fmtDQ(dq)} proc.</div>
+                            )}
+                            {dv !== null && dv !== 0 && (
+                              <div style={{ fontSize: 10, fontWeight: 600, color: corDV, whiteSpace: 'nowrap' }}>{fmtDV(dv)}</div>
+                            )}
+                            {dq === 0 && dv === 0 && <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>—</span>}
+                            {dq === null && <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>—</span>}
+                          </td>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+          {/* Totais por coluna */}
+          <tfoot>
+            <tr style={{ fontWeight: 700, background: 'var(--color-surface-2)', borderTop: '2px solid var(--color-border)' }}>
+              <td style={{ position: 'sticky', left: 0, background: 'var(--color-surface-2)', borderRight: '2px solid var(--color-border)', padding: '8px 10px', zIndex: 1 }}>Total</td>
+              {colunas.map((_, ci) => {
+                const cur  = totaisCols[ci];
+                const prev = ci > 0 ? totaisCols[ci-1] : null;
+                const dq   = prev !== null ? cur.qtd   - prev.qtd   : null;
+                const dv   = prev !== null ? cur.valor - prev.valor : null;
+                const corDQ = dq === null ? '' : dq > 0 ? '#15803d' : dq < 0 ? '#dc2626' : '#6b7280';
+                const corDV = dv === null ? '' : dv > 0 ? '#15803d' : dv < 0 ? '#dc2626' : '#6b7280';
+                return (
+                  <React.Fragment key={ci}>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', borderLeft: '1px solid var(--color-border)', padding: '8px 6px' }}>{cur.qtd}</td>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', padding: '8px 6px' }}>{fmtV(cur.valor)}</td>
+                    {ci < n - 1 && (
+                      <td style={{ textAlign: 'center', padding: '8px 6px', background: 'var(--color-surface-3)' }}>
+                        {dq !== null && dq !== 0 && <div style={{ fontSize: 10, fontWeight: 700, color: corDQ }}>{fmtDQ(dq)} proc.</div>}
+                        {dv !== null && dv !== 0 && <div style={{ fontSize: 10, fontWeight: 600, color: corDV }}>{fmtDV(dv)}</div>}
+                        {((dq === 0 && dv === 0) || dq === null) && <span style={{ color: 'var(--color-text-faint)', fontSize: 10 }}>—</span>}
+                      </td>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tr>
           </tfoot>
         </table>
