@@ -4,7 +4,7 @@ import ProcessoDetalhe from './ProcessoDetalhe.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 function formatBRL(v) {
-  const n = parseFloat(String(v || 0).replace(/\./g, '').replace(',', '.')) || 0;
+  const n = parseFloat(v) || 0;
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
