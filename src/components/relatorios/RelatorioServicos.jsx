@@ -236,13 +236,8 @@ export default function RelatorioServicos() {
                 padding: '11px 16px', background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-primary)',
                 borderLeft: '4px solid var(--color-primary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {/* Ícone de setor — duas engrenagens SVG */}
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                    <path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>
-                    <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-                  </svg>
+                  {/* Ícone de setor */}
+                  <span style={{ fontSize: 16 }}>⚙</span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.01em' }}>{g.categoria}</span>
                   <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length}</span>
                   {limiteSetor !== 'todos' && g.processos.length > limiteSetor && (
