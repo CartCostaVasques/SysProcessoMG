@@ -132,6 +132,7 @@ export default function ProcessoDetalhePage() {
   const [busca,        setBusca]        = useState('');
   const [filtroStatus, setFiltroStatus] = useState('Em andamento');
   const [modoVis,      setModoVis]      = useState('lista');
+  const [limite,       setLimite]       = useState(50);
 
   const processoAtual = selecionado
     ? processos.find(p => p.id === selecionado.id) || selecionado
@@ -149,6 +150,7 @@ export default function ProcessoDetalhePage() {
   }), [processos, busca, filtroStatus, interessados]);
 
   const totalGeral = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
+  const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
 
   const grupos = useMemo(() => {
     const mapa = {};
@@ -220,7 +222,21 @@ export default function ProcessoDetalhePage() {
       {/* ── Modo Lista ── */}
       {modoVis === 'lista' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <TabelaProcessos lista={lista} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+          {lista.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Exibindo {listaLimitada.length} de {lista.length}</span>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas:</span>
+                {[50, 70, 100, 'todos'].map(v => (
+                  <button key={v} className={`btn btn-sm ${limite === v ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setLimite(v)} style={{ minWidth: 36, fontSize: 11 }}>
+                    {v === 'todos' ? 'Todos' : v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <TabelaProcessos lista={listaLimitada} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
         </div>
       )}
 
