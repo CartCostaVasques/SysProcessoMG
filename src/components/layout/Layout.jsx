@@ -5,7 +5,7 @@ import { getInitials } from '../../data/mockData.js';
 const NAV_ITEMS = [
   { id: 'dashboard',      label: 'Dashboard',       icon: '⊡', section: 'Principal' },
   { id: 'processos',      label: 'Processos',        icon: '📋', section: 'Operacional' },
-  { id: 'andamentos',     label: 'Andamentos',       icon: '🔄', section: 'Operacional' },
+  { id: 'andamentos',     label: 'Processo Detalhe', icon: '🔄', section: 'Operacional' },
   { id: 'relservicos',    label: 'Serviços por Setor', icon: '📊', section: 'Operacional' },
   { id: 'panoramico',     label: 'Panorâmico',         icon: '📈', section: 'Operacional' },
   { id: 'importacaocsv',  label: 'Importação CSV',     icon: '📄', section: 'Configurações' },
@@ -83,7 +83,7 @@ export function Header({ page, setPage }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const PAGE_LABELS = {
-    dashboard: 'Dashboard', processos: 'Processos', andamentos: 'Andamentos', interessados: 'Interessados',
+    dashboard: 'Dashboard', processos: 'Processos', andamentos: 'Processo Detalhe', interessados: 'Interessados',
     tarefas: 'Tarefas', oficios: 'Ofícios', recibos: 'Recibos', panoramico: 'Panorâmico', importacaocsv: 'Importação CSV', servicos: 'Tipo de Serviços',
     setores: 'Setores', relservicos: 'Serviços por Setor', usuarios: 'Usuários', configuracoes: 'Configurações',
     logs: 'Logs de Acesso',
