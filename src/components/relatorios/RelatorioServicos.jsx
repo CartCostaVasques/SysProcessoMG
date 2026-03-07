@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 const formatBRL = v => {
-  const n = parseFloat(String(v || 0).replace(/\./g, '').replace(',', '.')) || 0;
+  const n = parseFloat(v) || 0;
   return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
