@@ -65,63 +65,55 @@ function valorPorExtenso(valor) {
   return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
-function gerarViaHtml(recibo, interessado, cartorio, label) {
+function cabecalhoHtml(cartorio) {
   const logo     = cartorio.logo_url || '';
   const nomeCart = cartorio.nome || 'Cartório';
   const cidade   = cartorio.cidade || '';
-  const dtRecibo = fmtData(recibo.dt_recibo);
+  const cnpj     = cartorio.cnpj || '';
+  const endereco = cartorio.endereco || '';
+  const telefone = cartorio.telefone || '';
+  const email    = cartorio.email || '';
+  return `
+  <div class="cab">
+    <div class="logo-box">${logo ? `<img src="${logo}" alt="Logo">` : '<span style="font-size:9px;color:#aaa">Logo</span>'}</div>
+    <div class="cab-info">
+      <div class="cab-nome">${nomeCart}</div>
+      <div class="cab-sub">
+        ${endereco ? endereco + '<br>' : ''}
+        ${[telefone, email].filter(Boolean).join(' - ')}${cidade ? '<br>' + cidade + '-MT' : ''}
+        ${cnpj ? '<br>CNPJ - ' + cnpj : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// Modelo Colaborador — quem assina é o colaborador
+function gerarViaColaborador(recibo, interessado, cartorio, label) {
+  const cidade    = cartorio.cidade || '';
+  const nomeCart  = cartorio.nome || 'Cartório';
+  const dtRecibo  = fmtData(recibo.dt_recibo);
   const numRecibo = String(recibo.id || 0).padStart(6, '0');
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
-  const cnpj      = cartorio.cnpj || '';
-  const endereco  = cartorio.endereco || '';
-  const telefone  = cartorio.telefone || '';
-  const email     = cartorio.email || '';
   const descTexto = recibo.obs || ('Declaro para todos os efeitos que recebi o presente valor a título de ' + (recibo.descricao || '') + '.');
 
   return `
   <div class="via">
-    <div class="cab">
-      <div class="logo-box">${logo ? `<img src="${logo}" alt="Logo">` : '<span style="font-size:9px;color:#aaa">Logo</span>'}</div>
-      <div class="cab-info">
-        <div class="cab-nome">${nomeCart}</div>
-        <div class="cab-sub">
-          ${endereco}<br>
-          ${[telefone, email].filter(Boolean).join(' - ')}${cidade ? '<br>' + cidade + '-MT' : ''}
-          ${cnpj ? '<br>CNPJ - ' + cnpj : ''}
-        </div>
-      </div>
-    </div>
-
+    ${cabecalhoHtml(cartorio)}
     <div class="titulo-bloco">
-      <div class="titulo-recibo">Recibo de ${recibo.descricao || 'Pagamento'} - Colaborador</div>
+      <div class="titulo-recibo">Recibo de ${recibo.descricao || 'Pagamento'} — Colaborador</div>
       ${label ? `<div class="via-check"><span class="check-box">&#x2611;</span> ${label}</div>` : ''}
     </div>
-
     <table class="campos">
-      <tr>
-        <td class="lbl">Nome</td>
-        <td><div class="campo-box">${interessado?.nome || '—'}</div></td>
-      </tr>
-      <tr>
-        <td class="lbl">CPF/CNPJ</td>
-        <td><div class="campo-box">${interessado?.cpf || '—'}</div></td>
-      </tr>
-      <tr>
-        <td class="lbl">Valor</td>
-        <td>
-          <div class="campo-box valor-destaque">${valorNum}</div>
-          <div class="valor-ext">${valorExt}</div>
-        </td>
-      </tr>
-      <tr>
-        <td class="lbl">Descrição</td>
-        <td><div class="campo-box descricao-box">${descTexto}</div></td>
-      </tr>
+      <tr><td class="lbl">Nome</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
+      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr><td class="lbl">Valor</td><td>
+        <div class="campo-box valor-destaque">${valorNum}</div>
+        <div class="valor-ext">${valorExt}</div>
+      </td></tr>
+      <tr><td class="lbl">Descrição</td><td><div class="campo-box descricao-box">${descTexto}</div></td></tr>
     </table>
-
     <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
-
     <div class="assin-bloco">
       <div class="assin-linha">
         <div class="assin-nome">${(interessado?.nome || '').toUpperCase()}</div>
@@ -129,9 +121,56 @@ function gerarViaHtml(recibo, interessado, cartorio, label) {
         <div class="assin-cargo">Colaborador(a)</div>
       </div>
     </div>
-
     <div class="rodape">Nº ${numRecibo} &nbsp;|&nbsp; ${dtRecibo} &nbsp;|&nbsp; ${nomeCart}</div>
   </div>`;
+}
+
+// Modelo Cliente — quem assina é o responsável do cartório (Tabelião / Substituto / Escrevente)
+function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
+  const cidade    = cartorio.cidade || '';
+  const nomeCart  = cartorio.nome || 'Cartório';
+  const dtRecibo  = fmtData(recibo.dt_recibo);
+  const numRecibo = String(recibo.id || 0).padStart(6, '0');
+  const valorNum  = fmtValor(recibo.valor);
+  const valorExt  = valorPorExtenso(recibo.valor);
+  const nomeAssin = assinante?.nome_completo || assinante?.nome_simples || '';
+  const cargoAssin = assinante?.perfil || assinante?.cargo || 'Responsável';
+  const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
+  const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
+
+  return `
+  <div class="via">
+    ${cabecalhoHtml(cartorio)}
+    <div class="titulo-bloco">
+      <div class="titulo-recibo">Recibo de Pagamento de Emolumentos</div>
+      ${label ? `<div class="via-check"><span class="check-box">&#x2611;</span> ${label}</div>` : ''}
+    </div>
+    <table class="campos">
+      <tr><td class="lbl">Recebi de</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
+      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      ${osHtml}
+      <tr><td class="lbl">Referente a</td><td><div class="campo-box">${recibo.descricao || '—'}</div></td></tr>
+      <tr><td class="lbl">Valor</td><td>
+        <div class="campo-box valor-destaque">${valorNum}</div>
+        <div class="valor-ext">${valorExt}</div>
+      </td></tr>
+      ${obsHtml}
+    </table>
+    <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
+    <div class="assin-bloco">
+      <div class="assin-linha">
+        <div class="assin-nome">${nomeAssin.toUpperCase()}</div>
+        <div class="assin-cargo">${cargoAssin}</div>
+        <div class="assin-cargo">${nomeCart}</div>
+      </div>
+    </div>
+    <div class="rodape">Nº ${numRecibo} &nbsp;|&nbsp; ${dtRecibo} &nbsp;|&nbsp; ${nomeCart}</div>
+  </div>`;
+}
+
+// Mantém compatibilidade — usa modelo colaborador por padrão
+function gerarViaHtml(recibo, interessado, cartorio, label) {
+  return gerarViaColaborador(recibo, interessado, cartorio, label);
 }
 
 const CSS_RECIBO = `
@@ -176,7 +215,25 @@ function imprimirRecibo(recibo, interessado, cartorio) {
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title>
 <style>${CSS_RECIBO}</style></head><body>
-${vias.map((v, i) => gerarViaHtml(recibo, interessado, cartorio, v) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
+${vias.map((v, i) => gerarViaColaborador(recibo, interessado, cartorio, v) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=860,height=1100');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 500);
+}
+
+function imprimirReciboCliente(recibo, interessado, cartorio, assinante) {
+  const vias = [];
+  if (recibo.primeira_via)  vias.push('1ª Via — Cartório');
+  if (recibo.segunda_via)   vias.push('2ª Via — Cliente');
+  if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
+  if (vias.length === 0)    vias.push('1ª Via — Cartório');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title>
+<style>${CSS_RECIBO}</style></head><body>
+${vias.map((v, i) => gerarViaCliente(recibo, interessado, cartorio, v, assinante) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=860,height=1100');
@@ -322,7 +379,8 @@ function TabelaRecibos({ recibos, total, totalCount, carregando, busca, onEditar
               <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 13 }}>{fmtValor(r.valor)}</td>
               <td>
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                  <button className="btn-icon btn-sm" title="Imprimir" onClick={() => onImprimir(r)}>🖨</button>
+                  <button className="btn-icon btn-sm" title="Imprimir — Colaborador" onClick={() => onImprimir(r)}>🖨</button>
+                  {onImprimirCliente && <button className="btn-icon btn-sm" title="Imprimir — Cliente" onClick={() => onImprimirCliente(r)} style={{ fontSize: 11 }}>📄</button>}
                   {onEditar && <button className="btn-icon btn-sm" title="Editar" onClick={() => onEditar(r)}>✎</button>}
                   <button className="btn-icon btn-sm" title="Remover" onClick={() => onDeletar(r.id)} style={{ color: 'var(--color-danger)' }}>✕</button>
                 </div>
@@ -346,10 +404,19 @@ function TabelaRecibos({ recibos, total, totalCount, carregando, busca, onEditar
 
 // ── Componente principal ─────────────────────────────────────
 export default function Recibos() {
-  const { interessados, addInteressado, addToast, cartorio, usuario, supabaseClient: sb } = useApp();
+  const { interessados, addInteressado, addToast, cartorio, usuario, usuarios, supabaseClient: sb } = useApp();
 
   const mesAtual = String(new Date().getMonth() + 1).padStart(2, '0');
   const anoAtual = String(new Date().getFullYear());
+
+  // Usuários que podem assinar recibos de cliente
+  const assinantes = useMemo(() =>
+    usuarios.filter(u => u.ativo && ['Tabelião','Escrevente','Administrador'].includes(u.perfil))
+  , [usuarios]);
+
+  const [assinanteSel, setAssinanteSel] = useState(null);
+  // Auto-seleciona o primeiro Tabelião disponível
+  useState(() => { if (assinantes.length) setAssinanteSel(assinantes[0]); });
 
   const [aba,           setAba]          = useState('emitir');
   const [recibos,       setRecibos]      = useState([]);
@@ -605,7 +672,15 @@ export default function Recibos() {
               <div className="card" style={{ padding: 0 }}>
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div className="card-title">🧾 {clienteSel.nome}</div>
-                  <button className="btn btn-primary btn-sm" onClick={() => setModalRecibo('novo')}>＋ Novo Recibo</button>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select className="form-select" style={{ fontSize: 11, height: 30 }}
+                      value={assinanteSel?.id || ''}
+                      onChange={e => setAssinanteSel(assinantes.find(u => u.id === e.target.value) || null)}>
+                      <option value="">— Assinante —</option>
+                      {assinantes.map(u => <option key={u.id} value={u.id}>{u.nome_simples} ({u.perfil})</option>)}
+                    </select>
+                    <button className="btn btn-primary btn-sm" onClick={() => setModalRecibo('novo')}>＋ Novo Recibo</button>
+                  </div>
                 </div>
                 <div style={{ padding: '0 14px 12px' }}>
                   <input className="form-input" placeholder="Buscar por descrição ou OS..." value={busca} onChange={e => setBusca(e.target.value)} style={{ fontSize: 13 }} />
@@ -614,6 +689,7 @@ export default function Recibos() {
                   carregando={carregando} busca={busca}
                   onEditar={r => setModalRecibo(r)}
                   onImprimir={r => imprimirRecibo(r, clienteSel, cartorio)}
+                  onImprimirCliente={r => imprimirReciboCliente(r, clienteSel, cartorio, assinanteSel)}
                   onDeletar={deletarRecibo} mostrarCliente={false} />
               </div>
             )}
@@ -757,6 +833,7 @@ export default function Recibos() {
             carregando={carregando} busca={buscaHist}
             onEditar={null}
             onImprimir={r => imprimirRecibo(r, r.interessados, cartorio)}
+            onImprimirCliente={r => imprimirReciboCliente(r, r.interessados, cartorio, assinanteSel)}
             onDeletar={deletarRecibo} mostrarCliente={true} />
         </div>
       )}
