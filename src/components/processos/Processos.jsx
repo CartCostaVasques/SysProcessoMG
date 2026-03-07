@@ -121,13 +121,22 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Tipo de Serviço *</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {SERVICOS_RAPIDOS.map((s, i) => {
+                // Busca o serviço real no banco pelo label — match por subcategoria contendo palavras-chave
+                const svcReal = servicos.find(sv =>
+                  sv.subcategoria?.toLowerCase().includes(s.especie.toLowerCase()) ||
+                  sv.subcategoria === s.especie
+                );
+                const item = svcReal
+                  ? { label: s.label, categoria: svcReal.categoria, especie: svcReal.subcategoria }
+                  : s;
                 const ativo = selecionado?.label === s.label;
                 return (
-                  <button key={i} onClick={() => setSelecionado(s)} style={btnStyle(ativo)}>
+                  <button key={i} onClick={() => setSelecionado(item)} style={btnStyle(ativo)}>
                     <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, color: 'var(--color-bg)' }}>
                       {ativo ? '✓' : ''}
                     </span>
                     {s.label}
+                    {svcReal && <span style={{ fontSize: 10, color: 'var(--color-text-faint)', marginLeft: 4 }}>✓</span>}
                   </button>
                 );
               })}
@@ -531,11 +540,15 @@ export default function Processos() {
               <tr key={p.id} className="row-editing">
                 <td><input className="td-input" value={editRow.numero_interno} onChange={e => setEd('numero_interno', e.target.value)} style={{ width: 70 }} /></td>
                 <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
-                <td><select className="td-select" value={editRow.categoria} onChange={e => setEd('categoria', e.target.value)} style={{ width: 105 }}>
-                  <option value="">—</option>{categorias.map(c => <option key={c}>{c}</option>)}
+                <td><select className="td-select" value={editRow.categoria} onChange={e => { setEd('categoria', e.target.value); setEd('especie', ''); }} style={{ width: 105 }}>
+                  <option value="">—</option>
+                  {categorias.map(c => <option key={c}>{c}</option>)}
+                  {editRow.categoria && !categorias.includes(editRow.categoria) && <option value={editRow.categoria}>{editRow.categoria}</option>}
                 </select></td>
                 <td><select className="td-select" value={editRow.especie} onChange={e => setEd('especie', e.target.value)} style={{ width: 125 }}>
-                  <option value="">—</option>{getEspecies(editRow.categoria).map(s => <option key={s}>{s}</option>)}
+                  <option value="">—</option>
+                  {getEspecies(editRow.categoria).map(s => <option key={s}>{s}</option>)}
+                  {editRow.especie && !getEspecies(editRow.categoria).includes(editRow.especie) && <option value={editRow.especie}>{editRow.especie}</option>}
                 </select></td>
                 <td>
                   <AutocompleteInteressados todos={interessados} selecionados={editRow._sel || []}
