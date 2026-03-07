@@ -15,6 +15,7 @@ export default function Andamentos() {
   const [filtroProc,   setFiltroProc]   = useState('');
   const [dtInicio,     setDtInicio]     = useState('');
   const [dtFim,        setDtFim]        = useState('');
+  const [limite,       setLimite]       = useState(50);
 
   // Formulário novo/editar (inline no topo da lista)
   const EMPTY = { dt_andamento: HOJE(), tipo: '', descricao: '', responsavel: usuario?.nome_simples || '', vencimento: '', obs_and: '', processo_id: '' };
@@ -79,7 +80,8 @@ export default function Andamentos() {
     }
   };
 
-  const limparFiltros = () => { setBusca(''); setFiltroResp(''); setFiltroStatus(''); setFiltroProc(''); setDtInicio(''); setDtFim(''); };
+  const limarFiltros = () => { setBusca(''); setFiltroResp(''); setFiltroStatus(''); setFiltroProc(''); setDtInicio(''); setDtFim(''); };
+  const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
 
   return (
     <div className="fade-in">
@@ -172,7 +174,7 @@ export default function Andamentos() {
         <input type="date" className="form-input" value={dtInicio} onChange={e => setDtInicio(e.target.value)} title="Data início" style={{ width: 130 }} />
         <input type="date" className="form-input" value={dtFim}    onChange={e => setDtFim(e.target.value)}    title="Data fim"   style={{ width: 130 }} />
         {temFiltro && (
-          <button className="btn btn-ghost btn-sm" onClick={limparFiltros}>✕ Limpar</button>
+          <button className="btn btn-ghost btn-sm" onClick={limarFiltros}>✕ Limpar</button>
         )}
       </div>
 
@@ -196,6 +198,20 @@ export default function Andamentos() {
 
       {/* Tabela */}
       <div className="table-wrapper">
+        {temFiltro && lista.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Exibindo {listaLimitada.length} de {lista.length}</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas:</span>
+              {[50, 70, 100, 'todos'].map(v => (
+                <button key={v} className={`btn btn-sm ${limite === v ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setLimite(v)} style={{ minWidth: 36, fontSize: 11 }}>
+                  {v === 'todos' ? 'Todos' : v}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <table className="data-table">
           <thead>
             <tr>
@@ -233,7 +249,7 @@ export default function Andamentos() {
                 </td>
               </tr>
             )}
-            {lista.map(a => (
+            {listaLimitada.map(a => (
               <tr key={a.id} style={{ opacity: a.concluido ? 0.6 : 1 }}>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDate(a.dt_andamento)}</td>
                 <td>
