@@ -90,16 +90,20 @@ export default function Panoramico() {
   const hoje     = new Date();
   const anoAtual = String(hoje.getFullYear());
   const mesAtual = String(hoje.getMonth() + 1).padStart(2,'0');
-  // Mês anterior (pode cruzar o ano)
-  const mesAntNum = hoje.getMonth() === 0 ? 12 : hoje.getMonth();
-  const anoAnt    = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
-  const mesAnt    = String(mesAntNum).padStart(2,'0');
+  // Mês anterior
+  const mesAntNum  = hoje.getMonth() === 0 ? 12 : hoje.getMonth();
+  const anoAnt     = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
+  const mesAnt     = String(mesAntNum).padStart(2,'0');
+  // Dois meses atrás
+  const mes2AntNum = mesAntNum === 1 ? 12 : mesAntNum - 1;
+  const ano2Ant    = mesAntNum === 1 ? String(Number(anoAnt) - 1) : anoAnt;
+  const mes2Ant    = String(mes2AntNum).padStart(2,'0');
 
   const [modoVis,  setModoVis]  = useState('mensal');
-  const [anoA,     setAnoA]     = useState(anoAtual);
-  const [mesA,     setMesA]     = useState(mesAtual);
-  const [anoB,     setAnoB]     = useState(anoAnt);    // ano do mês anterior
-  const [mesB,     setMesB]     = useState(mesAnt);    // mês anterior
+  const [anoA,     setAnoA]     = useState(anoAnt);    // mês anterior = mais provável ter dados
+  const [mesA,     setMesA]     = useState(mesAnt);
+  const [anoB,     setAnoB]     = useState(ano2Ant);   // dois meses atrás
+  const [mesB,     setMesB]     = useState(mes2Ant);
   const [secao,    setSecao]    = useState('todos');
 
   // Estados do modo Sequência
@@ -128,11 +132,12 @@ export default function Panoramico() {
     return Array.from(s).sort();
   }, [processos, anoB]);
 
-  const anoARef = React.useRef(anoA);
-  const anoBRef = React.useRef(anoB);
+  const anoARef = React.useRef(null);  // null = ainda não houve troca pelo usuário
+  const anoBRef = React.useRef(null);
 
-  // Se o mês selecionado não existe após troca de ANO, ajusta para o mais recente disponível
+  // Só ajusta o mês se o USUÁRIO trocou o ano e o mês atual não existe nesse ano
   useEffect(() => {
+    if (anoARef.current === null) { anoARef.current = anoA; return; }
     if (anoA !== anoARef.current) {
       anoARef.current = anoA;
       if (mesesDispA.length && !mesesDispA.includes(mesA)) {
@@ -140,7 +145,9 @@ export default function Panoramico() {
       }
     }
   }, [anoA, mesesDispA]);
+
   useEffect(() => {
+    if (anoBRef.current === null) { anoBRef.current = anoB; return; }
     if (anoB !== anoBRef.current) {
       anoBRef.current = anoB;
       if (mesesDispB.length && !mesesDispB.includes(mesB)) {
