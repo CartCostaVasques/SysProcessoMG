@@ -100,10 +100,10 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
 export default function RelatorioServicos() {
   const { processos, cartorio, usuarios } = useApp();
   const [filtro,    setFiltro]    = useState('Concluído');
-  const [filtroMes, setFiltroMes] = useState('todos');
+  const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno, setFiltroAno] = useState(String(new Date().getFullYear()));
   const [busca,     setBusca]     = useState('');
-  const [limiteSetor, setLimiteSetor] = useState(35);
+  const [limiteSetor, setLimiteSetor] = useState(25);
 
   // Anos disponíveis nos processos
   const anosDisp = useMemo(() => {
