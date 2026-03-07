@@ -90,11 +90,26 @@ export default function Dashboard({ setPage }) {
   const { processos, tarefas, oficios, andamentos, usuarios } = useApp();
 
   const hoje = new Date();
-  const mesAtual  = String(hoje.getMonth() + 1).padStart(2, '0');
   const anoAtual  = String(hoje.getFullYear());
-  const mesAnt    = String(hoje.getMonth() === 0 ? 12 : hoje.getMonth()).padStart(2, '0');
-  const anoAnt    = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
   const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  const [filtroAno, setFiltroAno] = useState(anoAtual);
+
+  // Anos disponíveis nos processos
+  const anosDisp = useMemo(() => {
+    const s = new Set();
+    processos.forEach(p => { if (p.dt_conclusao) s.add(p.dt_conclusao.substring(0,4)); });
+    if (!s.size) s.add(anoAtual);
+    return Array.from(s).sort((a,b) => b - a);
+  }, [processos]);
+
+  // Mês/mês anterior relativos ao filtroAno (se for ano atual, usa mês atual; senão, Dez vs Nov)
+  const isAnoAtual = filtroAno === anoAtual;
+  const mesRef     = isAnoAtual ? hoje.getMonth() + 1 : 12;
+  const mesStr     = String(mesRef).padStart(2,'0');
+  const mesAntNum  = mesRef === 1 ? 12 : mesRef - 1;
+  const anoAntStr  = mesRef === 1 ? String(Number(filtroAno) - 1) : filtroAno;
+  const mesAntStr  = String(mesAntNum).padStart(2,'0');
 
   const stats = useMemo(() => {
     const total = processos.length;
@@ -106,7 +121,7 @@ export default function Dashboard({ setPage }) {
     return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas };
   }, [processos, tarefas, oficios]);
 
-  // Valores financeiros — baseados em processos concluídos
+  // Valores financeiros — filtrados pelo ano selecionado
   const financeiro = useMemo(() => {
     const filtrar = (ano, mes) => processos.filter(p => {
       const dt = p.dt_conclusao;
@@ -114,57 +129,60 @@ export default function Dashboard({ setPage }) {
       return dt.startsWith(ano) && dt.substring(5,7) === mes;
     });
 
-    const listaMes   = filtrar(anoAtual, mesAtual);
-    const listaAnt   = filtrar(anoAnt,   mesAnt);
-    const listaAno   = processos.filter(p => p.dt_conclusao?.startsWith(anoAtual));
+    const listaMes   = filtrar(filtroAno,  mesStr);
+    const listaAnt   = filtrar(anoAntStr,  mesAntStr);
+    const listaAno   = processos.filter(p => p.dt_conclusao?.startsWith(filtroAno));
     const listaConcl = processos.filter(p => p.status === 'Concluído');
 
     const soma = (arr) => arr.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
 
-    const vlMes  = soma(listaMes);
-    const vlAnt  = soma(listaAnt);
-    const vlAno  = soma(listaAno);
+    const vlMes   = soma(listaMes);
+    const vlAnt   = soma(listaAnt);
+    const vlAno   = soma(listaAno);
     const vlTotal = soma(listaConcl);
-
     const diffMes = vlMes - vlAnt;
     const diffPct = vlAnt > 0 ? ((vlMes - vlAnt) / vlAnt * 100) : null;
 
     return {
       vlMes, vlAnt, vlAno, vlTotal,
-      qtdMes: listaMes.length, qtdAnt: listaAnt.length,
-      qtdAno: listaAno.length,
+      qtdMes: listaMes.length, qtdAnt: listaAnt.length, qtdAno: listaAno.length,
       diffMes, diffPct,
-      labelMes: MESES_FULL[hoje.getMonth()],
-      labelAnt: MESES_FULL[hoje.getMonth() === 0 ? 11 : hoje.getMonth() - 1],
+      labelMes: MESES_FULL[mesRef - 1],
+      labelAnt: MESES_FULL[mesAntNum - 1],
     };
-  }, [processos]);
+  }, [processos, filtroAno]);
 
   const fmtBRL = (v) => Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const porCategoria = useMemo(() => {
     const map = {};
-    processos.forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + 1; });
+    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
+      .forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + 1; });
     return Object.entries(map).map(([label, value]) => ({ label, value }));
-  }, [processos]);
+  }, [processos, filtroAno]);
 
   const porResponsavel = useMemo(() => {
     const map = {};
-    processos.forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + 1; });
+    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
+      .forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + 1; });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [processos]);
+  }, [processos, usuarios, filtroAno]);
 
-  // Processos por mês (últimos 6 meses reais)
+  // Processos por mês (6 meses do filtroAno, terminando no mês de referência)
   const porMes = useMemo(() => {
     const result = [];
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      const ano = String(d.getFullYear());
-      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const m = mesRef - i;
+      const ajuste = m <= 0;
+      const mesNum = ajuste ? m + 12 : m;
+      const anoNum = ajuste ? Number(filtroAno) - 1 : Number(filtroAno);
+      const mes = String(mesNum).padStart(2,'0');
+      const ano = String(anoNum);
       const qtd = processos.filter(p => p.dt_conclusao?.startsWith(ano) && p.dt_conclusao?.substring(5,7) === mes).length;
-      result.push({ label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()], value: qtd, highlight: i === 0 });
+      result.push({ label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mesNum-1], value: qtd, highlight: i === 0 });
     }
     return result;
-  }, [processos]);
+  }, [processos, filtroAno]);
 
   const processosPendentes = processos.filter(p => p.status === 'Em andamento').slice(0, 5);
   const tarefasRecentes    = tarefas.filter(t => !t.concluida).slice(0, 4);
@@ -186,6 +204,17 @@ export default function Dashboard({ setPage }) {
         <div>
           <div className="page-title">Dashboard</div>
           <div className="page-sub">Visão geral do cartório — {hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Ano:</span>
+          <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+            {anosDisp.map(a => (
+              <button key={a} onClick={() => setFiltroAno(a)}
+                style={{ padding: '6px 16px', fontSize: 13, fontWeight: filtroAno === a ? 700 : 400, background: filtroAno === a ? 'var(--color-accent)' : 'var(--color-surface)', color: filtroAno === a ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRight: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                {a}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -236,7 +265,7 @@ export default function Dashboard({ setPage }) {
 
         {/* Ano atual */}
         <div className="stat-card" style={{ borderLeft: '3px solid var(--color-info)' }}>
-          <div className="stat-card-label">📅 Acumulado {anoAtual}</div>
+          <div className="stat-card-label">📅 Acumulado {filtroAno}</div>
           <div className="stat-card-value" style={{ color: 'var(--color-info)', fontSize: 18 }}>
             R$ {fmtBRL(financeiro.vlAno)}
           </div>
