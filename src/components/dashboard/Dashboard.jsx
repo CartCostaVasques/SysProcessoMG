@@ -89,22 +89,57 @@ function DonutChart({ slices }) {
 export default function Dashboard({ setPage }) {
   const { processos, tarefas, oficios, andamentos, usuarios } = useApp();
 
+  const hoje = new Date();
+  const mesAtual  = String(hoje.getMonth() + 1).padStart(2, '0');
+  const anoAtual  = String(hoje.getFullYear());
+  const mesAnt    = String(hoje.getMonth() === 0 ? 12 : hoje.getMonth()).padStart(2, '0');
+  const anoAnt    = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
+  const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
   const stats = useMemo(() => {
     const total = processos.length;
     const emAndamento = processos.filter(p => p.status === 'Em andamento').length;
-    const concluidos = processos.filter(p => p.status === 'Concluído').length;
+    const concluidos  = processos.filter(p => p.status === 'Concluído').length;
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
-    const oficiosPendentes = oficios.filter(o => o.status === 'Aguardando Resposta').length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
-
-    const hoje = new Date();
-    const tarefasVencidas = tarefas.filter(t => {
-      if (t.concluida) return false;
-      return new Date(t.dt_fim) < hoje;
-    }).length;
-
-    return { total, emAndamento, concluidos, tarefasPendentes, oficiosPendentes, oficiosEnviados, tarefasVencidas };
+    const tarefasVencidas  = tarefas.filter(t => !t.concluida && new Date(t.dt_fim) < hoje).length;
+    return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas };
   }, [processos, tarefas, oficios]);
+
+  // Valores financeiros — baseados em processos concluídos
+  const financeiro = useMemo(() => {
+    const filtrar = (ano, mes) => processos.filter(p => {
+      const dt = p.dt_conclusao;
+      if (!dt) return false;
+      return dt.startsWith(ano) && dt.substring(5,7) === mes;
+    });
+
+    const listaMes   = filtrar(anoAtual, mesAtual);
+    const listaAnt   = filtrar(anoAnt,   mesAnt);
+    const listaAno   = processos.filter(p => p.dt_conclusao?.startsWith(anoAtual));
+    const listaConcl = processos.filter(p => p.status === 'Concluído');
+
+    const soma = (arr) => arr.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
+
+    const vlMes  = soma(listaMes);
+    const vlAnt  = soma(listaAnt);
+    const vlAno  = soma(listaAno);
+    const vlTotal = soma(listaConcl);
+
+    const diffMes = vlMes - vlAnt;
+    const diffPct = vlAnt > 0 ? ((vlMes - vlAnt) / vlAnt * 100) : null;
+
+    return {
+      vlMes, vlAnt, vlAno, vlTotal,
+      qtdMes: listaMes.length, qtdAnt: listaAnt.length,
+      qtdAno: listaAno.length,
+      diffMes, diffPct,
+      labelMes: MESES_FULL[hoje.getMonth()],
+      labelAnt: MESES_FULL[hoje.getMonth() === 0 ? 11 : hoje.getMonth() - 1],
+    };
+  }, [processos]);
+
+  const fmtBRL = (v) => Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const porCategoria = useMemo(() => {
     const map = {};
@@ -118,37 +153,51 @@ export default function Dashboard({ setPage }) {
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [processos]);
 
-  const meses = ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'];
-  const abertosData = [2, 3, 1, 3, 2, 1, 2, 1, 2];
-  const concluidosData = [1, 2, 1, 2, 2, 0, 1, 0, 0];
-
-  const porMes = meses.map((label, i) => ({
-    label,
-    value: abertosData[i],
-    highlight: i === meses.length - 1,
-  }));
+  // Processos por mês (últimos 6 meses reais)
+  const porMes = useMemo(() => {
+    const result = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const ano = String(d.getFullYear());
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const qtd = processos.filter(p => p.dt_conclusao?.startsWith(ano) && p.dt_conclusao?.substring(5,7) === mes).length;
+      result.push({ label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()], value: qtd, highlight: i === 0 });
+    }
+    return result;
+  }, [processos]);
 
   const processosPendentes = processos.filter(p => p.status === 'Em andamento').slice(0, 5);
-  const tarefasRecentes = tarefas.filter(t => !t.concluida).slice(0, 4);
+  const tarefasRecentes    = tarefas.filter(t => !t.concluida).slice(0, 4);
+
+  const DeltaBadge = ({ diff, pct }) => {
+    if (pct === null) return null;
+    const cor = pct > 0 ? '#15803d' : pct < 0 ? '#dc2626' : '#6b7280';
+    const bg  = pct > 0 ? '#dcfce7' : pct < 0 ? '#fee2e2' : '#f3f4f6';
+    return (
+      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: bg, color: cor, whiteSpace: 'nowrap' }}>
+        {pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+      </span>
+    );
+  };
 
   return (
     <div className="fade-in">
       <div className="page-header">
         <div>
           <div className="page-title">Dashboard</div>
-          <div className="page-sub">Visão geral do cartório — {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          <div className="page-sub">Visão geral do cartório — {hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+      {/* KPI Cards — operacionais */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
         {[
           { label: 'Total de Processos', value: stats.total, sub: 'Todos os registros', icon: '📋', color: 'var(--color-info)' },
-          { label: 'Em Andamento', value: stats.emAndamento, sub: 'Processos ativos', icon: '🔄', color: 'var(--color-warning)' },
-          { label: 'Concluídos', value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
-          { label: 'Tarefas Pendentes', value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
-          { label: 'Ofícios Enviados', value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
-          { label: 'Usuários Ativos', value: usuarios.filter(u => u.ativo).length, sub: `de ${usuarios.length} cadastrados`, icon: '◉', color: 'var(--color-text-muted)' },
+          { label: 'Em Andamento',       value: stats.emAndamento, sub: 'Processos ativos', icon: '🔄', color: 'var(--color-warning)' },
+          { label: 'Concluídos',         value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
+          { label: 'Tarefas Pendentes',  value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
+          { label: 'Ofícios Enviados',   value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
+          { label: 'Usuários Ativos',    value: usuarios.filter(u => u.ativo).length, sub: `de ${usuarios.length} cadastrados`, icon: '◉', color: 'var(--color-text-muted)' },
         ].map((s, i) => (
           <div key={i} className="stat-card">
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -159,6 +208,75 @@ export default function Dashboard({ setPage }) {
             <div className="stat-card-sub">{s.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* KPI Cards — financeiros */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 20 }}>
+        {/* Mês atual */}
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--color-success)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="stat-card-label">💰 {financeiro.labelMes}/{anoAtual}</div>
+            <DeltaBadge diff={financeiro.diffMes} pct={financeiro.diffPct} />
+          </div>
+          <div className="stat-card-value" style={{ color: 'var(--color-success)', fontSize: 18 }}>
+            R$ {fmtBRL(financeiro.vlMes)}
+          </div>
+          <div className="stat-card-sub">{financeiro.qtdMes} processo(s) concluído(s)</div>
+          {financeiro.vlAnt > 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
+              <span style={{ marginRight: 4 }}>{financeiro.labelAnt}:</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>R$ {fmtBRL(financeiro.vlAnt)}</span>
+              <span style={{ marginLeft: 6, color: 'var(--color-text-faint)' }}>({financeiro.qtdAnt} proc.)</span>
+              <span style={{ marginLeft: 6, fontFamily: 'var(--font-mono)', color: financeiro.diffMes >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                {financeiro.diffMes >= 0 ? '+' : ''}R$ {fmtBRL(financeiro.diffMes)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Ano atual */}
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--color-info)' }}>
+          <div className="stat-card-label">📅 Acumulado {anoAtual}</div>
+          <div className="stat-card-value" style={{ color: 'var(--color-info)', fontSize: 18 }}>
+            R$ {fmtBRL(financeiro.vlAno)}
+          </div>
+          <div className="stat-card-sub">{financeiro.qtdAno} processo(s) concluído(s)</div>
+          {financeiro.qtdAno > 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
+              Ticket médio: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-text-muted)' }}>R$ {fmtBRL(financeiro.vlAno / financeiro.qtdAno)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Total histórico */}
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--color-accent-dim)' }}>
+          <div className="stat-card-label">🏛 Total Histórico</div>
+          <div className="stat-card-value" style={{ color: 'var(--color-text)', fontSize: 18 }}>
+            R$ {fmtBRL(financeiro.vlTotal)}
+          </div>
+          <div className="stat-card-sub">{processos.filter(p=>p.status==='Concluído').length} proc. concluídos</div>
+          {financeiro.vlTotal > 0 && financeiro.qtdMes > 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
+              {financeiro.labelMes} representa <span style={{ fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                {(financeiro.vlMes / financeiro.vlTotal * 100).toFixed(1)}%
+              </span> do total
+            </div>
+          )}
+        </div>
+
+        {/* Ticket médio mês */}
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--color-warning)' }}>
+          <div className="stat-card-label">📊 Ticket Médio — {financeiro.labelMes}</div>
+          <div className="stat-card-value" style={{ color: 'var(--color-warning)', fontSize: 18 }}>
+            {financeiro.qtdMes > 0 ? `R$ ${fmtBRL(financeiro.vlMes / financeiro.qtdMes)}` : '—'}
+          </div>
+          <div className="stat-card-sub">por processo concluído</div>
+          {financeiro.qtdAnt > 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
+              {financeiro.labelAnt}: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>R$ {fmtBRL(financeiro.vlAnt / financeiro.qtdAnt)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Charts row */}
