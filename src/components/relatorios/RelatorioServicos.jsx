@@ -103,6 +103,7 @@ export default function RelatorioServicos() {
   const [filtroMes, setFiltroMes] = useState('todos');
   const [filtroAno, setFiltroAno] = useState(String(new Date().getFullYear()));
   const [busca,     setBusca]     = useState('');
+  const [limiteSetor, setLimiteSetor] = useState(35);
 
   // Anos disponíveis nos processos
   const anosDisp = useMemo(() => {
@@ -198,11 +199,25 @@ export default function RelatorioServicos() {
 
         <div style={{ width: 1, height: 24, background: 'var(--color-border)' }} />
 
-        {/* Busca */}
-        <input className="filter-input"
-          placeholder="Buscar nº, categoria, espécie..."
-          value={busca} onChange={e => setBusca(e.target.value)}
-          style={{ maxWidth: 240 }} />
+        {/* Busca — padrão search-bar */}
+        <div className="search-bar" style={{ flex: '1 1 200px', maxWidth: 280 }}>
+          <span className="search-bar-icon">⌕</span>
+          <input
+            placeholder="Buscar nº, categoria, espécie..."
+            value={busca} onChange={e => setBusca(e.target.value)}
+          />
+        </div>
+
+        {/* Limitador de linhas por setor */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas/setor:</span>
+          {[25, 35, 'todos'].map(v => (
+            <button key={v} className={`btn btn-sm ${limiteSetor === v ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setLimiteSetor(v)} style={{ minWidth: 36, fontSize: 11 }}>
+              {v === 'todos' ? 'Todos' : v}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Conteúdo */}
@@ -212,14 +227,27 @@ export default function RelatorioServicos() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {grupos.map(g => (
+          {grupos.map(g => {
+            const processosVisiveis = limiteSetor === 'todos' ? g.processos : g.processos.slice(0, limiteSetor);
+            return (
             <div key={g.categoria} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              {/* Cabeçalho do grupo — total só aqui */}
+              {/* Cabeçalho do grupo — destaque maior */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '9px 16px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                padding: '11px 16px', background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-primary)',
+                borderLeft: '4px solid var(--color-primary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{g.categoria}</span>
+                  {/* Ícone de setor — duas engrenagens SVG */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    <path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                    <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                  </svg>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.01em' }}>{g.categoria}</span>
                   <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length}</span>
+                  {limiteSetor !== 'todos' && g.processos.length > limiteSetor && (
+                    <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>exibindo {limiteSetor}</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-success)' }}>
@@ -232,7 +260,7 @@ export default function RelatorioServicos() {
                 </div>
               </div>
 
-              {/* Tabela com larguras fixas — igual em todos os setores */}
+              {/* Tabela com larguras fixas */}
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <colgroup>
                   {COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}
@@ -249,7 +277,7 @@ export default function RelatorioServicos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {g.processos.map((p, i) => (
+                  {processosVisiveis.map((p, i) => (
                     <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)',
                       background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)' }}>
                       <td style={{ padding: '6px 12px', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.numero_interno}</td>
@@ -268,7 +296,7 @@ export default function RelatorioServicos() {
                 </tbody>
               </table>
             </div>
-          ))}
+          )})}
 
           {/* Total geral */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 16,
