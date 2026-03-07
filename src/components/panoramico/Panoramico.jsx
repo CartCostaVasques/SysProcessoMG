@@ -29,7 +29,7 @@ const DeltaBadge = ({ atual, anterior }) => {
 function agrupar(processos, usuarios, dtRef) {
   const porCategoria = {};
   const porEspecie   = {};
-  const porSetor     = {};
+  const porSetor     = {};  // agora = por categoria do processo (campo mais confiável)
   let total = 0;
   let qtd   = 0;
 
@@ -37,21 +37,21 @@ function agrupar(processos, usuarios, dtRef) {
     const v   = parseFloat(p.valor_ato || 0);
     const cat = p.categoria || 'Sem Categoria';
     const esp = p.especie   || 'Sem Tipo';
-    const u   = usuarios.find(u => u.id === p.responsavel_id);
-    const set = u?.setor || 'Sem Setor';
 
-    // Categoria
+    // Categoria (igual ao "setor" — usamos p.categoria como agrupador principal)
     if (!porCategoria[cat]) porCategoria[cat] = { qtd: 0, valor: 0 };
     porCategoria[cat].qtd++;
     porCategoria[cat].valor += v;
 
-    // Espécie (tipo de serviço)
+    // Espécie (tipo de serviço: Categoria › Subcategoria)
     const chave = `${cat} › ${esp}`;
     if (!porEspecie[chave]) porEspecie[chave] = { categoria: cat, especie: esp, qtd: 0, valor: 0 };
     porEspecie[chave].qtd++;
     porEspecie[chave].valor += v;
 
-    // Setor
+    // porSetor agora agrupa pelo setor do usuário responsável (mantido para compatibilidade)
+    const u   = usuarios.find(u => u.id === p.responsavel_id);
+    const set = u?.setor || 'Sem Setor';
     if (!porSetor[set]) porSetor[set] = { qtd: 0, valor: 0 };
     porSetor[set].qtd++;
     porSetor[set].valor += v;
@@ -123,17 +123,26 @@ export default function Panoramico() {
     return Array.from(s).sort();
   }, [processos, anoB]);
 
-  // Se o mês selecionado não existe nos disponíveis, ajusta para o mais recente
+  const anoARef = React.useRef(anoA);
+  const anoBRef = React.useRef(anoB);
+
+  // Se o mês selecionado não existe após troca de ANO, ajusta para o mais recente disponível
   useEffect(() => {
-    if (mesesDispA.length && !mesesDispA.includes(mesA)) {
-      setMesA(mesesDispA[mesesDispA.length - 1]);
+    if (anoA !== anoARef.current) {
+      anoARef.current = anoA;
+      if (mesesDispA.length && !mesesDispA.includes(mesA)) {
+        setMesA(mesesDispA[mesesDispA.length - 1]);
+      }
     }
-  }, [mesesDispA]);
+  }, [anoA, mesesDispA]);
   useEffect(() => {
-    if (mesesDispB.length && !mesesDispB.includes(mesB)) {
-      setMesB(mesesDispB[mesesDispB.length - 1]);
+    if (anoB !== anoBRef.current) {
+      anoBRef.current = anoB;
+      if (mesesDispB.length && !mesesDispB.includes(mesB)) {
+        setMesB(mesesDispB[mesesDispB.length - 1]);
+      }
     }
-  }, [mesesDispB]);
+  }, [anoB, mesesDispB]);
 
   // Dados dos dois períodos
   const listaA = useMemo(() => filtrarProcessos(processos, anoA, modoVis === 'anual' ? 'todos' : mesA), [processos, anoA, mesA, modoVis]);
@@ -289,7 +298,7 @@ export default function Panoramico() {
               <select className="form-select" value={seqAgrup} onChange={e => setSeqAgrup(e.target.value)}>
                 <option value="especie">Tipo de Serviço</option>
                 <option value="categoria">Categoria</option>
-                <option value="setor">Setor</option>
+                <option value="setor">Responsável (Setor)</option>
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -422,24 +431,10 @@ export default function Panoramico() {
 
       {/* ── Filtro de seção ── */}
       <div className="tabs" style={{ marginBottom: 16 }}>
-        {[['todos','Todos'],['categoria','Por Categoria'],['especie','Por Tipo de Serviço'],['setor','Por Setor']].map(([id, label]) => (
+        {[['todos','Todos'],['especie','Por Tipo de Serviço'],['categoria','Por Categoria']].map(([id, label]) => (
           <button key={id} className={`tab-btn ${secao === id ? 'active' : ''}`} onClick={() => setSecao(id)}>{label}</button>
         ))}
       </div>
-
-      {/* ── Tabela por Categoria ── */}
-      {(secao === 'todos' || secao === 'categoria') && (
-        <TabelaComparacao
-          titulo="📁 Por Categoria"
-          labelA={labelA} labelB={labelB}
-          linhas={todasCats.map(k => ({
-            chave: k, label: k,
-            vA: dadosA.porCategoria[k] || { qtd: 0, valor: 0 },
-            vB: dadosB.porCategoria[k] || { qtd: 0, valor: 0 },
-          }))}
-          maxValor={maxCatValor}
-        />
-      )}
 
       {/* ── Tabela por Tipo de Serviço ── */}
       {(secao === 'todos' || secao === 'especie') && (
@@ -458,17 +453,17 @@ export default function Panoramico() {
         />
       )}
 
-      {/* ── Tabela por Setor ── */}
-      {(secao === 'todos' || secao === 'setor') && (
+      {/* ── Tabela por Categoria ── */}
+      {(secao === 'todos' || secao === 'categoria') && (
         <TabelaComparacao
-          titulo="🏢 Por Setor"
+          titulo="📁 Por Categoria"
           labelA={labelA} labelB={labelB}
-          linhas={todosSetores.map(k => ({
+          linhas={todasCats.map(k => ({
             chave: k, label: k,
-            vA: dadosA.porSetor[k] || { qtd: 0, valor: 0 },
-            vB: dadosB.porSetor[k] || { qtd: 0, valor: 0 },
+            vA: dadosA.porCategoria[k] || { qtd: 0, valor: 0 },
+            vB: dadosB.porCategoria[k] || { qtd: 0, valor: 0 },
           }))}
-          maxValor={maxSetValor}
+          maxValor={maxCatValor}
         />
       )}
       </> )} {/* fim modoVis !== sequencia */}
