@@ -333,6 +333,7 @@ export default function Processos() {
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroResp, setFiltroResp]     = useState('');
   const [filtroCateg, setFiltroCateg]   = useState('');
+  const [limite, setLimite]             = useState(30);
   const numRef = useRef(null);
   const focadoRef = useRef(false);
 
@@ -360,6 +361,7 @@ export default function Processos() {
       && (!filtroResp || (usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '') === filtroResp)
       && (!filtroCateg || p.categoria === filtroCateg);
   });
+  const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
 
   const startEdit  = (p) => { setEditingId(p.id); setEditRow({ ...p, _sel: toSel(p.partes) }); };
   const cancelEdit = () => { setEditingId(null); setEditRow({}); };
@@ -488,6 +490,20 @@ export default function Processos() {
       </div>
 
       <div className="table-wrapper">
+        {lista.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Exibindo {listaLimitada.length} de {lista.length}</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas:</span>
+              {[30, 40, 'todos'].map(v => (
+                <button key={v} className={`btn btn-sm ${limite === v ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => setLimite(v)} style={{ minWidth: 36, fontSize: 11 }}>
+                  {v === 'todos' ? 'Todos' : v}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <table className="data-table" style={{ fontSize: 12 }}>
           <thead>
             <tr>
@@ -537,7 +553,7 @@ export default function Processos() {
               <tr><td colSpan={10}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
             )}
 
-            {lista.map(p => editingId === p.id ? (
+            {listaLimitada.map(p => editingId === p.id ? (
               <tr key={p.id} className="row-editing">
                 <td><input className="td-input" value={editRow.numero_interno} onChange={e => setEd('numero_interno', e.target.value)} style={{ width: 70 }} /></td>
                 <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
