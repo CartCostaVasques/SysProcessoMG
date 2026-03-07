@@ -55,6 +55,7 @@ const SERVICOS_RAPIDOS = [
 const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 
 function ModalServicRapido({ usuarios, onSalvar, onClose }) {
+  const { servicos } = useApp();
   const [selecionado, setSelecionado] = useState(null);
   const [respId, setRespId]           = useState('');
   const [data, setData]               = useState(HOJE());
