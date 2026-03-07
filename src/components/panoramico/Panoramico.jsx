@@ -87,15 +87,20 @@ function dadosMensais(processos, usuarios, ano) {
 export default function Panoramico() {
   const { processos, usuarios } = useApp();
 
-  const anoAtual = String(new Date().getFullYear());
-  const mesAtual = String(new Date().getMonth() + 1).padStart(2,'0');
+  const hoje     = new Date();
+  const anoAtual = String(hoje.getFullYear());
+  const mesAtual = String(hoje.getMonth() + 1).padStart(2,'0');
+  // Mês anterior (pode cruzar o ano)
+  const mesAntNum = hoje.getMonth() === 0 ? 12 : hoje.getMonth();
+  const anoAnt    = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
+  const mesAnt    = String(mesAntNum).padStart(2,'0');
 
-  const [modoVis,  setModoVis]  = useState('mensal');   // 'mensal' | 'anual' | 'sequencia'
+  const [modoVis,  setModoVis]  = useState('mensal');
   const [anoA,     setAnoA]     = useState(anoAtual);
   const [mesA,     setMesA]     = useState(mesAtual);
-  const [anoB,     setAnoB]     = useState(String(Number(anoAtual) - 1));
-  const [mesB,     setMesB]     = useState(mesAtual);
-  const [secao,    setSecao]    = useState('todos');     // 'todos' | 'categoria' | 'especie' | 'setor'
+  const [anoB,     setAnoB]     = useState(anoAnt);    // ano do mês anterior
+  const [mesB,     setMesB]     = useState(mesAnt);    // mês anterior
+  const [secao,    setSecao]    = useState('todos');
 
   // Estados do modo Sequência
   const [seqAno,      setSeqAno]      = useState(anoAtual);
