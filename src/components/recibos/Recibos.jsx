@@ -65,79 +65,118 @@ function valorPorExtenso(valor) {
   return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
-function imprimirRecibo(recibo, interessado, cartorio) {
-  const logo = cartorio.logo_url || '';
+function gerarViaHtml(recibo, interessado, cartorio, label) {
+  const logo     = cartorio.logo_url || '';
   const nomeCart = cartorio.nome || 'Cartório';
   const cidade   = cartorio.cidade || '';
   const dtRecibo = fmtData(recibo.dt_recibo);
   const numRecibo = String(recibo.id || 0).padStart(6, '0');
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
+  const cnpj      = cartorio.cnpj || '';
+  const endereco  = cartorio.endereco || '';
+  const telefone  = cartorio.telefone || '';
+  const email     = cartorio.email || '';
+  const descTexto = recibo.obs || ('Declaro para todos os efeitos que recebi o presente valor a título de ' + (recibo.descricao || '') + '.');
 
-  const vias = [];
-  if (recibo.primeira_via)  vias.push('1ª Via — Cartório');
-  if (recibo.segunda_via)   vias.push('2ª Via — Cliente');
-  if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
-  if (vias.length === 0)    vias.push('1ª Via');
-
-  const viaHtml = (label) => `
-    <div class="via">
-      <div class="cab">
-        <div class="logo-box">${logo ? `<img src="${logo}" alt="Logo">` : '<span style="font-size:9px;color:#aaa">Logo</span>'}</div>
-        <div class="cab-info">
-          <div class="cab-nome">${nomeCart}</div>
-          <div class="cab-sub">${[cartorio.endereco, cidade].filter(Boolean).join(' — ')}<br>${[cartorio.telefone, cartorio.email].filter(Boolean).join(' · ')}</div>
+  return `
+  <div class="via">
+    <div class="cab">
+      <div class="logo-box">${logo ? `<img src="${logo}" alt="Logo">` : '<span style="font-size:9px;color:#aaa">Logo</span>'}</div>
+      <div class="cab-info">
+        <div class="cab-nome">${nomeCart}</div>
+        <div class="cab-sub">
+          ${endereco}<br>
+          ${[telefone, email].filter(Boolean).join(' - ')}${cidade ? '<br>' + cidade + '-MT' : ''}
+          ${cnpj ? '<br>CNPJ - ' + cnpj : ''}
         </div>
-        <div class="via-label">${label}</div>
       </div>
-      <div class="titulo-recibo">Recibo de Pagamento de Emolumentos</div>
-      <div class="num-recibo">Nº ${numRecibo} &nbsp;|&nbsp; ${dtRecibo}</div>
-      <div class="campo"><b>Recebi de:</b><span>${interessado?.nome || '—'}</span></div>
-      <div class="campo"><b>CPF/CNPJ:</b><span>${interessado?.cpf || '—'}</span></div>
-      ${recibo.numero_os ? `<div class="campo"><b>Nº Interno/OS:</b><span>${recibo.numero_os}</span></div>` : ''}
-      <div class="campo"><b>Referente a:</b><span>${recibo.descricao}</span></div>
-      ${recibo.obs ? `<div class="campo"><b>Observações:</b><span>${recibo.obs}</span></div>` : ''}
-      <div class="valor-bloco">
-        <div class="valor-num">${valorNum}</div>
-        <div class="valor-ext">${valorExt}</div>
-      </div>
-      <div class="assin">
-        <div><div class="linha-assin">${cidade}, ${dtRecibo}</div><div class="label-assin">Local e Data</div></div>
-        <div><div class="linha-assin">&nbsp;</div><div class="label-assin">${nomeCart}</div></div>
-      </div>
-      <div class="rodape">${nomeCart}${cidade ? ' — ' + cidade : ''}</div>
-    </div>`;
+    </div>
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo ${numRecibo}</title>
-<style>
-  @page{size:A4 portrait;margin:10mm 14mm}
+    <div class="titulo-bloco">
+      <div class="titulo-recibo">Recibo de ${recibo.descricao || 'Pagamento'} - Colaborador</div>
+      ${label ? `<div class="via-check"><span class="check-box">&#x2611;</span> ${label}</div>` : ''}
+    </div>
+
+    <table class="campos">
+      <tr>
+        <td class="lbl">Nome</td>
+        <td><div class="campo-box">${interessado?.nome || '—'}</div></td>
+      </tr>
+      <tr>
+        <td class="lbl">CPF/CNPJ</td>
+        <td><div class="campo-box">${interessado?.cpf || '—'}</div></td>
+      </tr>
+      <tr>
+        <td class="lbl">Valor</td>
+        <td>
+          <div class="campo-box valor-destaque">${valorNum}</div>
+          <div class="valor-ext">${valorExt}</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="lbl">Descrição</td>
+        <td><div class="campo-box descricao-box">${descTexto}</div></td>
+      </tr>
+    </table>
+
+    <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
+
+    <div class="assin-bloco">
+      <div class="assin-linha">
+        <div class="assin-nome">${(interessado?.nome || '').toUpperCase()}</div>
+        ${interessado?.cpf ? `<div class="assin-cpf">${interessado.cpf}</div>` : ''}
+        <div class="assin-cargo">Colaborador(a)</div>
+      </div>
+    </div>
+
+    <div class="rodape">Nº ${numRecibo} &nbsp;|&nbsp; ${dtRecibo} &nbsp;|&nbsp; ${nomeCart}</div>
+  </div>`;
+}
+
+const CSS_RECIBO = `
+  @page{size:A4 portrait;margin:14mm 16mm}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff}
   .via{padding:6mm 0;page-break-inside:avoid}
-  .cab{display:flex;align-items:center;gap:12px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px}
-  .logo-box{width:68px;height:52px;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+  .cab{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
+  .logo-box{width:90px;height:72px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:4px}
   .logo-box img{max-width:100%;max-height:100%;object-fit:contain}
   .cab-info{flex:1;text-align:center}
-  .cab-nome{font-size:14px;font-weight:bold;margin-bottom:2px}
-  .cab-sub{font-size:10px;color:#444;line-height:1.5}
-  .via-label{font-size:10px;font-weight:bold;color:#555;white-space:nowrap;text-align:right;min-width:130px}
-  .titulo-recibo{text-align:center;font-size:14px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px}
-  .num-recibo{text-align:center;font-size:10px;color:#666;margin-bottom:12px}
-  .campo{display:flex;gap:8px;margin-bottom:7px;align-items:baseline;font-size:12px}
-  .campo b{min-width:120px;white-space:nowrap;font-size:11px}
-  .campo span{flex:1;border-bottom:1px solid #000;padding-bottom:1px;min-height:15px}
-  .valor-bloco{text-align:center;margin:14px 0 10px}
-  .valor-num{display:inline-block;border:2px solid #000;padding:7px 28px;font-size:20px;font-weight:bold;letter-spacing:1px;margin-bottom:4px}
-  .valor-ext{font-size:11px;font-style:italic;color:#333}
-  .assin{display:flex;justify-content:space-between;margin-top:28px;padding:0 20px}
-  .assin>div{text-align:center}
-  .linha-assin{border-top:1px solid #000;padding-top:5px;min-width:180px;font-size:11px;min-height:22px}
-  .label-assin{font-size:10px;color:#555;margin-top:2px}
-  .rodape{margin-top:10px;text-align:center;font-size:9px;color:#888;border-top:1px solid #ddd;padding-top:5px}
-  .sep{border:none;border-top:1px dashed #aaa;margin:4mm 0}
+  .cab-nome{font-size:16px;font-weight:bold;margin-bottom:5px}
+  .cab-sub{font-size:10px;color:#444;line-height:1.8}
+  .titulo-bloco{margin:16px 0 18px;background:#e8e8e8;padding:10px 16px;border-radius:2px}
+  .titulo-recibo{font-size:14px;font-weight:bold;text-align:center;letter-spacing:0.5px}
+  .via-check{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:6px}
+  .check-box{font-size:13px}
+  .campos{width:100%;border-collapse:collapse;margin-bottom:20px}
+  .campos tr td{padding:5px 6px;vertical-align:top}
+  .lbl{font-size:11px;color:#555;width:80px;padding-top:8px;white-space:nowrap}
+  .campo-box{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px}
+  .valor-destaque{font-size:13px;font-weight:bold;display:inline-block;min-width:160px}
+  .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px}
+  .descricao-box{min-height:72px;font-size:11px;line-height:1.7}
+  .data-linha{margin:22px 0 36px;font-size:12px;padding-left:2px}
+  .assin-bloco{display:flex;justify-content:center;margin-bottom:14px}
+  .assin-linha{text-align:center;min-width:280px}
+  .assin-nome{border-top:1px solid #000;padding-top:6px;font-size:11px;font-weight:bold;letter-spacing:0.5px}
+  .assin-cpf{font-size:10px;color:#444;margin-top:3px}
+  .assin-cargo{font-size:10px;color:#444;margin-top:3px}
+  .rodape{text-align:center;font-size:9px;color:#888;border-top:1px solid #ddd;padding-top:5px;margin-top:12px}
+  .sep{border:none;border-top:2px dashed #bbb;margin:8mm 0}
   @media print{body{margin:0}}
-</style></head><body>
-${vias.map((v, i) => viaHtml(v) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
+`;
+
+function imprimirRecibo(recibo, interessado, cartorio) {
+  const vias = [];
+  if (recibo.primeira_via)  vias.push('Primeira Via');
+  if (recibo.segunda_via)   vias.push('Segunda Via');
+  if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
+  if (vias.length === 0)    vias.push('Primeira Via');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title>
+<style>${CSS_RECIBO}</style></head><body>
+${vias.map((v, i) => gerarViaHtml(recibo, interessado, cartorio, v) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=860,height=1100');
@@ -145,6 +184,29 @@ ${vias.map((v, i) => viaHtml(v) + (i < vias.length - 1 ? '<hr class="sep">' : ''
   w.document.close();
   setTimeout(() => { w.focus(); w.print(); }, 500);
 }
+
+function imprimirLote(recibosComInt, cartorio) {
+  const partes = recibosComInt.map(({ recibo, interessado }) => {
+    const vias = [];
+    if (recibo.primeira_via)  vias.push('Primeira Via');
+    if (recibo.segunda_via)   vias.push('Segunda Via');
+    if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
+    if (vias.length === 0)    vias.push('Primeira Via');
+    return vias.map(v => gerarViaHtml(recibo, interessado, cartorio, v)).join('<hr class="sep">');
+  });
+
+  const cssLote = CSS_RECIBO + ' .via{page-break-after:always}';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibos em Lote</title>
+<style>${cssLote}</style></head><body>
+${partes.join('')}
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=860,height=1100');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 600);
+}
+
 
 // ── Modal novo/editar ────────────────────────────────────────
 function ModalRecibo({ recibo, nomeCliente, onClose, onSave }) {
@@ -437,17 +499,19 @@ export default function Recibos() {
     if (!window.confirm(`Emitir ${selecionadosLote.length} recibo(s) de ${fmtValor(valor)} cada?`)) return;
     setLoteProcessando(true);
     let ok = 0, erros = 0;
+    const recibosEmitidos = [];
     for (const int of selecionadosLote) {
       try {
         const { data, error } = await sb.from('recibos').insert({
           ...loteForm, valor, interessado_id: int.id, criado_por: usuario?.id
         }).select().single();
         if (error) throw error;
-        imprimirRecibo(data, int, cartorio);
+        recibosEmitidos.push({ recibo: data, interessado: int });
         ok++;
       } catch(e) { console.error(e); erros++; }
     }
     setLoteProcessando(false);
+    if (recibosEmitidos.length > 0) imprimirLote(recibosEmitidos, cartorio);
     addToast(`${ok} recibo(s) emitido(s)${erros ? `, ${erros} erro(s)` : ''}.`, erros ? 'error' : 'success');
     setLoteSelecionados({});
   };
