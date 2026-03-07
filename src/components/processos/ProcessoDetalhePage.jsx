@@ -133,6 +133,17 @@ export default function ProcessoDetalhePage() {
   const [filtroStatus, setFiltroStatus] = useState('Em andamento');
   const [modoVis,      setModoVis]      = useState('lista');
   const [limite,       setLimite]       = useState(50);
+  const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
+
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  const anosDisp = useMemo(() => {
+    const s = new Set();
+    processos.forEach(p => { const d = p.dt_conclusao || p.dt_abertura; if (d) s.add(d.substring(0,4)); });
+    if (!s.size) s.add(String(new Date().getFullYear()));
+    return Array.from(s).sort((a,b) => b - a);
+  }, [processos]);
 
   const processoAtual = selecionado
     ? processos.find(p => p.id === selecionado.id) || selecionado
@@ -145,9 +156,13 @@ export default function ProcessoDetalhePage() {
       return (int?.nome || pt.nome || '').toLowerCase();
     }).join(' ');
     const txt = (p.numero_interno + p.especie + p.categoria + nomesPartes).toLowerCase();
+    const dtRef = filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_abertura;
+    const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
+    const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
     return (!busca || txt.includes(busca.toLowerCase()))
-        && (!filtroStatus || p.status === filtroStatus);
-  }), [processos, busca, filtroStatus, interessados]);
+        && (!filtroStatus || p.status === filtroStatus)
+        && matchAno && matchMes;
+  }), [processos, busca, filtroStatus, filtroMes, filtroAno, interessados]);
 
   const totalGeral = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
   const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
@@ -202,8 +217,8 @@ export default function ProcessoDetalhePage() {
       </div>
 
       {/* Filtros */}
-      <div className="filter-bar">
-        <div className="search-bar" style={{ flex: 1 }}>
+      <div className="filter-bar" style={{ flexWrap: 'wrap' }}>
+        <div className="search-bar" style={{ flex: '1 1 200px' }}>
           <span className="search-bar-icon">⌕</span>
           <input placeholder="Buscar por nº, serviço, categoria, interessado..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
@@ -214,8 +229,15 @@ export default function ProcessoDetalhePage() {
           <option value="Devolvido">Devolvido</option>
           <option value="Suspenso">Suspenso</option>
         </select>
-        {(busca || filtroStatus !== 'Em andamento') && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroStatus('Em andamento'); }}>↺ Limpar</button>
+        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
+          <option value="todos">Todos os meses</option>
+          {MESES.map((m, i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+        </select>
+        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+          {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        {(busca || filtroStatus !== 'Em andamento' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0')) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroStatus('Em andamento'); setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0')); setFiltroAno(String(new Date().getFullYear())); }}>↺ Limpar</button>
         )}
       </div>
 
