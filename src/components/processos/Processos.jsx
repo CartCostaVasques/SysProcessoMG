@@ -471,7 +471,7 @@ export default function Processos() {
       <div className="page-header">
         <div>
           <div className="page-title">Processos</div>
-          <div className="page-sub">{lista.length} registro(s) · {processos.filter(p => STATUS_PENDENTES.includes(p.status)).length} pendentes</div>
+          <div className="page-sub">{lista.reduce((s,p)=>s+parseInt(p.quantidade||1),0)} serviço(s) · {processos.filter(p => STATUS_PENDENTES.includes(p.status)).reduce((s,p)=>s+parseInt(p.quantidade||1),0)} pendentes</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => setModalRapido(true)}>⚡ Cadastro Rápido</button>
