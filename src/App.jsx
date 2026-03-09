@@ -1,4 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component } from 'react';
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e) { console.error('[ErrorBoundary] Componente crashou:', e); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 32, color: 'red' }}>
+        <b>Erro ao carregar página:</b><br/>
+        {this.state.error.message}
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import { AppProvider, useApp } from './context/AppContext.jsx';
 
 // Estilos
@@ -69,7 +84,9 @@ function AppShell() {
       <div className="main-area">
         <Header page={page} setPage={setPageDebug} />
         <main className="main-content">
-          {renderPage()}
+          <ErrorBoundary key={page}>
+            {renderPage()}
+          </ErrorBoundary>
         </main>
       </div>
       <ToastContainer />
