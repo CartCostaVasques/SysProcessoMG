@@ -27,7 +27,7 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
   const email        = cartorio?.email    || '';
   const hoje         = new Date().toLocaleDateString('pt-BR');
   const totalGeral   = grupos.reduce((s, g) => s + g.total, 0);
-  const qtdGeral     = grupos.reduce((s, g) => s + g.processos.length, 0);
+  const qtdGeral     = grupos.reduce((s, g) => s + g.processos.reduce((a,p)=>a+parseInt(p.quantidade||1),0), 0);
   const thData       = isConcluido ? 'Dt. Conclusão' : 'Dt. Abertura';
   const periodoLabel = [filtroMes !== 'todos' ? MESES[parseInt(filtroMes)-1] : null, filtroAno].filter(Boolean).join(' ');
 
@@ -46,7 +46,7 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
     return `
       <tr><td colspan="5" style="padding:6px 10px;background:#d6e4f0;font-size:12px;font-weight:bold;border-top:2px solid #aac;">
         ${g.categoria}
-        <span style="float:right;font-weight:600;font-size:11px;">${g.processos.length} processo(s) &nbsp;|&nbsp; R$ ${formatBRL(g.total)}</span>
+        <span style="float:right;font-weight:600;font-size:11px;">${g.processos.reduce((s,p)=>s+parseInt(p.quantidade||1),0)} serviço(s) &nbsp;|&nbsp; R$ ${formatBRL(g.total)}</span>
       </td></tr>
       <tr style="background:#eef4f9;">
         <th style="padding:4px 8px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Nº Interno</th>
@@ -127,16 +127,17 @@ export default function RelatorioServicos() {
     const mapa = {};
     lista.forEach(p => {
       const cat = p.categoria || 'Sem Categoria';
-      if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0 };
+      if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0, qtdTotal: 0 };
       const _partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x=>(x.nome||'').split(' ').slice(0,2).join(' ')).filter(Boolean).join(', '); } catch { return ''; } })();
       mapa[cat].processos.push({ ...p, _partes });
-      mapa[cat].total += parseFloat(p.valor_ato || 0);
+      mapa[cat].total    += parseFloat(p.valor_ato || 0);
+      mapa[cat].qtdTotal += parseInt(p.quantidade || 1);
     });
     return Object.values(mapa).sort((a, b) => a.categoria.localeCompare(b.categoria));
   }, [processos, filtro, filtroMes, filtroAno, busca]);
 
   const totalGeral = grupos.reduce((s, g) => s + g.total, 0);
-  const qtdGeral   = grupos.reduce((s, g) => s + g.processos.length, 0);
+  const qtdGeral   = grupos.reduce((s, g) => s + g.qtdTotal, 0);
   const isConcluido = filtro === 'Concluído';
   const labelData   = isConcluido ? 'Dt. Conclusão' : 'Dt. Abertura';
 
@@ -242,7 +243,7 @@ export default function RelatorioServicos() {
                   {/* Ícone de setor */}
                   <span style={{ fontSize: 16 }}>⚙</span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.01em' }}>{g.categoria}</span>
-                  <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length}</span>
+                  <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.qtdTotal}</span>
                   {limiteSetor !== 'todos' && g.processos.length > limiteSetor && (
                     <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>exibindo {limiteSetor}</span>
                   )}
