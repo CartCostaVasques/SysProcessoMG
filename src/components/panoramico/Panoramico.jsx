@@ -674,10 +674,22 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
     valor: chaves.reduce((s, k) => s + getDado(dados[ci], k).valor, 0),
   }));
 
-  const AGRUP_LABEL = { especie: 'Tipo de Serviço', categoria: 'Categoria', setor: 'Setor' };
+  // Resumo do período (soma de todos os meses) por chave
+  const resumoPorChave = chaves.reduce((acc, k) => {
+    acc[k] = colunas.reduce((s, _, ci) => {
+      const d = getDado(dados[ci], k);
+      return { qtd: s.qtd + d.qtd, valor: s.valor + d.valor };
+    }, { qtd: 0, valor: 0 });
+    return acc;
+  }, {});
 
-  // Cabeçalho de colunas: cada mês ocupa 2 colunas (Qtd + Valor) + 1 Δ (menos na última)
-  // Layout: [Serviço] [Qtd M1] [Val M1] [Δ] [Qtd M2] [Val M2] [Δ] ... [Qtd Mn] [Val Mn]
+  // Resumo total geral
+  const resumoTotal = chaves.reduce((s, k) => ({
+    qtd:   s.qtd   + resumoPorChave[k].qtd,
+    valor: s.valor + resumoPorChave[k].valor,
+  }), { qtd: 0, valor: 0 });
+
+  const AGRUP_LABEL = { especie: 'Tipo de Serviço', categoria: 'Categoria', setor: 'Setor' };
   const n = colunas.length;
 
   return (
@@ -696,9 +708,9 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
         </div>
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table className="data-table" style={{ minWidth: 200 + n * 260, fontSize: 12 }}>
+        <table className="data-table" style={{ minWidth: 200 + n * 260 + 180, fontSize: 12 }}>
           <thead>
-            {/* Linha 1 — Meses */}
+            {/* Linha 1 — Meses + coluna Resumo */}
             <tr style={{ background: 'var(--color-surface-2)' }}>
               <th rowSpan={2} style={{ minWidth: 180, position: 'sticky', left: 0, background: 'var(--color-surface-2)', zIndex: 2, borderRight: '2px solid var(--color-border)' }}>
                 {AGRUP_LABEL[agrup]}
@@ -709,8 +721,12 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
                   {col.label}
                 </th>
               ))}
+              {/* Cabeçalho da coluna Resumo */}
+              <th colSpan={2} style={{ textAlign: 'center', borderLeft: '3px solid var(--color-accent)', padding: '6px 8px', fontSize: 11, fontWeight: 800, color: 'var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-2))' }}>
+                ∑ Período
+              </th>
             </tr>
-            {/* Linha 2 — Qtd / Valor / Δ */}
+            {/* Linha 2 — Qtd / Valor / Δ + Resumo sub-headers */}
             <tr style={{ background: 'var(--color-surface-2)' }}>
               {colunas.map((_, ci) => (
                 <React.Fragment key={ci}>
@@ -719,14 +735,17 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
                   {ci < n - 1 && <th style={{ textAlign: 'center', fontSize: 10, color: 'var(--color-text-faint)', minWidth: 80, background: 'var(--color-surface-3)' }}>Δ vs ant.</th>}
                 </React.Fragment>
               ))}
+              <th style={{ textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--color-accent)', borderLeft: '3px solid var(--color-accent)', minWidth: 50, background: 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-2))' }}>Qtd</th>
+              <th style={{ textAlign: 'right', fontSize: 10, fontWeight: 700, color: 'var(--color-accent)', minWidth: 130, background: 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface-2))' }}>Valor</th>
             </tr>
           </thead>
           <tbody>
             {chaves.length === 0 ? (
-              <tr><td colSpan={1 + n * 3} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-faint)' }}>Sem dados no período selecionado</td></tr>
+              <tr><td colSpan={1 + n * 3 + 2} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-faint)' }}>Sem dados no período selecionado</td></tr>
             ) : chaves.map(chave => {
               const { label, sub } = getLabelChave(chave);
               const temQualquerDado = dados.some(d => getDado(d, chave).qtd > 0);
+              const resumo = resumoPorChave[chave];
               return (
                 <tr key={chave} style={{ opacity: temQualquerDado ? 1 : 0.3 }}>
                   <td style={{ position: 'sticky', left: 0, background: 'var(--color-surface)', borderRight: '2px solid var(--color-border)', zIndex: 1 }}>
@@ -764,6 +783,13 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
                       </React.Fragment>
                     );
                   })}
+                  {/* Coluna Resumo por linha */}
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: resumo.qtd > 0 ? 700 : 400, color: resumo.qtd > 0 ? 'var(--color-accent)' : 'var(--color-text-faint)', borderLeft: '3px solid var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)' }}>
+                    {resumo.qtd || '—'}
+                  </td>
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: resumo.valor > 0 ? 600 : 400, color: resumo.valor > 0 ? 'var(--color-accent)' : 'var(--color-text-faint)', background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)' }}>
+                    {fmtV(resumo.valor)}
+                  </td>
                 </tr>
               );
             })}
@@ -793,6 +819,13 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
                   </React.Fragment>
                 );
               })}
+              {/* Total geral do período */}
+              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--color-accent)', borderLeft: '3px solid var(--color-accent)', padding: '8px 6px', background: 'color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-2))' }}>
+                {resumoTotal.qtd}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-accent)', padding: '8px 6px', background: 'color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-2))' }}>
+                {fmtV(resumoTotal.valor)}
+              </td>
             </tr>
           </tfoot>
         </table>
