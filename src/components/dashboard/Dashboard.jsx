@@ -113,16 +113,19 @@ export default function Dashboard({ setPage }) {
 
   const stats = useMemo(() => {
     const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const isRF = (p) => p.categoria === 'Reconhecimento de Firma';
     const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
-    const total        = somaQtd(processos);
-    const emAndamento  = somaQtd(processos.filter(p => STATUS_PENDENTES.includes(p.status)));
-    const concluidos   = somaQtd(processos.filter(p => p.status === 'Concluído'));
+    const total            = somaQtd(processos);
+    const emAndamento      = somaQtd(processos.filter(p => STATUS_PENDENTES.includes(p.status)));
+    const concluidos       = somaQtd(processos.filter(p => p.status === 'Concluído'));
+    const conclRF          = somaQtd(processos.filter(p => p.status === 'Concluído' && isRF(p)));
+    const conclOutros      = concluidos - conclRF;
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
     const tarefasVencidas  = tarefas.filter(t => !t.concluida && new Date(t.dt_fim) < hoje).length;
-    const recFirma     = somaQtd(processos.filter(p => p.categoria === 'Reconhecimento de Firma'));
+    const recFirma         = somaQtd(processos.filter(p => isRF(p)));
     const outrosProcessos  = total - recFirma;
-    return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas, recFirma, outrosProcessos };
+    return { total, emAndamento, concluidos, conclRF, conclOutros, tarefasPendentes, oficiosEnviados, tarefasVencidas, recFirma, outrosProcessos };
   }, [processos, tarefas, oficios]);
 
   // Valores financeiros — filtrados pelo ano selecionado
@@ -148,9 +151,14 @@ export default function Dashboard({ setPage }) {
     const diffPct = vlAnt > 0 ? ((vlMes - vlAnt) / vlAnt * 100) : null;
 
     const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const isRF = (p) => p.categoria === 'Reconhecimento de Firma';
     return {
       vlMes, vlAnt, vlAno, vlTotal,
       qtdMes: somaQtd(listaMes), qtdAnt: somaQtd(listaAnt), qtdAno: somaQtd(listaAno),
+      qtdAnoRF:     somaQtd(listaAno.filter(isRF)),
+      qtdAnoOutros: somaQtd(listaAno.filter(p => !isRF(p))),
+      qtdTotalRF:   somaQtd(listaConcl.filter(isRF)),
+      qtdTotalOutros: somaQtd(listaConcl.filter(p => !isRF(p))),
       diffMes, diffPct,
       labelMes: MESES_FULL[mesRef - 1],
       labelAnt: MESES_FULL[mesAntNum - 1],
@@ -244,9 +252,26 @@ export default function Dashboard({ setPage }) {
             </div>
           </div>
         </div>
+        {/* Card especial: Concluídos + Rec. Firma */}
+        <div className="stat-card">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div className="stat-card-label">Concluídos</div>
+            <span style={{ fontSize: 16, opacity: 0.6 }}>✓</span>
+          </div>
+          <div className="stat-card-value" style={{ color: 'var(--color-success)' }}>{stats.concluidos}</div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{stats.conclOutros}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{stats.conclRF}</span>
+            </div>
+          </div>
+        </div>
         {[
-          { label: 'Pendentes',       value: stats.emAndamento, sub: 'Em andamento / devolvidos / reanálise', icon: '🔄', color: 'var(--color-warning)' },
-          { label: 'Concluídos',         value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
+          { label: 'Pendentes',          value: stats.emAndamento, sub: 'Em andamento / devolvidos / reanálise', icon: '🔄', color: 'var(--color-warning)' },
           { label: 'Tarefas Pendentes',  value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
           { label: 'Ofícios Enviados',   value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
           { label: 'Usuários Ativos',    value: usuarios.filter(u => u.ativo).length, sub: `de ${usuarios.length} cadastrados`, icon: '◉', color: 'var(--color-text-muted)' },
@@ -292,7 +317,16 @@ export default function Dashboard({ setPage }) {
           <div className="stat-card-value" style={{ color: 'var(--color-info)', fontSize: 18 }}>
             R$ {fmtBRL(financeiro.vlAno)}
           </div>
-          <div className="stat-card-sub">{financeiro.qtdAno} processo(s) concluído(s)</div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{financeiro.qtdAnoOutros}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{financeiro.qtdAnoRF}</span>
+            </div>
+          </div>
           {financeiro.qtdAno > 0 && (
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
               Ticket médio: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-text-muted)' }}>R$ {fmtBRL(financeiro.vlAno / financeiro.qtdAno)}</span>
@@ -306,7 +340,16 @@ export default function Dashboard({ setPage }) {
           <div className="stat-card-value" style={{ color: 'var(--color-text)', fontSize: 18 }}>
             R$ {fmtBRL(financeiro.vlTotal)}
           </div>
-          <div className="stat-card-sub">{processos.filter(p=>p.status==='Concluído').reduce((s,p)=>s+parseInt(p.quantidade||1),0)} proc. concluídos</div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{financeiro.qtdTotalOutros}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{financeiro.qtdTotalRF}</span>
+            </div>
+          </div>
           {financeiro.vlTotal > 0 && financeiro.qtdMes > 0 && (
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
               {financeiro.labelMes} representa <span style={{ fontWeight: 600, color: 'var(--color-text-muted)' }}>
