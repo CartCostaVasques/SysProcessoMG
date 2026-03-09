@@ -172,7 +172,10 @@ export default function RelatorioServicos() {
         <div style={{ display: 'flex', gap: 6 }}>
           {[
             { v: 'Em andamento', l: 'Em Andamento' },
+            { v: 'Devolvido',    l: 'Devolvido'    },
+            { v: 'Em reanálise', l: 'Em Reanálise' },
             { v: 'Concluído',    l: 'Concluídos'   },
+            { v: 'Encerrado',    l: 'Encerrado'    },
             { v: 'todos',        l: 'Todos'         },
           ].map(({ v, l }) => (
             <button key={v}
