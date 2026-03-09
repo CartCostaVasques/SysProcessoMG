@@ -46,10 +46,11 @@ const EMPTY_ROW = {
 // ─── Serviços fixos do cadastro rápido ──────────────────────
 // Edite categoria/especie para bater com os cadastrados no banco
 const SERVICOS_RAPIDOS = [
-  { label: 'Cancelamento de Protesto', categoria: 'Protesto',          especie: 'Cancelamento' },
-  { label: 'Certidão de Protesto',     categoria: 'Certidao de Atos',  especie: 'Cert de Protesto' },
-  { label: 'Averbação Registro Civil', categoria: 'Registro Civil',    especie: 'Averbação' },
-  { label: 'Certidão Registro Civil',  categoria: 'Certidao de Atos',  especie: 'Cert Registro Civil' },
+  { label: 'Apontamento Protesto',      categoria: 'Protesto',          especie: 'Apontamento Protesto' },
+  { label: 'Cancelamento de Protesto',  categoria: 'Protesto',          especie: 'Cancelamento' },
+  { label: 'Certidão de Protesto',      categoria: 'Certidao de Atos',  especie: 'Cert de Protesto' },
+  { label: 'Averbação Registro Civil',  categoria: 'Registro Civil',    especie: 'Averbação' },
+  { label: 'Certidão Registro Civil',   categoria: 'Certidao de Atos',  especie: 'Cert Registro Civil' },
 ];
 
 // ─── Modal Cadastro Rápido ───────────────────────────────────
