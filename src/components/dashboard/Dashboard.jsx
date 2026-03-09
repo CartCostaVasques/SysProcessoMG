@@ -169,15 +169,25 @@ export default function Dashboard({ setPage }) {
 
   const porCategoria = useMemo(() => {
     const map = {};
-    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
+    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria !== 'Reconhecimento de Firma')
       .forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + parseInt(p.quantidade||1); });
     return Object.entries(map).map(([label, value]) => ({ label, value }));
   }, [processos, filtroAno]);
 
+  const recFirmaAno = useMemo(() =>
+    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria === 'Reconhecimento de Firma')
+      .reduce((s,p) => s + parseInt(p.quantidade||1), 0)
+  , [processos, filtroAno]);
+
   const porResponsavel = useMemo(() => {
     const map = {};
-    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
-      .forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + parseInt(p.quantidade||1); });
+    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria !== 'Reconhecimento de Firma')
+      .forEach(p => {
+        const u = (usuarios||[]).find(u=>u.id===p.responsavel_id);
+        if (!u) return; // ignora sem responsável
+        const rNome = u.nome_simples;
+        map[rNome] = (map[rNome] || 0) + parseInt(p.quantidade||1);
+      });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [processos, usuarios, filtroAno]);
 
@@ -393,6 +403,18 @@ export default function Dashboard({ setPage }) {
             <div className="card-title">Por Categoria</div>
           </div>
           <DonutChart slices={porCategoria} />
+          {recFirmaAno > 0 && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--color-accent)', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--color-text-muted)' }}>Reconhecimento de Firma</span>
+                </div>
+                <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{recFirmaAno}</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-faint)', marginTop: 4 }}>* não incluído no gráfico acima</div>
+            </div>
+          )}
         </div>
 
         {/* Por responsável */}
@@ -402,7 +424,7 @@ export default function Dashboard({ setPage }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {porResponsavel.map(([nome, qtd]) => {
-              const totalQtd = processos.filter(p=>p.dt_conclusao?.startsWith(filtroAno)).reduce((s,p)=>s+parseInt(p.quantidade||1),0);
+              const totalQtd = processos.filter(p=>p.dt_conclusao?.startsWith(filtroAno) && p.categoria !== 'Reconhecimento de Firma' && (usuarios||[]).find(u=>u.id===p.responsavel_id)).reduce((s,p)=>s+parseInt(p.quantidade||1),0);
               const pct = totalQtd > 0 ? (qtd / totalQtd) * 100 : 0;
               return (
                 <div key={nome}>
