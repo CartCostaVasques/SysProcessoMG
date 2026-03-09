@@ -425,7 +425,6 @@ export default function Processos() {
     setModalRapido(false);
     if (salvos > 0) addToast(`${salvos} processo(s) registrado(s)!`, 'success');
   };
-  };
 
   const STATUS_CONF = {
     'Em andamento': { cor: 'var(--color-warning)', sigla: 'EA' },
