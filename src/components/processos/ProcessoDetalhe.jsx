@@ -287,6 +287,14 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
               : <div style={{ fontSize: 13, padding: '6px 0', fontFamily: 'var(--font-mono)' }}>{proc.valor_ato > 0 ? `R$ ${formatBRL(proc.valor_ato)}` : '—'}</div>
             }
           </Campo>
+          <Campo label="Quantidade">
+            {editando
+              ? <input className="form-input" type="number" min="1" value={proc.quantidade || 1} onChange={e => onChange('quantidade', parseInt(e.target.value)||1)} style={{ fontSize: 12 }} />
+              : <div style={{ fontSize: 13, padding: '6px 0', fontWeight: (proc.quantidade||1) > 1 ? 700 : 400, color: (proc.quantidade||1) > 1 ? 'var(--color-accent)' : 'var(--color-text)' }}>
+                  {proc.quantidade || 1}{(proc.quantidade||1) > 1 && <span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:5 }}>serviços neste lançamento</span>}
+                </div>
+            }
+          </Campo>
           <Campo label="Nº Judicial">{inp(proc.numero_judicial, 'numero_judicial')}</Campo>
         </div>
       </Secao>
