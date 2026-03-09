@@ -134,8 +134,7 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
   const nomeAssin  = cartorio?.responsavel || assinante?.nome_completo || assinante?.nome_simples || 'Tabeliã';
-  const isTabeliao = assinante?.perfil?.toLowerCase().startsWith('tabeliã') || assinante?.perfil?.toLowerCase().startsWith('tabeliao');
-  const cargoAssin = isTabeliao ? 'Tabeliã' : (assinante?.perfil || 'Tabeliã');
+  const cargoAssin = 'Tabeliã';
   const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
   const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
 
