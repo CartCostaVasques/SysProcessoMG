@@ -40,7 +40,7 @@ const EMPTY_ROW = {
   numero_interno: '', especie: '', categoria: '',
   partes: '[]', municipio: 'Paranatinga', status: 'Em andamento',
   dt_abertura: HOJE(), dt_conclusao: '', responsavel_id: null,
-  valor_ato: 0, obs: '', _sel: [],
+  valor_ato: 0, quantidade: 1, obs: '', _sel: [],
 };
 
 // ─── Serviços fixos do cadastro rápido ──────────────────────
@@ -380,13 +380,23 @@ export default function Processos() {
     setEditingId(null);
   };
 
+  // Gera nº interno único: se "123" já existe, tenta "123-1", "123-2"...
+  const gerarNumeroUnico = (base) => {
+    const existe = (n) => processos.some(p => p.numero_interno.trim() === n.trim());
+    if (!existe(base)) return base;
+    let i = 1;
+    while (existe(`${base}-${i}`)) i++;
+    return `${base}-${i}`;
+  };
+
   const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
-    if (processos.find(p => p.numero_interno.trim() === newRow.numero_interno.trim())) {
-      addToast(`Nº "${newRow.numero_interno}" já existe!`, 'error'); return;
-    }
+    const numeroFinal = gerarNumeroUnico(newRow.numero_interno.trim());
     const { _sel, ...rest } = newRow;
-    await addProcesso({ ...rest, partes: serializarPartes(_sel) });
+    await addProcesso({ ...rest, numero_interno: numeroFinal, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
+    if (numeroFinal !== newRow.numero_interno.trim()) {
+      addToast(`Nº duplicado — salvo como "${numeroFinal}"`, 'info');
+    }
     setNewRow(null);
   };
 
@@ -406,18 +416,15 @@ export default function Processos() {
   };
 
   const handleSalvarRapido = async (lista) => {
-    let salvos = 0, erros = [];
+    let salvos = 0;
     for (const dados of lista) {
-      if (processos.find(p => p.numero_interno.trim() === dados.numero_interno.trim())) {
-        erros.push(dados.numero_interno);
-      } else {
-        await addProcesso(dados);
-        salvos++;
-      }
+      const numeroFinal = gerarNumeroUnico(dados.numero_interno.trim());
+      await addProcesso({ ...dados, numero_interno: numeroFinal, quantidade: 1 });
+      salvos++;
     }
     setModalRapido(false);
     if (salvos > 0) addToast(`${salvos} processo(s) registrado(s)!`, 'success');
-    if (erros.length > 0) addToast(`Nº já existente: ${erros.join(', ')}`, 'error');
+  };
   };
 
   const STATUS_CONF = {
@@ -516,6 +523,7 @@ export default function Processos() {
               <th style={{ minWidth: 220 }}>Interessados</th>
               <th style={{ width: 60 }}>Resp.</th>
               <th style={{ width: 110 }}>Valor</th>
+              <th style={{ width: 45 }}>Qtd</th>
               <th style={{ width: 100 }}>Status</th>
               <th style={{ width: 75 }}>Conclusão</th>
               <th style={{ width: 75 }}></th>
@@ -540,6 +548,7 @@ export default function Processos() {
                 </td>
                 <td>{selResp(newRow.responsavel_id, v => setNR('responsavel_id', v))}</td>
                 <td><InputValor value={newRow.valor_ato} onChange={v => setNR('valor_ato', v)} style={{ width: 80 }} /></td>
+                <td><input className="td-input" type="number" min="1" value={newRow.quantidade || 1} onChange={e => setNR('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={newRow.status} onChange={e => { setNR('status', e.target.value); if (e.target.value === 'Concluído') setNR('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
@@ -552,7 +561,7 @@ export default function Processos() {
             )}
 
             {lista.length === 0 && !newRow && (
-              <tr><td colSpan={10}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
+              <tr><td colSpan={11}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">Nenhum processo encontrado</div></div></td></tr>
             )}
 
             {listaLimitada.map(p => editingId === p.id ? (
@@ -576,6 +585,7 @@ export default function Processos() {
                 </td>
                 <td>{selResp(editRow.responsavel_id, v => setEd('responsavel_id', v))}</td>
                 <td><InputValor value={editRow.valor_ato} onChange={v => setEd('valor_ato', v)} style={{ width: 80 }} /></td>
+                <td><input className="td-input" type="number" min="1" value={editRow.quantidade || 1} onChange={e => setEd('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={editRow.status} onChange={e => { setEd('status', e.target.value); if (e.target.value === 'Concluído' && !editRow.dt_conclusao) setEd('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
@@ -604,6 +614,12 @@ export default function Processos() {
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, textAlign: 'right', color: 'var(--color-text-muted)' }}>
                   {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
+                </td>
+                <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                  {(p.quantidade || 1) > 1
+                    ? <span style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{p.quantidade}</span>
+                    : <span style={{ color: 'var(--color-text-faint)' }}>1</span>
+                  }
                 </td>
                 <td>{statusBadge(p.status)}</td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(p.dt_conclusao) || '—'}</td>
