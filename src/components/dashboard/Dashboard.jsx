@@ -112,15 +112,16 @@ export default function Dashboard({ setPage }) {
   const mesAntStr  = String(mesAntNum).padStart(2,'0');
 
   const stats = useMemo(() => {
-    const total = processos.length;
+    const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
     const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
-    const emAndamento = processos.filter(p => STATUS_PENDENTES.includes(p.status)).length;
-    const concluidos  = processos.filter(p => p.status === 'Concluído').length;
+    const total        = somaQtd(processos);
+    const emAndamento  = somaQtd(processos.filter(p => STATUS_PENDENTES.includes(p.status)));
+    const concluidos   = somaQtd(processos.filter(p => p.status === 'Concluído'));
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
     const tarefasVencidas  = tarefas.filter(t => !t.concluida && new Date(t.dt_fim) < hoje).length;
-    const recFirma = processos.filter(p => p.categoria === 'Reconhecimento de Firma').reduce((s,p) => s + parseInt(p.quantidade||1), 0);
-    const outrosProcessos = total - processos.filter(p => p.categoria === 'Reconhecimento de Firma').length;
+    const recFirma     = somaQtd(processos.filter(p => p.categoria === 'Reconhecimento de Firma'));
+    const outrosProcessos  = total - recFirma;
     return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas, recFirma, outrosProcessos };
   }, [processos, tarefas, oficios]);
 
@@ -146,9 +147,10 @@ export default function Dashboard({ setPage }) {
     const diffMes = vlMes - vlAnt;
     const diffPct = vlAnt > 0 ? ((vlMes - vlAnt) / vlAnt * 100) : null;
 
+    const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
     return {
       vlMes, vlAnt, vlAno, vlTotal,
-      qtdMes: listaMes.length, qtdAnt: listaAnt.length, qtdAno: listaAno.length,
+      qtdMes: somaQtd(listaMes), qtdAnt: somaQtd(listaAnt), qtdAno: somaQtd(listaAno),
       diffMes, diffPct,
       labelMes: MESES_FULL[mesRef - 1],
       labelAnt: MESES_FULL[mesAntNum - 1],
@@ -160,14 +162,14 @@ export default function Dashboard({ setPage }) {
   const porCategoria = useMemo(() => {
     const map = {};
     processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
-      .forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + 1; });
+      .forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + parseInt(p.quantidade||1); });
     return Object.entries(map).map(([label, value]) => ({ label, value }));
   }, [processos, filtroAno]);
 
   const porResponsavel = useMemo(() => {
     const map = {};
     processos.filter(p => p.dt_conclusao?.startsWith(filtroAno))
-      .forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + 1; });
+      .forEach(p => { const rNome = (usuarios||[]).find(u=>u.id===p.responsavel_id)?.nome_simples || "—"; map[rNome] = (map[rNome] || 0) + parseInt(p.quantidade||1); });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }, [processos, usuarios, filtroAno]);
 
@@ -181,7 +183,8 @@ export default function Dashboard({ setPage }) {
       const anoNum = ajuste ? Number(filtroAno) - 1 : Number(filtroAno);
       const mes = String(mesNum).padStart(2,'0');
       const ano = String(anoNum);
-      const qtd = processos.filter(p => p.dt_conclusao?.startsWith(ano) && p.dt_conclusao?.substring(5,7) === mes).length;
+      const qtd = processos.filter(p => p.dt_conclusao?.startsWith(ano) && p.dt_conclusao?.substring(5,7) === mes)
+        .reduce((s,p) => s + parseInt(p.quantidade||1), 0);
       result.push({ label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mesNum-1], value: qtd, highlight: i === 0 });
     }
     return result;
@@ -303,7 +306,7 @@ export default function Dashboard({ setPage }) {
           <div className="stat-card-value" style={{ color: 'var(--color-text)', fontSize: 18 }}>
             R$ {fmtBRL(financeiro.vlTotal)}
           </div>
-          <div className="stat-card-sub">{processos.filter(p=>p.status==='Concluído').length} proc. concluídos</div>
+          <div className="stat-card-sub">{processos.filter(p=>p.status==='Concluído').reduce((s,p)=>s+parseInt(p.quantidade||1),0)} proc. concluídos</div>
           {financeiro.vlTotal > 0 && financeiro.qtdMes > 0 && (
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
               {financeiro.labelMes} representa <span style={{ fontWeight: 600, color: 'var(--color-text-muted)' }}>
@@ -356,7 +359,8 @@ export default function Dashboard({ setPage }) {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {porResponsavel.map(([nome, qtd]) => {
-              const pct = (qtd / processos.length) * 100;
+              const totalQtd = processos.filter(p=>p.dt_conclusao?.startsWith(filtroAno)).reduce((s,p)=>s+parseInt(p.quantidade||1),0);
+              const pct = totalQtd > 0 ? (qtd / totalQtd) * 100 : 0;
               return (
                 <div key={nome}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
