@@ -875,6 +875,12 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
     const tConc  = (tarefas||[]).filter(t =>  t.concluida && t.responsavel_id === u.id);
     const tAtras = tPend.filter(t => t.dt_fim && new Date(t.dt_fim) < hoje);
 
+    const qtdConc = procConc.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const qtdAnd  = emAnd.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const vlConc  = procConc.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const vlAnd   = emAnd.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const ticket  = qtdConc > 0 ? vlConc / qtdConc : 0;
+
     // Evolução mensal (apenas no modo anual)
     const evolucao = filtroTipo === 'anual'
       ? Array.from({length:12}, (_,i) => {
@@ -889,12 +895,6 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
           };
         })
       : [];
-
-    const qtdConc = procConc.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
-    const qtdAnd  = emAnd.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
-    const vlConc  = procConc.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
-    const vlAnd   = emAnd.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
-    const ticket  = qtdConc > 0 ? vlConc / qtdConc : 0;
 
     return { u, procConc, emAnd, qtdConc, qtdAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao };
   }).filter(c => c.qtdConc > 0 || c.qtdAnd > 0 || c.tPend.length > 0);
