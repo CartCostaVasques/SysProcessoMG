@@ -519,13 +519,13 @@ export default function Recibos() {
         if (error) throw error;
         setRecibos(p => p.map(r => r.id === form.id ? data : r));
         addToast('Recibo atualizado!', 'success');
-        imprimirRecibo(data, clienteSel, cartorio);
+        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0]);
       } else {
         const { data, error } = await sb.from('recibos').insert({ ...form, interessado_id: clienteSel.id, criado_por: usuario?.id }).select().single();
         if (error) throw error;
         setRecibos(p => [data, ...p]);
         addToast('Recibo registrado!', 'success');
-        imprimirRecibo(data, clienteSel, cartorio);
+        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0]);
       }
       setModalRecibo(null);
       if (aba === 'historico') carregarTodosRecibos();
