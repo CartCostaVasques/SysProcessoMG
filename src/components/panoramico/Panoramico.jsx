@@ -902,30 +902,21 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                 {/* Evolução mensal — só no modo anual */}
                 {filtroTipo === 'anual' && evolucao.some(e => e.qtd > 0) && (
                   <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)' }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:'var(--color-text-muted)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>📈 Evolução mensal</div>
-                    {/* Mini barras */}
-                    <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:48 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'var(--color-text-muted)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>📈 Evolução mensal</div>
+                    <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:72 }}>
                       {evolucao.map(e => {
-                        const h = e.qtd > 0 ? Math.max(4, Math.round((e.qtd / maxQtd) * 44)) : 0;
+                        const h = e.qtd > 0 ? Math.max(6, Math.round((e.qtd / maxQtd) * 44)) : 0;
                         const isMesAtual = e.mes === String(hoje.getMonth()+1).padStart(2,'0') && filtroAno === String(hoje.getFullYear());
                         return (
-                          <div key={e.mes} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2 }} title={`${e.label}: ${e.qtd} proc. / ${fmtVal(e.valor)}`}>
-                            <div style={{ fontSize:9, color: e.qtd > 0 ? 'var(--color-text-muted)' : 'transparent', fontWeight:600 }}>{e.qtd||''}</div>
+                          <div key={e.mes} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:0 }} title={`${e.label}: ${e.qtd} proc. / ${fmtVal(e.valor)}`}>
+                            <div style={{ fontSize:9, color: e.qtd > 0 ? 'var(--color-text-muted)' : 'transparent', fontWeight:600, marginBottom:4 }}>{e.qtd||''}</div>
                             <div style={{ width:'100%', height:44, display:'flex', alignItems:'flex-end' }}>
                               <div style={{ width:'100%', height: h, background: isMesAtual ? '#f59e0b' : e.qtd > 0 ? 'var(--color-accent)' : 'var(--color-surface-2)', borderRadius:'3px 3px 0 0', transition:'height .3s', opacity: e.qtd > 0 ? 1 : 0.3 }} />
                             </div>
-                            <div style={{ fontSize:8, color:'var(--color-text-faint)', marginTop:1 }}>{e.label}</div>
+                            <div style={{ fontSize:8, color:'var(--color-text-faint)', marginTop:4 }}>{e.label}</div>
                           </div>
                         );
                       })}
-                    </div>
-                    {/* Valores por mês em texto compacto */}
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 8px', marginTop:8 }}>
-                      {evolucao.filter(e => e.qtd > 0).map(e => (
-                        <span key={e.mes} style={{ fontSize:10, color:'var(--color-text-muted)' }}>
-                          <strong style={{ color:'var(--color-text)' }}>{e.label}</strong> {e.qtd}× {fmtK(e.valor)}
-                        </span>
-                      ))}
                     </div>
                   </div>
                 )}
