@@ -124,11 +124,9 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Tipo de Serviço *</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {SERVICOS_RAPIDOS.map((s, i) => {
-                // Busca o serviço real no banco pelo label — match por subcategoria contendo palavras-chave
-                const svcReal = servicos.find(sv =>
-                  sv.subcategoria?.toLowerCase().includes(s.especie.toLowerCase()) ||
-                  sv.subcategoria === s.especie
-                );
+                // Busca o serviço real no banco — match exato primeiro, depois parcial
+                const svcReal = servicos.find(sv => sv.subcategoria?.toLowerCase() === s.especie.toLowerCase())
+                  || servicos.find(sv => sv.subcategoria?.toLowerCase().includes(s.especie.toLowerCase()));
                 const item = svcReal
                   ? { label: s.label, categoria: svcReal.categoria, especie: svcReal.subcategoria }
                   : s;
