@@ -133,8 +133,12 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
   const numRecibo = String(recibo.id || 0).padStart(6, '0');
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
-  const nomeAssin  = cartorio?.responsavel || assinante?.nome_completo || assinante?.nome_simples || 'Tabeliã';
-  const cargoAssin = 'Tabeliã';
+  const nomeAssin  = cartorio?.responsavel && assinante?.id === '__tabelia_cartorio__'
+    ? cartorio.responsavel
+    : (assinante?.nome_completo || assinante?.nome_simples || cartorio?.responsavel || 'Tabeliã');
+  const cargoAssin = assinante?.id === '__tabelia_cartorio__'
+    ? 'Tabeliã'
+    : (assinante?.cargo || assinante?.perfil || 'Tabeliã');
   const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
   const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
 
@@ -422,11 +426,18 @@ export default function Recibos() {
     ))
   , [usuarios]);
 
+  // Opção especial da Tabeliã vinda de cartorio.responsavel
+  const TABELIA_ID = '__tabelia_cartorio__';
+  const tabeliaCartorio = cartorio?.responsavel
+    ? { id: TABELIA_ID, nome_simples: cartorio.responsavel, nome_completo: cartorio.responsavel, perfil: 'Tabelião', cargo: 'Tabeliã' }
+    : null;
+
   const [assinanteSel, setAssinanteSel] = useState(null);
-  // Auto-seleciona sempre o Tabelião quando usuários carregam
+  // Auto-seleciona sempre a Tabeliã do cartório
   useEffect(() => {
+    if (tabeliaCartorio) { setAssinanteSel(tabeliaCartorio); return; }
     if (assinantes.length) setAssinanteSel(buscarTabeliao(assinantes));
-  }, [assinantes]);
+  }, [assinantes, cartorio]);
 
   const [aba,           setAba]          = useState('emitir');
   const [recibos,       setRecibos]      = useState([]);
@@ -685,9 +696,13 @@ export default function Recibos() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <select className="form-select" style={{ fontSize: 11, height: 30 }}
                       value={assinanteSel?.id || ''}
-                      onChange={e => setAssinanteSel(assinantes.find(u => String(u.id) === String(e.target.value)) || null)}>
+                      onChange={e => {
+                        if (e.target.value === TABELIA_ID) { setAssinanteSel(tabeliaCartorio); return; }
+                        setAssinanteSel(assinantes.find(u => String(u.id) === String(e.target.value)) || null);
+                      }}>
                       <option value="">— Assinante —</option>
-                      {assinantes.map(u => <option key={u.id} value={u.id}>{u.nome_simples} ({u.perfil})</option>)}
+                      {tabeliaCartorio && <option value={TABELIA_ID}>{tabeliaCartorio.nome_completo} (Tabeliã)</option>}
+                      {assinantes.map(u => <option key={u.id} value={u.id}>{u.nome_simples} ({u.cargo || u.perfil})</option>)}
                     </select>
                     <button className="btn btn-primary btn-sm" onClick={() => setModalRecibo('novo')}>＋ Novo Recibo</button>
                   </div>
