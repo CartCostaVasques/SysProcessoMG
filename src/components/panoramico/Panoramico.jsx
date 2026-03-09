@@ -744,6 +744,7 @@ function TabelaSequencia({ colunas, dados, chaves, agrup }) {
 
 // ── Aba Produtividade por Colaborador ───────────────────────────
 function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, anoAtual, MESES_FULL }) {
+  const MESES_LABEL = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const hoje = new Date();
 
   const [filtroTipo,   setFiltroTipo]   = useState('mensal');
@@ -752,26 +753,29 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
   const [filtroMesAno, setFiltroMesAno] = useState(hoje.getMonth() === 0 ? String(Number(anoAtual)-1) : anoAtual);
 
   const fmtVal = (v) => `R$ ${Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtK   = (v) => v >= 1000 ? `R$${(v/1000).toFixed(1)}k` : `R$${Number(v).toFixed(0)}`;
   const COR_PERFIL = { Tabelião:'#f59e0b', Escrevente:'var(--color-accent)', Administrador:'#8b5cf6', Substituto:'#06b6d4', Auxiliar:'#84cc16', Consultor:'#64748b' };
 
-  // Data de referência do período selecionado (último dia do mês/ano filtrado)
-  const dtRefFim = filtroTipo === 'anual'
-    ? new Date(`${filtroAno}-12-31`)
-    : new Date(`${filtroMesAno}-${filtroMes}-28`); // último dia aproximado
-
-  // Inclui usuários que estavam ativos durante o período selecionado:
-  // - ativos agora, OU
-  // - desativados DEPOIS do fim do período (tinham produção naquele período)
+  // Usuários visíveis conforme período:
+  // Anual  → inclui quem foi desativado DENTRO ou APÓS o ano filtrado
+  // Mensal → inclui quem foi desativado APÓS o último dia do mês filtrado
   const usuariosVisiveis = (usuarios || []).filter(u => {
-    if (u.ativo) return true; // ativo agora: sempre aparece
-    if (!u.dt_desativacao) return false; // inativo sem data: não aparece
-    return new Date(u.dt_desativacao) > dtRefFim; // foi desativado DEPOIS do período
+    if (u.ativo) return true;
+    if (!u.dt_desativacao) return false;
+    if (filtroTipo === 'anual') {
+      // Desativado em qualquer momento do ano ou depois → aparece
+      return u.dt_desativacao.substring(0,4) >= filtroAno;
+    } else {
+      // Desativado após o início do mês selecionado → aparece
+      const dtMes = `${filtroMesAno}-${filtroMes}-01`;
+      return u.dt_desativacao >= dtMes;
+    }
   });
 
   const cards = usuariosVisiveis.map(u => {
+    const anoRef = filtroTipo === 'anual' ? filtroAno : filtroMesAno;
     const procConc = (processos || []).filter(p => {
       if (p.responsavel_id !== u.id || !p.dt_conclusao) return false;
-      const anoRef = filtroTipo === 'anual' ? filtroAno : filtroMesAno;
       if (!p.dt_conclusao.startsWith(anoRef)) return false;
       if (filtroTipo === 'mensal' && p.dt_conclusao.substring(5,7) !== filtroMes) return false;
       return true;
@@ -783,7 +787,19 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
     const tPend  = (tarefas||[]).filter(t => !t.concluida && t.responsavel_id === u.id);
     const tConc  = (tarefas||[]).filter(t =>  t.concluida && t.responsavel_id === u.id);
     const tAtras = tPend.filter(t => t.dt_fim && new Date(t.dt_fim) < hoje);
-    return { u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras };
+
+    // Evolução mensal (apenas no modo anual)
+    const evolucao = filtroTipo === 'anual'
+      ? Array.from({length:12}, (_,i) => {
+          const mes = String(i+1).padStart(2,'0');
+          const lista = (processos||[]).filter(p =>
+            p.responsavel_id === u.id && p.dt_conclusao?.startsWith(anoRef) && p.dt_conclusao.substring(5,7) === mes
+          );
+          return { mes, label: MESES_LABEL[i], qtd: lista.length, valor: lista.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0) };
+        })
+      : [];
+
+    return { u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao };
   }).filter(c => c.procConc.length > 0 || c.emAnd.length > 0 || c.tPend.length > 0);
 
   const labelPeriodo = filtroTipo === 'anual'
@@ -840,10 +856,13 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
           Nenhum dado encontrado para o período selecionado.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 14 }}>
-          {cards.map(({ u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras }) => {
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+          {cards.map(({ u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao }) => {
             const inicial   = (u.nome_simples || u.nome || '?')[0].toUpperCase();
             const corPerfil = COR_PERFIL[u.perfil] || '#64748b';
+            const maxQtd    = Math.max(...evolucao.map(e => e.qtd), 1);
+            const maxValor  = Math.max(...evolucao.map(e => e.valor), 1);
+
             return (
               <div key={u.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {/* Cabeçalho */}
@@ -853,15 +872,19 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontWeight:700, fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.nome_simples || u.nome}</div>
-                    <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:8, background:corPerfil+'22', color:corPerfil }}>{u.perfil}</span>
+                    <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:2 }}>
+                      <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:8, background:corPerfil+'22', color:corPerfil }}>{u.perfil}</span>
+                      {!u.ativo && <span style={{ fontSize:10, color:'var(--color-text-faint)' }}>· inativo</span>}
+                    </div>
                   </div>
                   {tAtras.length > 0 && (
                     <span style={{ fontSize:11, fontWeight:700, background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:8, flexShrink:0 }}>
-                      ⚠ {tAtras.length} atrasada{tAtras.length>1?'s':''}
+                      ⚠ {tAtras.length} atras.
                     </span>
                   )}
                 </div>
-                {/* Concluídos */}
+
+                {/* Concluídos — totais */}
                 <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--color-border)' }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--color-accent)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>✅ Concluídos — {labelPeriodo}</div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
@@ -875,6 +898,38 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                     </div>
                   </div>
                 </div>
+
+                {/* Evolução mensal — só no modo anual */}
+                {filtroTipo === 'anual' && evolucao.some(e => e.qtd > 0) && (
+                  <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)' }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:'var(--color-text-muted)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>📈 Evolução mensal</div>
+                    {/* Mini barras */}
+                    <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:48 }}>
+                      {evolucao.map(e => {
+                        const h = e.qtd > 0 ? Math.max(4, Math.round((e.qtd / maxQtd) * 44)) : 0;
+                        const isMesAtual = e.mes === String(hoje.getMonth()+1).padStart(2,'0') && filtroAno === String(hoje.getFullYear());
+                        return (
+                          <div key={e.mes} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2 }} title={`${e.label}: ${e.qtd} proc. / ${fmtVal(e.valor)}`}>
+                            <div style={{ fontSize:9, color: e.qtd > 0 ? 'var(--color-text-muted)' : 'transparent', fontWeight:600 }}>{e.qtd||''}</div>
+                            <div style={{ width:'100%', height:44, display:'flex', alignItems:'flex-end' }}>
+                              <div style={{ width:'100%', height: h, background: isMesAtual ? '#f59e0b' : e.qtd > 0 ? 'var(--color-accent)' : 'var(--color-surface-2)', borderRadius:'3px 3px 0 0', transition:'height .3s', opacity: e.qtd > 0 ? 1 : 0.3 }} />
+                            </div>
+                            <div style={{ fontSize:8, color:'var(--color-text-faint)', marginTop:1 }}>{e.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Valores por mês em texto compacto */}
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 8px', marginTop:8 }}>
+                      {evolucao.filter(e => e.qtd > 0).map(e => (
+                        <span key={e.mes} style={{ fontSize:10, color:'var(--color-text-muted)' }}>
+                          <strong style={{ color:'var(--color-text)' }}>{e.label}</strong> {e.qtd}× {fmtK(e.valor)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Em andamento */}
                 <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)', background: emAnd.length>0 ? 'color-mix(in srgb, #f59e0b 6%, transparent)' : 'transparent' }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:0.5, marginBottom:5 }}>⏳ Em Andamento (total)</div>
@@ -883,6 +938,7 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                     <div style={{ fontFamily:'var(--font-mono)', fontWeight:600, fontSize:13, color:'#f59e0b' }}>{fmtVal(vlAnd)}</div>
                   </div>
                 </div>
+
                 {/* Tarefas */}
                 <div style={{ padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                   <span style={{ fontSize:10, fontWeight:700, color:'var(--color-text-muted)', textTransform:'uppercase', letterSpacing:0.5 }}>Tarefas</span>
