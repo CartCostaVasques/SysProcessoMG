@@ -24,7 +24,7 @@ const EMPTY = {
   endereco: '', cidade: '', uf: 'MT', cep: '', ativo: true, permissoes: ['dashboard','processos','tarefas'],
 };
 
-function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando, onRedefinirSenha }) {
+function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditando, onRedefinirSenha, somenteLeitura }) {
   const [form, setForm] = useState(usuario ? { ...usuario } : { ...EMPTY });
   const [tab, setTab] = useState('dados');
   const [editando, setEditando] = useState(isNovo || iniciarEditando || false);
@@ -137,7 +137,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                 <label className="form-label">Status</label>
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   {[true, false].map(v => (
-                    <label key={String(v)} className="checkbox-wrapper">
+                    <label key={String(v)} className="checkbox-wrapper" style={{ opacity: (!editando || somenteLeitura) ? 0.7 : 1, pointerEvents: (!editando || somenteLeitura) ? 'none' : 'auto' }}>
                       <input type="radio" checked={form.ativo === v} onChange={() => set('ativo', v)} />
                       <div className="checkbox-box" style={{ borderRadius: '50%' }}>
                         {form.ativo === v && <span style={{ fontSize: 8, color: 'var(--color-bg)' }}>●</span>}
@@ -146,6 +146,11 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                     </label>
                   ))}
                 </div>
+                {!form.ativo && form.dt_desativacao && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>📅</span> Desativado em: <strong>{formatDate(form.dt_desativacao)}</strong>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -193,7 +198,12 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
           )}
         </div>
         <div className="modal-footer">
-          {editando ? (
+          {somenteLeitura ? (
+            <>
+              <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+              <button className="btn btn-primary" onClick={() => { /* sai do modo leitura e entra em edição */ setEditando(true); }}>✎ Editar</button>
+            </>
+          ) : editando ? (
             <>
               <button className="btn btn-secondary" onClick={() => isNovo ? onClose() : setEditando(false)}>
                 {isNovo ? 'Cancelar' : '✕ Descartar'}
@@ -225,8 +235,9 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
 
 export default function Usuarios() {
   const { usuarios, addUsuario, editUsuario, deleteUsuario, redefinirSenha, setores, addToast } = useApp();
-  const [modal, setModal] = useState(null); // null | 'novo' | usuario
-  const [busca, setBusca] = useState('');
+  const [modal, setModal]           = useState(null); // null | 'novo' | usuario
+  const [modalViewing, setModalViewing] = useState(false); // true = só visualizar
+  const [busca, setBusca]           = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
 
   const lista = usuarios.filter(u => {
@@ -236,7 +247,19 @@ export default function Usuarios() {
     return ok;
   });
 
+  const abrirVisualizar = (u) => { setModalViewing(true);  setModal(u); };
+  const abrirEditar     = (u) => { setModalViewing(false); setModal(u); };
+
   const handleSave = (form) => {
+    // Se estava ativo e agora está inativo, salva a data de desativação
+    const usuarioAtual = modal !== 'novo' ? usuarios.find(u => u.id === modal.id) : null;
+    if (usuarioAtual && usuarioAtual.ativo === true && form.ativo === false && !form.dt_desativacao) {
+      form.dt_desativacao = new Date().toISOString().split('T')[0];
+    }
+    // Se foi reativado, limpa a data
+    if (form.ativo === true) {
+      form.dt_desativacao = null;
+    }
     if (modal === 'novo') {
       addUsuario(form);
       addToast('Usuário cadastrado com sucesso!', 'success');
@@ -320,11 +343,17 @@ export default function Usuarios() {
                     <span className={`dot ${u.ativo ? 'dot-success' : 'dot-muted'}`} />
                     {u.ativo ? 'Ativo' : 'Inativo'}
                   </span>
+                  {!u.ativo && u.dt_desativacao && (
+                    <div style={{ fontSize: 10, color: 'var(--color-text-faint)', marginTop: 2 }}>
+                      desde {formatDate(u.dt_desativacao)}
+                    </div>
+                  )}
                 </td>
                 <td style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{u.ultimo_acesso || '—'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button className="btn-icon btn-sm" onClick={() => setModal(u)} title="Editar">✎</button>
+                    <button className="btn-icon btn-sm" onClick={() => abrirVisualizar(u)} title="Visualizar">👁</button>
+                    <button className="btn-icon btn-sm" onClick={() => abrirEditar(u)} title="Editar">✎</button>
                     <button className="btn-icon btn-sm" onClick={() => handleDelete(u)} title="Remover" style={{ color: 'var(--color-danger)' }}>✕</button>
                   </div>
                 </td>
@@ -338,7 +367,8 @@ export default function Usuarios() {
         <ModalUsuario
           usuario={modal === 'novo' ? null : modal}
           isNovo={modal === 'novo'}
-          onClose={() => setModal(null)}
+          somenteLeitura={modalViewing}
+          onClose={() => { setModal(null); setModalViewing(false); }}
           onSave={handleSave}
           setores={setores}
           onRedefinirSenha={redefinirSenha}
