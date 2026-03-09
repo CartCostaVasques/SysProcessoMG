@@ -375,7 +375,7 @@ export function AppProvider({ children }) {
   const editServico   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('servicos').update(d).eq('id',id).select().single(); if(error) throw error; setServicos(p=>p.map(s=>s.id===id?{...s,...data}:s)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteServico = useCallback(async (id) => { try { await supabase.from('servicos').delete().eq('id',id); setServicos(p=>p.filter(s=>s.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const salvarCartorio = useCallback(async (d) => { try { const {data,error} = await supabase.from('cartorio').upsert({id:1,...d}).select().single(); if(error) throw error; setCartorio(data); addToast('Configurações salvas!','success'); } catch(e){ addToast(e.message,'error'); } }, []);
+  const salvarCartorio = useCallback(async (d) => { try { const {data,error} = await supabase.from('cartorio').update(d).eq('id',1).select().single(); if(error) throw error; setCartorio(data); addToast('Configurações salvas!','success'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const getProximoNumeroOficio = useCallback(async (mesAno) => {
     try { const {data} = await supabase.rpc('proximo_numero_oficio', {p_mes_ano: mesAno}); return data; }
