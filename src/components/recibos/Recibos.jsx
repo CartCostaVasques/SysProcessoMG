@@ -336,7 +336,7 @@ function ModalRecibo({ recibo, nomeCliente, onClose, onSave }) {
 }
 
 // ── Tabela reutilizável ──────────────────────────────────────
-function TabelaRecibos({ recibos, total, totalCount, carregando, busca, onEditar, onImprimir, onDeletar, mostrarCliente }) {
+function TabelaRecibos({ recibos, total, totalCount, carregando, busca, onEditar, onImprimir, onImprimirCliente, onDeletar, mostrarCliente }) {
   const cols = mostrarCliente ? 6 : 5;
   return (
     <div className="table-wrapper">
@@ -415,8 +415,13 @@ export default function Recibos() {
   , [usuarios]);
 
   const [assinanteSel, setAssinanteSel] = useState(null);
-  // Auto-seleciona o primeiro Tabelião disponível
-  useState(() => { if (assinantes.length) setAssinanteSel(assinantes[0]); });
+  // Auto-seleciona o Tabelião (ou primeiro da lista) quando usuários carregam
+  useEffect(() => {
+    if (assinantes.length && !assinanteSel) {
+      const tabeliao = assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0];
+      setAssinanteSel(tabeliao);
+    }
+  }, [assinantes]);
 
   const [aba,           setAba]          = useState('emitir');
   const [recibos,       setRecibos]      = useState([]);
@@ -833,7 +838,7 @@ export default function Recibos() {
             carregando={carregando} busca={buscaHist}
             onEditar={null}
             onImprimir={r => imprimirRecibo(r, r.interessados, cartorio)}
-            onImprimirCliente={r => imprimirReciboCliente(r, r.interessados, cartorio, assinanteSel)}
+            onImprimirCliente={r => imprimirReciboCliente(r, r.interessados, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0])}
             onDeletar={deletarRecibo} mostrarCliente={true} />
         </div>
       )}
