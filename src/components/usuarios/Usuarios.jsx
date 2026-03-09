@@ -28,6 +28,10 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
   const [form, setForm] = useState(usuario ? { ...usuario } : { ...EMPTY });
   const [tab, setTab] = useState('dados');
   const [editando, setEditando] = useState(isNovo || iniciarEditando || false);
+  const [modoLeitura, setModoLeitura] = useState(somenteLeitura || false);
+
+  // Campos bloqueados se em modo leitura ou se não está editando
+  const bloqueado = modoLeitura || !editando;
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -77,7 +81,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
             <div className="form-grid form-grid-2">
               <div className="form-group form-full">
                 <label className="form-label">Nome Completo *</label>
-                <input className="form-input" value={form.nome_completo} onChange={e => set('nome_completo', e.target.value)} placeholder="Nome conforme documento" readOnly={!editando} style={!editando ? {opacity:0.75,cursor:'default'} : {}} />
+                <input className="form-input" value={form.nome_completo} onChange={e => set('nome_completo', e.target.value)} placeholder="Nome conforme documento" readOnly={bloqueado} style={bloqueado ? {opacity:0.75,cursor:'default'} : {}} />
               </div>
               <div className="form-group">
                 <label className="form-label">Nome Simples</label>
@@ -137,7 +141,7 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                 <label className="form-label">Status</label>
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   {[true, false].map(v => (
-                    <label key={String(v)} className="checkbox-wrapper" style={{ opacity: (!editando || somenteLeitura) ? 0.7 : 1, pointerEvents: (!editando || somenteLeitura) ? 'none' : 'auto' }}>
+                    <label key={String(v)} className="checkbox-wrapper" style={{ opacity: bloqueado ? 0.7 : 1, pointerEvents: bloqueado ? 'none' : 'auto' }}>
                       <input type="radio" checked={form.ativo === v} onChange={() => set('ativo', v)} />
                       <div className="checkbox-box" style={{ borderRadius: '50%' }}>
                         {form.ativo === v && <span style={{ fontSize: 8, color: 'var(--color-bg)' }}>●</span>}
@@ -146,9 +150,9 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                     </label>
                   ))}
                 </div>
-                {!form.ativo && form.dt_desativacao && (
+                {!form.ativo && (
                   <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>📅</span> Desativado em: <strong>{formatDate(form.dt_desativacao)}</strong>
+                    <span>📅</span> Desativado em: <strong>{form.dt_desativacao ? formatDate(form.dt_desativacao) : 'não registrado'}</strong>
                   </div>
                 )}
               </div>
@@ -198,10 +202,10 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
           )}
         </div>
         <div className="modal-footer">
-          {somenteLeitura ? (
+          {modoLeitura ? (
             <>
               <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
-              <button className="btn btn-primary" onClick={() => { /* sai do modo leitura e entra em edição */ setEditando(true); }}>✎ Editar</button>
+              <button className="btn btn-primary" onClick={() => { setModoLeitura(false); setEditando(true); }}>✎ Editar</button>
             </>
           ) : editando ? (
             <>
