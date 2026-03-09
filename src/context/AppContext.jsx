@@ -25,6 +25,7 @@ export function AppProvider({ children }) {
   const [setores,    setSetores]    = useState([]);
   const [servicos,   setServicos]   = useState([]);
   const [logs,       setLogs]       = useState([]);
+  const [processoHistorico, setProcessoHistorico] = useState([]);
   const [cartorio,   setCartorio]   = useState({});
   const [dashStats,  setDashStats]  = useState(null);
   const [loading,    setLoadingMap] = useState({});
@@ -133,6 +134,7 @@ export function AppProvider({ children }) {
       fetchUsuarios(),
       fetchInteressados(),
       fetchLogs(),
+      fetchProcessoHistorico(),
     ]);
   };
 
@@ -225,6 +227,7 @@ export function AppProvider({ children }) {
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
+  const fetchProcessoHistorico = async () => { try { const {data} = await supabase.from('processo_historico').select('*, usuarios(nome_simples)').order('dt_alteracao',{ascending:false}); if(data) setProcessoHistorico(data); } catch(e){ console.error('processo_historico',e); } };
   const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) { setCartorio(data); } } catch(e){} };
   const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
@@ -311,13 +314,42 @@ export function AppProvider({ children }) {
   }, []);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','responsavel_id','valor_ato','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
+  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','dt_encerramento','responsavel_id','valor_ato','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
   const addProcesso    = useCallback(async (d) => { try { 
     const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const editProcesso   = useCallback(async (id, d) => { try {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+
+  const alterarStatusProcesso = useCallback(async (processoId, statusAtual, novoStatus, obs = '') => {
+    try {
+      const hoje = new Date().toISOString().split('T')[0];
+      const updates = { status: novoStatus };
+      if (novoStatus === 'Concluído') updates.dt_conclusao = hoje;
+      if (novoStatus === 'Encerrado') updates.dt_encerramento = hoje;
+      // Se saindo de Concluído/Encerrado, limpa as datas
+      if (novoStatus !== 'Concluído') updates.dt_conclusao = null;
+      if (novoStatus !== 'Encerrado') updates.dt_encerramento = null;
+
+      const { data, error } = await supabase.from('processos').update(updates).eq('id', processoId).select().single();
+      if (error) throw error;
+      setProcessos(p => p.map(i => i.id === processoId ? { ...i, ...data } : i));
+
+      // Registra no histórico
+      await supabase.from('processo_historico').insert({
+        processo_id: processoId,
+        status_anterior: statusAtual,
+        status_novo: novoStatus,
+        dt_alteracao: hoje,
+        obs: obs || null,
+        usuario_id: usuario?.id || null,
+      });
+      await fetchProcessoHistorico();
+      addToast(`Status alterado para "${novoStatus}"`, 'success');
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, [usuario]);
   const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); setProcessos(p=>p.map(proc=>proc.id===d.processo_id?{...proc,total_andamentos:(proc.total_andamentos||0)+1}:proc)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
@@ -376,7 +408,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
       usuarios, addUsuario, editUsuario, deleteUsuario, alterarSenha, minhaSenha,
-      processos, addProcesso, editProcesso, deleteProcesso,
+      processos, addProcesso, editProcesso, deleteProcesso, alterarStatusProcesso,
+      processoHistorico, fetchProcessoHistorico,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
       oficios, addOficio, editOficio, deleteOficio,
