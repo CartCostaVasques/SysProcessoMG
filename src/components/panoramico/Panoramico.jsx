@@ -107,12 +107,14 @@ export default function Panoramico() {
   const [secao,    setSecao]    = useState('todos');
 
   // Estados do modo Sequência
-  const [seqAno,      setSeqAno]      = useState(anoAtual);
-  const [seqMeses,    setSeqMeses]    = useState(6);     // quantos meses exibir
-  const [seqAgrup,    setSeqAgrup]    = useState('especie'); // 'categoria' | 'especie' | 'setor'
-  const [seqMesInicio,setSeqMesInicio]= useState(
+  const [seqAno,       setSeqAno]       = useState(anoAtual);
+  const [seqMeses,     setSeqMeses]     = useState(6);
+  const [seqAgrup,     setSeqAgrup]     = useState('especie');
+  const [seqMesInicio, setSeqMesInicio] = useState(
     String(Math.max(1, new Date().getMonth() + 1 - 5)).padStart(2,'0')
   );
+  const [seqFiltroCat, setSeqFiltroCat] = useState('');  // filtro por categoria (quando agrup=especie)
+  const [seqFiltroTxt, setSeqFiltroTxt] = useState('');  // busca livre
 
   // Anos disponíveis
   const anosDisp = useMemo(() => {
@@ -199,6 +201,23 @@ export default function Panoramico() {
     });
     return Array.from(s).sort();
   }, [seqDados, seqAgrup]);
+
+  // Categorias únicas extraídas das chaves (formato "Categoria › Serviço")
+  const seqCategorias = useMemo(() => {
+    if (seqAgrup !== 'especie') return [];
+    const cats = new Set(seqChaves.map(k => k.split(' › ')[0]).filter(Boolean));
+    return Array.from(cats).sort();
+  }, [seqChaves, seqAgrup]);
+
+  // Chaves filtradas por categoria e texto
+  const seqChavesFiltradas = useMemo(() => {
+    return seqChaves.filter(k => {
+      const lower = k.toLowerCase();
+      const matchCat = !seqFiltroCat || k.startsWith(seqFiltroCat + ' › ');
+      const matchTxt = !seqFiltroTxt || lower.includes(seqFiltroTxt.toLowerCase());
+      return matchCat && matchTxt;
+    });
+  }, [seqChaves, seqFiltroCat, seqFiltroTxt]);
 
   const labelA = modoVis === 'anual' ? anoA : `${MESES_FULL[parseInt(mesA)-1]}/${anoA}`;
   const labelB = modoVis === 'anual' ? anoB : `${MESES_FULL[parseInt(mesB)-1]}/${anoB}`;
@@ -307,7 +326,7 @@ export default function Panoramico() {
           {modoVis === 'sequencia' && (<>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Agrupar por</label>
-              <select className="form-select" value={seqAgrup} onChange={e => setSeqAgrup(e.target.value)}>
+              <select className="form-select" value={seqAgrup} onChange={e => { setSeqAgrup(e.target.value); setSeqFiltroCat(''); setSeqFiltroTxt(''); }}>
                 <option value="especie">Tipo de Serviço</option>
                 <option value="categoria">Categoria</option>
                 <option value="setor">Responsável (Setor)</option>
@@ -333,6 +352,40 @@ export default function Panoramico() {
                 {[3,4,5,6,8,10,12].map(n => <option key={n} value={n}>{n} meses</option>)}
               </select>
             </div>
+            {/* Filtro por Categoria — só quando agrup=especie */}
+            {seqAgrup === 'especie' && seqCategorias.length > 0 && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Categoria</label>
+                <select className="form-select" value={seqFiltroCat} onChange={e => setSeqFiltroCat(e.target.value)}>
+                  <option value="">Todas</option>
+                  {seqCategorias.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            )}
+            {/* Busca por serviço/nome */}
+            <div className="form-group" style={{ marginBottom: 0, flex: '1 1 160px' }}>
+              <label className="form-label">Buscar</label>
+              <div className="search-bar" style={{ height: 34 }}>
+                <span className="search-bar-icon" style={{ fontSize: 13 }}>⌕</span>
+                <input
+                  placeholder={seqAgrup === 'especie' ? 'Serviço...' : seqAgrup === 'categoria' ? 'Categoria...' : 'Responsável...'}
+                  value={seqFiltroTxt}
+                  onChange={e => setSeqFiltroTxt(e.target.value)}
+                  style={{ fontSize: 12 }}
+                />
+                {seqFiltroTxt && (
+                  <button onClick={() => setSeqFiltroTxt('')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-faint)', fontSize:14, padding:'0 6px' }}>✕</button>
+                )}
+              </div>
+            </div>
+            {/* Indicador de filtro ativo */}
+            {(seqFiltroCat || seqFiltroTxt) && (
+              <div style={{ alignSelf: 'flex-end', marginBottom: 0 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setSeqFiltroCat(''); setSeqFiltroTxt(''); }}>
+                  ↺ Limpar filtros
+                </button>
+              </div>
+            )}
           </>)}
         </div>
       </div>
@@ -498,8 +551,10 @@ export default function Panoramico() {
         <TabelaSequencia
           colunas={seqColunas}
           dados={seqDados}
-          chaves={seqChaves}
+          chaves={seqChavesFiltradas}
           agrup={seqAgrup}
+          filtroAtivo={!!(seqFiltroCat || seqFiltroTxt)}
+          totalChaves={seqChaves.length}
         />
       )}
     </div>
@@ -594,7 +649,7 @@ function TabelaComparacao({ titulo, labelA, labelB, linhas, maxValor, agrupado }
 }
 
 // ── Tabela Sequência Mensal ──────────────────────────────────
-function TabelaSequencia({ colunas, dados, chaves, agrup }) {
+function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChaves }) {
   const fmtV  = (v) => Number(v||0) > 0 ? `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
   const fmtDV = (v) => v === 0 ? '—' : (v > 0 ? `+R$ ${Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `-R$ ${Number(Math.abs(v)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`);
   const fmtDQ = (v) => v === 0 ? '—' : (v > 0 ? `+${v}` : `${v}`);
@@ -633,6 +688,11 @@ function TabelaSequencia({ colunas, dados, chaves, agrup }) {
           <div className="card-title">📊 Evolução Mensal — {AGRUP_LABEL[agrup]}</div>
           <div className="card-subtitle" style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
             Δ = diferença em relação ao mês anterior &nbsp;·&nbsp; verde = crescimento &nbsp;·&nbsp; vermelho = queda
+            {filtroAtivo && (
+              <span style={{ marginLeft: 10, background: 'var(--color-accent)', color: '#fff', padding: '1px 8px', borderRadius: 10, fontWeight: 700, fontSize: 10 }}>
+                {chaves.length} de {totalChaves} linhas
+              </span>
+            )}
           </div>
         </div>
       </div>
