@@ -10,10 +10,13 @@ function formatBRL(v) {
 
 const STATUS_CONF = {
   'Em andamento': { cor: 'var(--color-warning)', sigla: 'EA' },
-  'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
   'Devolvido':    { cor: 'var(--color-danger)',  sigla: 'DV' },
-  'Suspenso':     { cor: '#8a8a96',              sigla: 'SP' },
+  'Em reanálise': { cor: '#a78bfa',              sigla: 'RA' },
+  'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
+  'Encerrado':    { cor: '#64748b',              sigla: 'EN' },
 };
+
+const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
 
 function parsePartes(partes) {
   try { return JSON.parse(partes || '[]'); } catch { return []; }
@@ -82,7 +85,7 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
             <tr key={p.id} onClick={() => onSelecionar(p)}
               style={{ cursor: 'pointer', borderBottom: '1px solid var(--color-border)',
                 background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)',
-                opacity: p.status === 'Concluído' ? 0.75 : 1 }}>
+                opacity: ['Concluído','Encerrado'].includes(p.status) ? 0.75 : 1 }}>
               <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.numero_interno}</td>
               <td style={{ padding: '6px 10px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{formatDate(p.dt_abertura)}</td>
               <td style={{ padding: '6px 10px', overflow: 'hidden' }}>
@@ -156,11 +159,17 @@ export default function ProcessoDetalhePage() {
       return (int?.nome || pt.nome || '').toLowerCase();
     }).join(' ');
     const txt = (p.numero_interno + p.especie + p.categoria + nomesPartes).toLowerCase();
-    const dtRef = filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_abertura;
+    const dtRef = ['Concluído','Encerrado'].includes(filtroStatus)
+      ? (filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_encerramento)
+      : p.dt_abertura;
     const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
     const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
     return (!busca || txt.includes(busca.toLowerCase()))
-        && (!filtroStatus || p.status === filtroStatus)
+        && (
+          !filtroStatus ? true
+          : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
+          : p.status === filtroStatus
+        )
         && matchAno && matchMes;
   }), [processos, busca, filtroStatus, filtroMes, filtroAno, interessados]);
 
@@ -224,10 +233,12 @@ export default function ProcessoDetalhePage() {
         </div>
         <select className="form-select" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
           <option value="">Todos os status</option>
+          <option value="pendentes">⏳ Pendentes (todos)</option>
           <option value="Em andamento">Em andamento</option>
-          <option value="Concluído">Concluído</option>
           <option value="Devolvido">Devolvido</option>
-          <option value="Suspenso">Suspenso</option>
+          <option value="Em reanálise">Em reanálise</option>
+          <option value="Concluído">Concluído</option>
+          <option value="Encerrado">Encerrado</option>
         </select>
         <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
           <option value="todos">Todos os meses</option>
