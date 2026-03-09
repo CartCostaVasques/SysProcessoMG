@@ -29,35 +29,33 @@ const DeltaBadge = ({ atual, anterior }) => {
 function agrupar(processos, usuarios, dtRef) {
   const porCategoria = {};
   const porEspecie   = {};
-  const porSetor     = {};  // agora = por categoria do processo (campo mais confiável)
+  const porSetor     = {};
   let total = 0;
   let qtd   = 0;
 
   processos.forEach(p => {
     const v   = parseFloat(p.valor_ato || 0);
+    const q   = parseInt(p.quantidade  || 1);  // respeita campo quantidade
     const cat = p.categoria || 'Sem Categoria';
     const esp = p.especie   || 'Sem Tipo';
 
-    // Categoria (igual ao "setor" — usamos p.categoria como agrupador principal)
     if (!porCategoria[cat]) porCategoria[cat] = { qtd: 0, valor: 0 };
-    porCategoria[cat].qtd++;
+    porCategoria[cat].qtd   += q;
     porCategoria[cat].valor += v;
 
-    // Espécie (tipo de serviço: Categoria › Subcategoria)
     const chave = `${cat} › ${esp}`;
     if (!porEspecie[chave]) porEspecie[chave] = { categoria: cat, especie: esp, qtd: 0, valor: 0 };
-    porEspecie[chave].qtd++;
+    porEspecie[chave].qtd   += q;
     porEspecie[chave].valor += v;
 
-    // porSetor agora agrupa pelo setor do usuário responsável (mantido para compatibilidade)
     const u   = usuarios.find(u => u.id === p.responsavel_id);
     const set = u?.setor || 'Sem Setor';
     if (!porSetor[set]) porSetor[set] = { qtd: 0, valor: 0 };
-    porSetor[set].qtd++;
+    porSetor[set].qtd   += q;
     porSetor[set].valor += v;
 
     total += v;
-    qtd++;
+    qtd   += q;
   });
 
   return { porCategoria, porEspecie, porSetor, total, qtd };
@@ -887,12 +885,22 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
           const lista = (processos||[]).filter(p =>
             p.responsavel_id === u.id && p.dt_conclusao?.startsWith(anoRef) && p.dt_conclusao.substring(5,7) === mes
           );
-          return { mes, label: MESES_LABEL[i], qtd: lista.length, valor: lista.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0) };
+          return {
+            mes, label: MESES_LABEL[i],
+            qtd:   lista.reduce((s,p) => s + parseInt(p.quantidade||1), 0),
+            valor: lista.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0),
+          };
         })
       : [];
 
-    return { u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao };
-  }).filter(c => c.procConc.length > 0 || c.emAnd.length > 0 || c.tPend.length > 0);
+    const qtdConc = procConc.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const qtdAnd  = emAnd.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const vlConc  = procConc.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const vlAnd   = emAnd.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const ticket  = qtdConc > 0 ? vlConc / qtdConc : 0;
+
+    return { u, procConc, emAnd, qtdConc, qtdAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao };
+  }).filter(c => c.qtdConc > 0 || c.qtdAnd > 0 || c.tPend.length > 0);
 
   const labelPeriodo = filtroTipo === 'anual'
     ? `Ano ${filtroAno}`
@@ -981,8 +989,8 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                   <div style={{ fontSize:10, fontWeight:700, color:'var(--color-accent)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>✅ Concluídos — {labelPeriodo}</div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
                     <div>
-                      <span style={{ fontSize:28, fontWeight:800, lineHeight:1 }}>{procConc.length}</span>
-                      <span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:5 }}>processos</span>
+                      <span style={{ fontSize:28, fontWeight:800, lineHeight:1 }}>{qtdConc}</span>
+                      <span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:5 }}>serviços</span>
                     </div>
                     <div style={{ textAlign:'right' }}>
                       <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14, color:'#22c55e' }}>{fmtVal(vlConc)}</div>
@@ -1014,10 +1022,10 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
                 )}
 
                 {/* Em andamento */}
-                <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)', background: emAnd.length>0 ? 'color-mix(in srgb, #f59e0b 6%, transparent)' : 'transparent' }}>
+                <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)', background: qtdAnd>0 ? 'color-mix(in srgb, #f59e0b 6%, transparent)' : 'transparent' }}>
                   <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:0.5, marginBottom:5 }}>⏳ Em Andamento (total)</div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div><span style={{ fontSize:20, fontWeight:700 }}>{emAnd.length}</span><span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:4 }}>proc.</span></div>
+                    <div><span style={{ fontSize:20, fontWeight:700 }}>{qtdAnd}</span><span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:4 }}>serv.</span></div>
                     <div style={{ fontFamily:'var(--font-mono)', fontWeight:600, fontSize:13, color:'#f59e0b' }}>{fmtVal(vlAnd)}</div>
                   </div>
                 </div>
