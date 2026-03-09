@@ -314,7 +314,7 @@ export function AppProvider({ children }) {
   }, []);
   const deleteUsuario = useCallback(async (id) => { try { await supabase.from('usuarios').update({ativo:false}).eq('id',id); setUsuarios(p=>p.map(u=>u.id===id?{...u,ativo:false}:u)); } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','dt_encerramento','responsavel_id','valor_ato','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
+  const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','dt_encerramento','responsavel_id','valor_ato','quantidade','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes'];
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
   const addProcesso    = useCallback(async (d) => { try { 
