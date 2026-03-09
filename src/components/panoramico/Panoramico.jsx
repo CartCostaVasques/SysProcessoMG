@@ -329,7 +329,6 @@ export default function Panoramico() {
               <select className="form-select" value={seqAgrup} onChange={e => { setSeqAgrup(e.target.value); setSeqFiltroCat(''); setSeqFiltroTxt(''); }}>
                 <option value="especie">Tipo de Serviço</option>
                 <option value="categoria">Categoria</option>
-                <option value="setor">Responsável (Setor)</option>
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
