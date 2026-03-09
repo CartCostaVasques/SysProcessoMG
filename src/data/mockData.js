@@ -17,7 +17,7 @@ export const MOCK_CARTORIO = {
   logo: null,
 };
 
-export const PERFIS = ['Administrador', 'Tabelião', 'Escrevente', 'Consultor'];
+export const PERFIS = ['Administrador', 'Tabelião', 'Escrevente', 'Substituto', 'Auxiliar', 'Consultor'];
 
 export const MOCK_USUARIOS = [
   { id: 1, nome_completo: 'Mauro George Viana Marques Felisbino', nome_simples: 'Mauro', email: 'mauro@cartorio.com', cpf: '861.719.921-00', rg: '1264191-0 SSP-MT', celular: '(66) 9 8402-0120', cargo: 'Administrador', perfil: 'Administrador', setor: 'Administração', endereco: 'Av. Brasil, 2518', cidade: 'Paranatinga', uf: 'MT', ativo: true, dt_cadastro: '2024-01-10', ultimo_acesso: '2025-03-03 08:45', permissoes: ['dashboard','usuarios','processos','servicos','tarefas','setores','oficios','configuracoes','logs'] },
