@@ -954,7 +954,7 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 14 }}>
-          {cards.map(({ u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao }) => {
+          {cards.map(({ u, procConc, emAnd, qtdConc, qtdAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras, evolucao }) => {
             const inicial   = (u.nome_simples || u.nome || '?')[0].toUpperCase();
             const corPerfil = COR_PERFIL[u.perfil] || '#64748b';
             const maxQtd    = Math.max(...evolucao.map(e => e.qtd), 1);
