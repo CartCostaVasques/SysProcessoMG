@@ -47,7 +47,7 @@ const EMPTY_ROW = {
 // Edite categoria/especie para bater com os cadastrados no banco
 const SERVICOS_RAPIDOS = [
   { label: 'Apontamento Protesto',      categoria: 'Protesto',          especie: 'Apontamento Protesto' },
-  { label: 'Cancelamento de Protesto',  categoria: 'Protesto',          especie: 'Cancelamento' },
+  { label: 'Baixa Protesto',            categoria: 'Protesto',          especie: 'Baixa Protesto' },
   { label: 'Certidão de Protesto',      categoria: 'Certidao de Atos',  especie: 'Cert de Protesto' },
   { label: 'Averbação Registro Civil',  categoria: 'Registro Civil',    especie: 'Averbação' },
   { label: 'Certidão Registro Civil',   categoria: 'Certidao de Atos',  especie: 'Cert Registro Civil' },
