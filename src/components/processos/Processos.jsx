@@ -4,7 +4,8 @@ import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
-const STATUS_OPTS = ['Em andamento', 'Concluído', 'Devolvido', 'Suspenso'];
+const STATUS_OPTS = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
+const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
 const HOJE = () => new Date().toISOString().split('T')[0];
 const ONTEM = () => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; };
 
@@ -421,9 +422,10 @@ export default function Processos() {
 
   const STATUS_CONF = {
     'Em andamento': { cor: 'var(--color-warning)', sigla: 'EA' },
-    'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
     'Devolvido':    { cor: 'var(--color-danger)',  sigla: 'DV' },
-    'Suspenso':     { cor: '#8a8a96',              sigla: 'SP' },
+    'Em reanálise': { cor: '#a78bfa',              sigla: 'RA' },
+    'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
+    'Encerrado':    { cor: '#64748b',              sigla: 'EN' },
   };
   const statusBadge = (s) => {
     const conf = STATUS_CONF[s] || { cor: 'var(--color-text-faint)', sigla: s?.slice(0,2).toUpperCase() };
@@ -462,7 +464,7 @@ export default function Processos() {
       <div className="page-header">
         <div>
           <div className="page-title">Processos</div>
-          <div className="page-sub">{lista.length} registro(s) · {processos.filter(p => p.status === 'Em andamento').length} em andamento</div>
+          <div className="page-sub">{lista.length} registro(s) · {processos.filter(p => STATUS_PENDENTES.includes(p.status)).length} pendentes</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => setModalRapido(true)}>⚡ Cadastro Rápido</button>
@@ -584,7 +586,7 @@ export default function Processos() {
                 </div></td>
               </tr>
             ) : (
-              <tr key={p.id} style={{ opacity: p.status === 'Concluído' ? 0.75 : 1, cursor: 'pointer' }} onClick={() => setProcessoDetalhe(p)}>
+              <tr key={p.id} style={{ opacity: ['Concluído','Encerrado'].includes(p.status) ? 0.75 : 1, cursor: 'pointer' }} onClick={() => setProcessoDetalhe(p)}>
                 <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{p.numero_interno}</span></td>
                 <td style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(p.dt_abertura)}</td>
                 <td><span className="badge badge-neutral">{p.categoria}</span></td>
@@ -607,7 +609,7 @@ export default function Processos() {
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(p.dt_conclusao) || '—'}</td>
                 <td>
                   <div style={{ display: 'flex', gap: 3, justifyContent: 'flex-end' }}>
-                    {p.status !== 'Concluído' && (
+                    {STATUS_PENDENTES.includes(p.status) && (
                       <button className="btn-icon btn-sm" onClick={e => { e.stopPropagation(); handleConcluir(p); }} title="Concluir" style={{ color: 'var(--color-success)', fontSize: 14 }}>✓</button>
                     )}
                     <button className="btn-icon btn-sm" onClick={e => { e.stopPropagation(); startEdit(p); }} title="Editar">✎</button>
