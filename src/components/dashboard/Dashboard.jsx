@@ -119,7 +119,9 @@ export default function Dashboard({ setPage }) {
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
     const tarefasVencidas  = tarefas.filter(t => !t.concluida && new Date(t.dt_fim) < hoje).length;
-    return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas };
+    const recFirma = processos.filter(p => p.categoria === 'Reconhecimento de Firma').reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+    const outrosProcessos = total - processos.filter(p => p.categoria === 'Reconhecimento de Firma').length;
+    return { total, emAndamento, concluidos, tarefasPendentes, oficiosEnviados, tarefasVencidas, recFirma, outrosProcessos };
   }, [processos, tarefas, oficios]);
 
   // Valores financeiros — filtrados pelo ano selecionado
@@ -221,8 +223,25 @@ export default function Dashboard({ setPage }) {
 
       {/* KPI Cards — operacionais */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
+        {/* Card especial: Total de Processos + Rec. Firma */}
+        <div className="stat-card">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div className="stat-card-label">Total de Processos</div>
+            <span style={{ fontSize: 16, opacity: 0.6 }}>📋</span>
+          </div>
+          <div className="stat-card-value" style={{ color: 'var(--color-info)' }}>{stats.total}</div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros processos</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{stats.outrosProcessos}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{stats.recFirma}</span>
+            </div>
+          </div>
+        </div>
         {[
-          { label: 'Total de Processos', value: stats.total, sub: 'Todos os registros', icon: '📋', color: 'var(--color-info)' },
           { label: 'Pendentes',       value: stats.emAndamento, sub: 'Em andamento / devolvidos / reanálise', icon: '🔄', color: 'var(--color-warning)' },
           { label: 'Concluídos',         value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
           { label: 'Tarefas Pendentes',  value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
