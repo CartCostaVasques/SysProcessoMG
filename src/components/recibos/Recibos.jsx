@@ -134,7 +134,8 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
   const nomeAssin  = assinante?.nome_completo || assinante?.nome_simples || 'Tabeliã';
-  const cargoAssin = assinante?.perfil === 'Tabelião' ? 'Tabeliã' : (assinante?.perfil || 'Responsável');
+  const isTabeliao = assinante?.perfil?.toLowerCase().startsWith('tabeliã') || assinante?.perfil?.toLowerCase().startsWith('tabeliao');
+  const cargoAssin = isTabeliao ? 'Tabeliã' : (assinante?.perfil || 'Responsável');
   const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
   const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
 
@@ -403,6 +404,12 @@ function TabelaRecibos({ recibos, total, totalCount, carregando, busca, onEditar
 }
 
 // ── Componente principal ─────────────────────────────────────
+function buscarTabeliao(lista) {
+  return lista.find(u => u.perfil?.toLowerCase().startsWith('tabeliã') || u.perfil?.toLowerCase().startsWith('tabeliao'))
+    || lista.find(u => u.nome_completo?.toLowerCase().includes('giselle') || u.nome_simples?.toLowerCase().includes('giselle'))
+    || lista[0];
+}
+
 export default function Recibos() {
   const { interessados, addInteressado, addToast, cartorio, usuario, usuarios, supabaseClient: sb } = useApp();
 
@@ -411,16 +418,15 @@ export default function Recibos() {
 
   // Usuários que podem assinar recibos de cliente
   const assinantes = useMemo(() =>
-    usuarios.filter(u => u.ativo && ['Tabelião','Escrevente','Administrador'].includes(u.perfil))
+    usuarios.filter(u => u.ativo && (
+      ['tabelião','tabeliao','escrevente','administrador','substituto'].includes(u.perfil?.toLowerCase())
+    ))
   , [usuarios]);
 
   const [assinanteSel, setAssinanteSel] = useState(null);
-  // Auto-seleciona o Tabelião (ou primeiro da lista) quando usuários carregam
+  // Auto-seleciona sempre o Tabelião quando usuários carregam
   useEffect(() => {
-    if (assinantes.length && !assinanteSel) {
-      const tabeliao = assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0];
-      setAssinanteSel(tabeliao);
-    }
+    if (assinantes.length) setAssinanteSel(buscarTabeliao(assinantes));
   }, [assinantes]);
 
   const [aba,           setAba]          = useState('emitir');
@@ -519,13 +525,13 @@ export default function Recibos() {
         if (error) throw error;
         setRecibos(p => p.map(r => r.id === form.id ? data : r));
         addToast('Recibo atualizado!', 'success');
-        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0]);
+        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || buscarTabeliao(assinantes));
       } else {
         const { data, error } = await sb.from('recibos').insert({ ...form, interessado_id: clienteSel.id, criado_por: usuario?.id }).select().single();
         if (error) throw error;
         setRecibos(p => [data, ...p]);
         addToast('Recibo registrado!', 'success');
-        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0]);
+        imprimirReciboCliente(data, clienteSel, cartorio, assinanteSel || buscarTabeliao(assinantes));
       }
       setModalRecibo(null);
       if (aba === 'historico') carregarTodosRecibos();
@@ -838,7 +844,7 @@ export default function Recibos() {
             carregando={carregando} busca={buscaHist}
             onEditar={null}
             onImprimir={r => imprimirRecibo(r, r.interessados, cartorio)}
-            onImprimirCliente={r => imprimirReciboCliente(r, r.interessados, cartorio, assinanteSel || assinantes.find(u => u.perfil === 'Tabelião') || assinantes[0])}
+            onImprimirCliente={r => imprimirReciboCliente(r, r.interessados, cartorio, assinanteSel || buscarTabeliao(assinantes))}
             onDeletar={deletarRecibo} mostrarCliente={true} />
         </div>
       )}
