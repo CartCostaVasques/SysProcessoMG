@@ -780,7 +780,7 @@ function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, an
       if (filtroTipo === 'mensal' && p.dt_conclusao.substring(5,7) !== filtroMes) return false;
       return true;
     });
-    const emAnd  = (processos || []).filter(p => p.responsavel_id === u.id && p.status === 'Em andamento');
+    const emAnd  = (processos || []).filter(p => p.responsavel_id === u.id && ['Em andamento', 'Devolvido', 'Em reanálise'].includes(p.status));
     const vlConc = procConc.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
     const vlAnd  = emAnd.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
     const ticket = procConc.length > 0 ? vlConc / procConc.length : 0;
