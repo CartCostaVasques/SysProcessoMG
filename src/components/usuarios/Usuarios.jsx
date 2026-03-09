@@ -255,9 +255,8 @@ export default function Usuarios() {
   const abrirEditar     = (u) => { setModalViewing(false); setModal(u); };
 
   const handleSave = (form) => {
-    // Se estava ativo e agora está inativo, salva a data de desativação
-    const usuarioAtual = modal !== 'novo' ? usuarios.find(u => u.id === modal.id) : null;
-    if (usuarioAtual && usuarioAtual.ativo === true && form.ativo === false && !form.dt_desativacao) {
+    // Salva a data de desativação sempre que inativo e sem data registrada
+    if (form.ativo === false && !form.dt_desativacao) {
       form.dt_desativacao = new Date().toISOString().split('T')[0];
     }
     // Se foi reativado, limpa a data
