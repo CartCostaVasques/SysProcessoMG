@@ -58,7 +58,11 @@ function agrupar(processos, usuarios, dtRef) {
     qtd   += q;
   });
 
-  return { porCategoria, porEspecie, porSetor, total, qtd };
+  const recFirma = Object.entries(porCategoria)
+    .filter(([cat]) => cat === 'Reconhecimento de Firma')
+    .reduce((s, [, v]) => s + v.qtd, 0);
+
+  return { porCategoria, porEspecie, porSetor, total, qtd, recFirma };
 }
 
 // Filtra processos por ano+mes (mes = '01'..'12' ou 'todos')
@@ -391,10 +395,10 @@ export default function Panoramico() {
       {modoVis !== 'sequencia' && (<>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
         {[
-          { label: 'Total de Processos', vA: dadosA.qtd,   vB: dadosB.qtd,   fmt: v => v, mono: false },
+          { label: 'Total de Processos', vA: dadosA.qtd,   vB: dadosB.qtd,   fmt: v => v, mono: false, recFirmaA: dadosA.recFirma, recFirmaB: dadosB.recFirma },
           { label: 'Valor Total',        vA: dadosA.total, vB: dadosB.total, fmt: fmtVal, mono: true  },
           { label: 'Ticket Médio',       vA: dadosA.qtd > 0 ? dadosA.total/dadosA.qtd : 0, vB: dadosB.qtd > 0 ? dadosB.total/dadosB.qtd : 0, fmt: fmtVal, mono: true },
-        ].map(({ label, vA, vB, fmt, mono }) => (
+        ].map(({ label, vA, vB, fmt, mono, recFirmaA, recFirmaB }) => (
           <div key={label} className="card" style={{ padding: '16px 20px' }}>
             <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 10, fontWeight: 600 }}>{label}</div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end' }}>
@@ -406,9 +410,24 @@ export default function Panoramico() {
                 <DeltaBadge atual={vA} anterior={vB} />
               </div>
             </div>
+            {recFirmaA !== undefined && (
+              <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Outros</span>
+                  <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{vA - recFirmaA}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+                  <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{recFirmaA}</span>
+                </div>
+              </div>
+            )}
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
               <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{labelB}: </span>
               <span style={{ fontSize: 13, color: 'var(--color-text-muted)', fontFamily: mono ? 'var(--font-mono)' : 'inherit' }}>{fmt(vB)}</span>
+              {recFirmaB !== undefined && recFirmaB > 0 && (
+                <span style={{ fontSize: 10, color: 'var(--color-text-faint)', marginLeft: 6 }}>(RF: {recFirmaB})</span>
+              )}
             </div>
           </div>
         ))}
