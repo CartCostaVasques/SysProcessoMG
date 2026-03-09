@@ -101,7 +101,7 @@ function gerarViaColaborador(recibo, interessado, cartorio, label) {
   <div class="via">
     ${cabecalhoHtml(cartorio)}
     <div class="titulo-bloco">
-      <div class="titulo-recibo">Recibo de ${recibo.descricao || 'Pagamento'} — Colaborador</div>
+      <div class="titulo-recibo">Recibo de Pagamento — Colaborador</div>
       ${label ? `<div class="via-check"><span class="check-box">&#x2611;</span> ${label}</div>` : ''}
     </div>
     <table class="campos">
@@ -133,8 +133,8 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
   const numRecibo = String(recibo.id || 0).padStart(6, '0');
   const valorNum  = fmtValor(recibo.valor);
   const valorExt  = valorPorExtenso(recibo.valor);
-  const nomeAssin = assinante?.nome_completo || assinante?.nome_simples || '';
-  const cargoAssin = assinante?.perfil || assinante?.cargo || 'Responsável';
+  const nomeAssin  = assinante?.nome_completo || assinante?.nome_simples || 'Tabeliã';
+  const cargoAssin = assinante?.perfil === 'Tabelião' ? 'Tabeliã' : (assinante?.perfil || 'Responsável');
   const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
   const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
 
@@ -680,7 +680,7 @@ export default function Recibos() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <select className="form-select" style={{ fontSize: 11, height: 30 }}
                       value={assinanteSel?.id || ''}
-                      onChange={e => setAssinanteSel(assinantes.find(u => u.id === e.target.value) || null)}>
+                      onChange={e => setAssinanteSel(assinantes.find(u => String(u.id) === String(e.target.value)) || null)}>
                       <option value="">— Assinante —</option>
                       {assinantes.map(u => <option key={u.id} value={u.id}>{u.nome_simples} ({u.perfil})</option>)}
                     </select>
