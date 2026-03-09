@@ -57,9 +57,9 @@ const SERVICOS_RAPIDOS = [
 const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 
 function ModalServicRapido({ usuarios, onSalvar, onClose }) {
-  const { servicos } = useApp();
+  const { servicos, usuario } = useApp();
   const [selecionado, setSelecionado] = useState(null);
-  const [respId, setRespId]           = useState('');
+  const [respId, setRespId]           = useState(usuario?.id || '');
   const [data, setData]               = useState(HOJE());
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const primeiroRef = useRef(null);
@@ -320,7 +320,7 @@ export default function Processos() {
   const {
     processos, addProcesso, editProcesso, deleteProcesso,
     andamentos, addAndamento, editAndamento, deleteAndamento,
-    servicos, usuarios, interessados, addInteressado, addToast,
+    servicos, usuarios, interessados, addInteressado, addToast, usuario,
   } = useApp();
 
   const [editingId, setEditingId]       = useState(null);
@@ -473,7 +473,7 @@ export default function Processos() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => setModalRapido(true)}>⚡ Cadastro Rápido</button>
-          <button className="btn btn-primary" onClick={() => setNewRow({ ...EMPTY_ROW })}>+ Novo Processo</button>
+          <button className="btn btn-primary" onClick={() => setNewRow({ ...EMPTY_ROW, responsavel_id: usuario?.id || null })}>+ Novo Processo</button>
         </div>
       </div>
 
