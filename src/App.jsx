@@ -44,11 +44,6 @@ function AppShell() {
   const { usuario, tema } = useApp();
   const [page, setPage] = useState('dashboard');
 
-  const setPageDebug = (p) => {
-    console.log('[NAV] setPage chamado com:', p, '| stack:', new Error().stack.split('\n')[2]);
-    setPage(p);
-  };
-
   // Aplica tema ao DOM
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', tema);
@@ -57,7 +52,6 @@ function AppShell() {
   if (!usuario) return <LoginPage />;
 
   const renderPage = () => {
-    console.log('[NAV] renderPage, page atual:', page);
     switch (page) {
       case 'dashboard':     return <Dashboard setPage={setPage} />;
       case 'usuarios':      return <Usuarios />;
@@ -80,9 +74,9 @@ function AppShell() {
 
   return (
     <div className="app-shell">
-      <Sidebar page={page} setPage={setPageDebug} />
+      <Sidebar page={page} setPage={setPage} />
       <div className="main-area">
-        <Header page={page} setPage={setPageDebug} />
+        <Header page={page} setPage={setPage} />
         <main className="main-content">
           <ErrorBoundary key={page}>
             {renderPage()}
