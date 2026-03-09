@@ -364,128 +364,6 @@ export default function Panoramico() {
         ))}
       </div>
 
-      {/* ── Produtividade por Colaborador ── */}
-      {modoVis === 'mensal' && (() => {
-        const hoje2 = new Date();
-        const usuariosAtivos = (usuarios || []).filter(u => u.ativo !== false);
-        const cards = usuariosAtivos.map(u => {
-          const procA = listaA.filter(p => p.responsavel_id === u.id);
-          const procB = listaB.filter(p => p.responsavel_id === u.id);
-          const vlA   = procA.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
-          const vlB   = procB.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
-          // tarefas
-          const tPend    = (tarefas || []).filter(t => !t.concluida && t.responsavel_id === u.id);
-          const tConc    = (tarefas || []).filter(t =>  t.concluida && t.responsavel_id === u.id);
-          const tAtras   = tPend.filter(t => t.dt_fim && new Date(t.dt_fim) < hoje2);
-          // processos em andamento desse usuário (todos os anos)
-          const emAnd    = (processos || []).filter(p => p.responsavel_id === u.id && p.status === 'Em andamento');
-          const vlAnd    = emAnd.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
-          return { u, procA, procB, vlA, vlB, tPend, tConc, tAtras, emAnd, vlAnd };
-        }).filter(c => c.procA.length > 0 || c.procB.length > 0 || c.tPend.length > 0);
-
-        if (!cards.length) return null;
-
-        const perfis = { Tabelião: '#f59e0b', Escrevente: 'var(--color-accent)', Administrador: '#8b5cf6', Consultor: '#64748b' };
-
-        return (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>👥 Produtividade por Colaborador</span>
-              <span style={{ fontSize: 11, background: 'var(--color-surface-2)', padding: '2px 8px', borderRadius: 10 }}>{labelA} vs {labelB}</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-              {cards.map(({ u, procA, procB, vlA, vlB, tPend, tConc, tAtras, emAnd, vlAnd }) => {
-                const inicial  = (u.nome_simples || u.nome || '?')[0].toUpperCase();
-                const corPerfil = perfis[u.perfil] || '#64748b';
-                const ticketA  = procA.length > 0 ? vlA / procA.length : 0;
-                const deltaQtd = procB.length > 0 ? ((procA.length - procB.length) / procB.length * 100) : null;
-                const deltaVlr = vlB > 0 ? ((vlA - vlB) / vlB * 100) : null;
-
-                return (
-                  <div key={u.id} className="card" style={{ padding: 0, overflow: 'hidden', border: `1px solid var(--color-border)` }}>
-                    {/* Cabeçalho */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: corPerfil, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, color: '#fff', flexShrink: 0 }}>
-                        {inicial}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.nome_simples || u.nome}</div>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 8, background: corPerfil + '22', color: corPerfil }}>{u.perfil}</span>
-                      </div>
-                      {tAtras.length > 0 && (
-                        <span style={{ fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#dc2626', padding: '2px 7px', borderRadius: 8, flexShrink: 0 }}>
-                          {tAtras.length} atrasada{tAtras.length > 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Processos período A */}
-                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)' }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        Concluídos — {labelA}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontSize: 22, fontWeight: 700 }}>{procA.length}</span>
-                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>proc.</span>
-                          {deltaQtd !== null && (
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 6, background: deltaQtd >= 0 ? '#dcfce7' : '#fee2e2', color: deltaQtd >= 0 ? '#15803d' : '#dc2626' }}>
-                              {deltaQtd >= 0 ? '+' : ''}{deltaQtd.toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13, color: '#22c55e' }}>{fmtVal(vlA)}</div>
-                          {ticketA > 0 && <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>ticket {fmtVal(ticketA)}</div>}
-                        </div>
-                      </div>
-                      {/* comparativo período B */}
-                      <div style={{ marginTop: 5, display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-text-muted)' }}>
-                        <span>{labelB}: <strong>{procB.length}</strong> proc.</span>
-                        <span style={{ fontFamily: 'var(--font-mono)' }}>{fmtVal(vlB)}</span>
-                      </div>
-                    </div>
-
-                    {/* Em andamento */}
-                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', background: emAnd.length > 0 ? 'color-mix(in srgb, #f59e0b 5%, transparent)' : 'transparent' }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: '#f59e0b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>Em Andamento</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontSize: 18, fontWeight: 700 }}>{emAnd.length}</span>
-                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>proc. pendentes</span>
-                        </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 13, color: '#f59e0b' }}>{fmtVal(vlAnd)}</div>
-                      </div>
-                    </div>
-
-                    {/* Tarefas */}
-                    <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tarefas</div>
-                      <div style={{ display: 'flex', gap: 10, fontSize: 12 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                          {tConc.length} concl.
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
-                          {tPend.length} pend.
-                        </span>
-                        {tAtras.length > 0 && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#dc2626', fontWeight: 700 }}>
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#dc2626', display: 'inline-block' }} />
-                            {tAtras.length} atras.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ── Comparação mensal (modo anual) ── */}
       {modoVis === 'anual' && (
         <div className="card" style={{ padding: 0, marginBottom: 20 }}>
@@ -565,7 +443,7 @@ export default function Panoramico() {
 
       {/* ── Filtro de seção ── */}
       <div className="tabs" style={{ marginBottom: 16 }}>
-        {[['todos','Todos'],['especie','Por Tipo de Serviço'],['categoria','Por Categoria']].map(([id, label]) => (
+        {[['todos','Todos'],['especie','Por Tipo de Serviço'],['categoria','Por Categoria'],['colaboradores','👥 Colaboradores']].map(([id, label]) => (
           <button key={id} className={`tab-btn ${secao === id ? 'active' : ''}`} onClick={() => setSecao(id)}>{label}</button>
         ))}
       </div>
@@ -600,6 +478,19 @@ export default function Panoramico() {
           maxValor={maxCatValor}
         />
       )}
+
+      {/* ── Aba Colaboradores ── */}
+      {secao === 'colaboradores' && (
+        <ProdutividadeColaboradores
+          processos={processos}
+          tarefas={tarefas}
+          usuarios={usuarios}
+          anosDisp={anosDisp}
+          anoAtual={anoAtual}
+          MESES_FULL={MESES_FULL}
+        />
+      )}
+
       </> )} {/* fim modoVis !== sequencia */}
 
       {/* ══ MODO SEQUÊNCIA ══════════════════════════════════════ */}
@@ -847,6 +738,153 @@ function TabelaSequencia({ colunas, dados, chaves, agrup }) {
           </tfoot>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ── Aba Produtividade por Colaborador ───────────────────────────
+function ProdutividadeColaboradores({ processos, tarefas, usuarios, anosDisp, anoAtual, MESES_FULL }) {
+  const hoje = new Date();
+
+  const [filtroTipo,   setFiltroTipo]   = useState('mensal');
+  const [filtroAno,    setFiltroAno]    = useState(anoAtual);
+  const [filtroMes,    setFiltroMes]    = useState(String(hoje.getMonth() === 0 ? 12 : hoje.getMonth()).padStart(2,'0'));
+  const [filtroMesAno, setFiltroMesAno] = useState(hoje.getMonth() === 0 ? String(Number(anoAtual)-1) : anoAtual);
+
+  const fmtVal = (v) => `R$ ${Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const COR_PERFIL = { Tabelião:'#f59e0b', Escrevente:'var(--color-accent)', Administrador:'#8b5cf6', Substituto:'#06b6d4', Auxiliar:'#84cc16', Consultor:'#64748b' };
+
+  const usuariosAtivos = (usuarios || []).filter(u => u.ativo !== false);
+
+  const cards = usuariosAtivos.map(u => {
+    const procConc = (processos || []).filter(p => {
+      if (p.responsavel_id !== u.id || !p.dt_conclusao) return false;
+      const anoRef = filtroTipo === 'anual' ? filtroAno : filtroMesAno;
+      if (!p.dt_conclusao.startsWith(anoRef)) return false;
+      if (filtroTipo === 'mensal' && p.dt_conclusao.substring(5,7) !== filtroMes) return false;
+      return true;
+    });
+    const emAnd  = (processos || []).filter(p => p.responsavel_id === u.id && p.status === 'Em andamento');
+    const vlConc = procConc.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const vlAnd  = emAnd.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+    const ticket = procConc.length > 0 ? vlConc / procConc.length : 0;
+    const tPend  = (tarefas||[]).filter(t => !t.concluida && t.responsavel_id === u.id);
+    const tConc  = (tarefas||[]).filter(t =>  t.concluida && t.responsavel_id === u.id);
+    const tAtras = tPend.filter(t => t.dt_fim && new Date(t.dt_fim) < hoje);
+    return { u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras };
+  }).filter(c => c.procConc.length > 0 || c.emAnd.length > 0 || c.tPend.length > 0);
+
+  const labelPeriodo = filtroTipo === 'anual'
+    ? `Ano ${filtroAno}`
+    : `${MESES_FULL[parseInt(filtroMes)-1]}/${filtroMesAno}`;
+
+  return (
+    <div>
+      {/* Filtros */}
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label">Período</label>
+          <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+            {[['mensal','Mensal'],['anual','Anual (completo)']].map(([id, lbl]) => (
+              <button key={id} onClick={() => setFiltroTipo(id)}
+                style={{ padding: '6px 14px', fontSize: 13, fontWeight: filtroTipo===id?700:400, background: filtroTipo===id?'var(--color-accent)':'var(--color-surface)', color: filtroTipo===id?'#fff':'var(--color-text)', border:'none', borderRight: id==='mensal'?'1px solid var(--color-border)':'none', cursor:'pointer' }}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filtroTipo === 'mensal' && (<>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Ano</label>
+            <select className="form-select" value={filtroMesAno} onChange={e => setFiltroMesAno(e.target.value)}>
+              {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Mês</label>
+            <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
+              {MESES_FULL.map((m,i) => { const v=String(i+1).padStart(2,'0'); return <option key={v} value={v}>{m}</option>; })}
+            </select>
+          </div>
+        </>)}
+
+        {filtroTipo === 'anual' && (
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Ano</label>
+            <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+              {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
+          {cards.length} colaborador{cards.length !== 1 ? 'es' : ''} com dados em <strong>{labelPeriodo}</strong>
+        </div>
+      </div>
+
+      {cards.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-muted)' }}>
+          Nenhum dado encontrado para o período selecionado.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 14 }}>
+          {cards.map(({ u, procConc, emAnd, vlConc, vlAnd, ticket, tPend, tConc, tAtras }) => {
+            const inicial   = (u.nome_simples || u.nome || '?')[0].toUpperCase();
+            const corPerfil = COR_PERFIL[u.perfil] || '#64748b';
+            return (
+              <div key={u.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Cabeçalho */}
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px', borderBottom:'1px solid var(--color-border)', background:'var(--color-surface-2)' }}>
+                  <div style={{ width:38, height:38, borderRadius:'50%', background:corPerfil, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:16, color:'#fff', flexShrink:0 }}>
+                    {inicial}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:13, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.nome_simples || u.nome}</div>
+                    <span style={{ fontSize:10, fontWeight:600, padding:'1px 6px', borderRadius:8, background:corPerfil+'22', color:corPerfil }}>{u.perfil}</span>
+                  </div>
+                  {tAtras.length > 0 && (
+                    <span style={{ fontSize:11, fontWeight:700, background:'#fee2e2', color:'#dc2626', padding:'2px 7px', borderRadius:8, flexShrink:0 }}>
+                      ⚠ {tAtras.length} atrasada{tAtras.length>1?'s':''}
+                    </span>
+                  )}
+                </div>
+                {/* Concluídos */}
+                <div style={{ padding:'12px 14px', borderBottom:'1px solid var(--color-border)' }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--color-accent)', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>✅ Concluídos — {labelPeriodo}</div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
+                    <div>
+                      <span style={{ fontSize:28, fontWeight:800, lineHeight:1 }}>{procConc.length}</span>
+                      <span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:5 }}>processos</span>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontFamily:'var(--font-mono)', fontWeight:700, fontSize:14, color:'#22c55e' }}>{fmtVal(vlConc)}</div>
+                      {ticket > 0 && <div style={{ fontSize:10, color:'var(--color-text-muted)' }}>ticket: {fmtVal(ticket)}</div>}
+                    </div>
+                  </div>
+                </div>
+                {/* Em andamento */}
+                <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--color-border)', background: emAnd.length>0 ? 'color-mix(in srgb, #f59e0b 6%, transparent)' : 'transparent' }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:0.5, marginBottom:5 }}>⏳ Em Andamento (total)</div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div><span style={{ fontSize:20, fontWeight:700 }}>{emAnd.length}</span><span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:4 }}>proc.</span></div>
+                    <div style={{ fontFamily:'var(--font-mono)', fontWeight:600, fontSize:13, color:'#f59e0b' }}>{fmtVal(vlAnd)}</div>
+                  </div>
+                </div>
+                {/* Tarefas */}
+                <div style={{ padding:'10px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:10, fontWeight:700, color:'var(--color-text-muted)', textTransform:'uppercase', letterSpacing:0.5 }}>Tarefas</span>
+                  <div style={{ display:'flex', gap:12, fontSize:12 }}>
+                    <span style={{ color:'#22c55e', fontWeight:600 }}>✓ {tConc.length}</span>
+                    <span style={{ color:'var(--color-text-muted)' }}>⏳ {tPend.length}</span>
+                    {tAtras.length > 0 && <span style={{ color:'#dc2626', fontWeight:700 }}>⚠ {tAtras.length}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
