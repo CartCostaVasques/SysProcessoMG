@@ -190,6 +190,69 @@ function Campo({ label, children, full }) {
   );
 }
 
+// ── Aba: Ofícios Expedidos ────────────────────────────────────
+function TabOficiosExpedidos({ processoId }) {
+  const { oficios, usuarios } = useApp();
+  const lista = (oficios || []).filter(o => o.processo_id === processoId);
+
+  const statusBadge = (s) => {
+    const conf = {
+      'Enviado':    { bg: '#dbeafe', color: '#1e40af' },
+      'Respondido': { bg: '#dcfce7', color: '#15803d' },
+      'Pendente':   { bg: '#fef9c3', color: '#854d0e' },
+      'Arquivado':  { bg: '#f3f4f6', color: '#6b7280' },
+    };
+    const c = conf[s] || conf['Pendente'];
+    return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: c.bg, color: c.color }}>{s}</span>;
+  };
+
+  if (lista.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-faint)' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>✉</div>
+        <div>Nenhum ofício expedido vinculado a este processo.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {lista.map(o => {
+        const resp = usuarios.find(u => u.id === o.responsavel_id);
+        return (
+          <div key={o.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', background: 'var(--color-surface-2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13 }}>
+                    {o.numero || '—'}
+                  </span>
+                  {statusBadge(o.status)}
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{o.assunto}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                  Destinatário: <strong>{o.destinatario}</strong>
+                </div>
+                {resp && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 2 }}>
+                    Responsável: {resp.nome_simples}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {o.dt_oficio ? new Date(o.dt_oficio + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                </div>
+                {o.mes_ano && <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{o.mes_ano}</div>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Aba: Dados do Processo ────────────────────────────────────
 function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, onCadastrarNovoInt }) {
   const categorias  = [...new Set(servicos.map(s => s.categoria))];
@@ -832,7 +895,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
 // ── Modal Principal ───────────────────────────────────────────
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio } = useApp();
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
   const [aba, setAba]                   = useState('dados');
   const [editando, setEditando]         = useState(false);
   const [form, setForm]                 = useState({ ...processo });
@@ -901,6 +964,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               ['dados', 'Dados do Processo'],
               ['andamentos', `Andamentos${andsPendentes > 0 ? ` (${andsPendentes})` : ''}`],
               ['historico', `Histórico${qtdHistorico > 0 ? ` (${qtdHistorico})` : ''}`],
+              ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
               ['certidoes', 'Pedido de Certidões'],
             ].map(([id, label]) => (
               <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
@@ -925,6 +989,9 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             )}
             {aba === 'historico' && (
               <TabHistorico processoId={processo.id} />
+            )}
+            {aba === 'oficios' && (
+              <TabOficiosExpedidos processoId={processo.id} />
             )}
             {aba === 'certidoes' && (
               <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} />
