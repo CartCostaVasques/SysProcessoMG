@@ -113,7 +113,8 @@ export default function Dashboard({ setPage }) {
 
   const stats = useMemo(() => {
     const total = processos.length;
-    const emAndamento = processos.filter(p => p.status === 'Em andamento').length;
+    const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+    const emAndamento = processos.filter(p => STATUS_PENDENTES.includes(p.status)).length;
     const concluidos  = processos.filter(p => p.status === 'Concluído').length;
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
@@ -184,7 +185,7 @@ export default function Dashboard({ setPage }) {
     return result;
   }, [processos, filtroAno]);
 
-  const processosPendentes = processos.filter(p => p.status === 'Em andamento').slice(0, 5);
+  const processosPendentes = processos.filter(p => ['Em andamento', 'Devolvido', 'Em reanálise'].includes(p.status)).slice(0, 5);
   const tarefasRecentes    = tarefas.filter(t => !t.concluida).slice(0, 4);
 
   const DeltaBadge = ({ diff, pct }) => {
@@ -222,7 +223,7 @@ export default function Dashboard({ setPage }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 14 }}>
         {[
           { label: 'Total de Processos', value: stats.total, sub: 'Todos os registros', icon: '📋', color: 'var(--color-info)' },
-          { label: 'Em Andamento',       value: stats.emAndamento, sub: 'Processos ativos', icon: '🔄', color: 'var(--color-warning)' },
+          { label: 'Pendentes',       value: stats.emAndamento, sub: 'Em andamento / devolvidos / reanálise', icon: '🔄', color: 'var(--color-warning)' },
           { label: 'Concluídos',         value: stats.concluidos, sub: 'Processos finalizados', icon: '✓', color: 'var(--color-success)' },
           { label: 'Tarefas Pendentes',  value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
           { label: 'Ofícios Enviados',   value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
@@ -360,7 +361,7 @@ export default function Dashboard({ setPage }) {
           <div className="card-header">
             <div>
               <div className="card-title">Processos em Andamento</div>
-              <div className="card-subtitle">{stats.emAndamento} processos ativos</div>
+              <div className="card-subtitle">{stats.emAndamento} pendentes</div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => setPage('processos')}>Ver todos →</button>
           </div>
