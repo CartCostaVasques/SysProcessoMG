@@ -102,10 +102,10 @@ export default function Panoramico() {
   const mes2Ant    = String(mes2AntNum).padStart(2,'0');
 
   const [modoVis,  setModoVis]  = useState('mensal');
-  const [anoA,     setAnoA]     = useState(anoAnt);    // mês anterior = mais provável ter dados
-  const [mesA,     setMesA]     = useState(mesAnt);
-  const [anoB,     setAnoB]     = useState(ano2Ant);   // dois meses atrás
-  const [mesB,     setMesB]     = useState(mes2Ant);
+  const [anoA,     setAnoA]     = useState(anoAtual);   // mês atual
+  const [mesA,     setMesA]     = useState(mesAtual);
+  const [anoB,     setAnoB]     = useState(anoAnt);     // mês anterior
+  const [mesB,     setMesB]     = useState(mesAnt);
   const [secao,    setSecao]    = useState('todos');
 
   // Estados do modo Sequência
