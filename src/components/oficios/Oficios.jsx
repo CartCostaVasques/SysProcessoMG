@@ -28,11 +28,11 @@ function mesAnoAtual() {
   return String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
 }
 
-function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, numeroInicial, usuarioLogadoId }) {
+function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, numeroInicial, usuarioLogado }) {
   const [form, setForm] = useState(() => {
     if (oficio) return { ...oficio };
     const ma = mesAnoAtual();
-    return { ...EMPTY, mes_ano: ma, numero: gerarNumeroOficio(oficios, ma, numeroInicial), responsavel_id: usuarioLogadoId || null };
+    return { ...EMPTY, mes_ano: ma, numero: gerarNumeroOficio(oficios, ma, numeroInicial), responsavel: usuarioLogado?.nome_simples || '' };
   });
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -350,7 +350,7 @@ export default function Oficios() {
           usuarios={usuarios}
           processos={processos}
           numeroInicial={cartorio?.oficio_numero_inicial ?? 0}
-          usuarioLogadoId={usuario?.id}
+          usuarioLogado={usuario}
         />
       )}
     </div>
