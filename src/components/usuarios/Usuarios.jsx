@@ -39,7 +39,11 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
   const handlePerfil = (p) => {
     set('perfil', p);
     if (p === 'Administrador') set('permissoes', TODOS_MODULOS);
-    else if (p === 'Consultor') set('permissoes', ['dashboard']);
+    else if (p === 'Tabelião')   set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','servicos','setores','configuracoes']);
+    else if (p === 'Substituto') set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','servicos','setores','configuracoes']);
+    else if (p === 'Escrevente') set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','servicos','setores']);
+    else if (p === 'Auxiliar')   set('permissoes', ['dashboard','processos','tarefas']);
+    else if (p === 'Consultor')  set('permissoes', ['dashboard']);
   };
 
   const handleSubmit = () => {
@@ -161,16 +165,18 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
                 </div>
                 <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-faint)' }}>
                   {form.perfil === 'Administrador' && 'Acesso total a todos os módulos.'}
-                  {form.perfil === 'Tabelião' && 'Acesso amplo, exceto configurações críticas.'}
-                  {form.perfil === 'Escrevente' && 'Acesso operacional conforme seleção abaixo.'}
-                  {form.perfil === 'Consultor' && 'Apenas leitura — somente Dashboard.'}
+                  {form.perfil === 'Tabelião'      && 'Acesso amplo, exceto Usuários e Logs.'}
+                  {form.perfil === 'Substituto'    && 'Mesmas permissões do Tabelião durante substituição.'}
+                  {form.perfil === 'Escrevente'    && 'Acesso operacional conforme seleção abaixo.'}
+                  {form.perfil === 'Auxiliar'      && 'Acesso básico: Dashboard, Processos e Tarefas.'}
+                  {form.perfil === 'Consultor'     && 'Apenas leitura — somente Dashboard.'}
                 </div>
               </div>
 
               <div className="form-label" style={{ marginBottom: 10 }}>Módulos Permitidos</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {MODULOS.map(m => {
-                  const checked = form.perfil === 'Administrador' || form.permissoes.includes(m.id);
+                  const checked  = form.perfil === 'Administrador' || form.permissoes.includes(m.id);
                   const disabled = form.perfil === 'Administrador' || form.perfil === 'Consultor';
                   return (
                     <label key={m.id} className="checkbox-wrapper" style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'default' : 'pointer', padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
