@@ -220,7 +220,24 @@ export function AppProvider({ children }) {
 
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
   const fetchInteressados = async () => { try { const {data} = await supabase.from('interessados').select('*').order('nome'); if(data) setInteressados(data); } catch(e){console.error('interessados',e)} };
-  const fetchProcessos = async () => { try { const [{data:procs},{data:ands}] = await Promise.all([supabase.from('processos').select('*').order('dt_abertura',{ascending:false}), supabase.from('andamentos').select('processo_id')]); if(procs) { const counts = (ands||[]).reduce((acc,a)=>{acc[a.processo_id]=(acc[a.processo_id]||0)+1;return acc;},{}); setProcessos(procs.map(p=>({...p,total_andamentos:counts[p.id]||0}))); } } catch(e){console.error('processos',e)} };
+  const fetchProcessos = async () => {
+    try {
+      // Busca paginada — Supabase limita 1000 por query
+      const PAGE = 1000;
+      let todos = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from('processos').select('*').order('dt_abertura', { ascending: false }).range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (data?.length) todos = [...todos, ...data];
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+      const { data: ands } = await supabase.from('andamentos').select('processo_id');
+      const counts = (ands||[]).reduce((acc,a) => { acc[a.processo_id] = (acc[a.processo_id]||0)+1; return acc; }, {});
+      setProcessos(todos.map(p => ({ ...p, total_andamentos: counts[p.id]||0 })));
+    } catch(e) { console.error('processos', e); }
+  };
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
