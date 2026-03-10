@@ -99,11 +99,16 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
 
 export default function RelatorioServicos() {
   const { processos, cartorio, usuarios } = useApp();
-  const [filtro,    setFiltro]    = useState('Concluído');
-  const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
-  const [filtroAno, setFiltroAno] = useState(String(new Date().getFullYear()));
-  const [busca,     setBusca]     = useState('');
+  const [filtro,      setFiltro]      = useState('Concluído');
+  const [filtroMes,   setFiltroMes]   = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [filtroAno,   setFiltroAno]   = useState(String(new Date().getFullYear()));
+  const [busca,       setBusca]       = useState('');
   const [limiteSetor, setLimiteSetor] = useState(25);
+  const [modoData,    setModoData]    = useState('mes'); // 'mes' | 'periodo'
+  const hoje = new Date().toISOString().slice(0, 10);
+  const inicioMes = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
+  const [dtInicio, setDtInicio] = useState(inicioMes);
+  const [dtFim,    setDtFim]    = useState(hoje);
 
   // Anos disponíveis nos processos
   const anosDisp = useMemo(() => {
@@ -119,10 +124,16 @@ export default function RelatorioServicos() {
     const lista = processos.filter(p => {
       const matchStatus = filtro === 'todos' ? true : p.status === filtro;
       const dtRef = filtro === 'Concluído' ? p.dt_conclusao : p.dt_abertura;
-      const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
-      const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5, 7) === filtroMes.padStart(2, '0');
+      let matchData;
+      if (modoData === 'periodo') {
+        matchData = !dtRef ? false : (!dtInicio || dtRef >= dtInicio) && (!dtFim || dtRef <= dtFim);
+      } else {
+        const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
+        const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5, 7) === filtroMes.padStart(2, '0');
+        matchData = matchAno && matchMes;
+      }
       const matchBusca = !busca || [p.numero_interno, p.categoria, p.especie].join(' ').toLowerCase().includes(busca.toLowerCase());
-      return matchStatus && matchAno && matchMes && matchBusca;
+      return matchStatus && matchData && matchBusca;
     });
     const mapa = {};
     lista.forEach(p => {
@@ -188,18 +199,35 @@ export default function RelatorioServicos() {
 
         <div style={{ width: 1, height: 24, background: 'var(--color-border)' }} />
 
-        {/* Mês */}
-        <select style={selectStyle} value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
-          <option value="todos">Todos os meses</option>
-          {MESES.map((m, i) => (
-            <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>
-          ))}
-        </select>
+        {/* Toggle modo data */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button className={`btn btn-sm ${modoData === 'mes' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setModoData('mes')}>📅 Mês</button>
+          <button className={`btn btn-sm ${modoData === 'periodo' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setModoData('periodo')}>📆 Período</button>
+        </div>
 
-        {/* Ano */}
-        <select style={selectStyle} value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
-          {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
+        {/* Filtro por mês/ano */}
+        {modoData === 'mes' && (<>
+          <select style={selectStyle} value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
+            <option value="todos">Todos os meses</option>
+            {MESES.map((m, i) => (
+              <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>
+            ))}
+          </select>
+          <select style={selectStyle} value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+            {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </>)}
+
+        {/* Filtro por período */}
+        {modoData === 'periodo' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="date" style={selectStyle} value={dtInicio} onChange={e => setDtInicio(e.target.value)} />
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>até</span>
+            <input type="date" style={selectStyle} value={dtFim} onChange={e => setDtFim(e.target.value)} />
+          </div>
+        )}
 
         <div style={{ width: 1, height: 24, background: 'var(--color-border)' }} />
 
