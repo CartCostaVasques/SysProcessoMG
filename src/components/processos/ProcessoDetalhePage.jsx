@@ -138,6 +138,11 @@ export default function ProcessoDetalhePage() {
   const [limite,       setLimite]       = useState(50);
   const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
+  const [modoData,     setModoData]     = useState('mes');
+  const hojeStr    = new Date().toISOString().slice(0, 10);
+  const inicioMes  = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
+  const [dtInicio, setDtInicio] = useState(inicioMes);
+  const [dtFim,    setDtFim]    = useState(hojeStr);
 
   const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -162,16 +167,22 @@ export default function ProcessoDetalhePage() {
     const dtRef = ['Concluído','Encerrado'].includes(filtroStatus)
       ? (filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_encerramento)
       : p.dt_abertura;
-    const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
-    const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
+    let matchData;
+    if (modoData === 'periodo') {
+      matchData = !dtRef ? false : (!dtInicio || dtRef >= dtInicio) && (!dtFim || dtRef <= dtFim);
+    } else {
+      const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
+      const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
+      matchData = matchAno && matchMes;
+    }
     return (!busca || txt.includes(busca.toLowerCase()))
         && (
           !filtroStatus ? true
           : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
           : p.status === filtroStatus
         )
-        && matchAno && matchMes;
-  }), [processos, busca, filtroStatus, filtroMes, filtroAno, interessados]);
+        && matchData;
+  }), [processos, busca, filtroStatus, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados]);
 
   const totalGeral = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
   const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
@@ -240,15 +251,40 @@ export default function ProcessoDetalhePage() {
           <option value="Concluído">Concluído</option>
           <option value="Encerrado">Encerrado</option>
         </select>
-        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
-          <option value="todos">Todos os meses</option>
-          {MESES.map((m, i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
-        </select>
-        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
-          {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        {(busca || filtroStatus !== 'Em andamento' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0')) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroStatus('Em andamento'); setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0')); setFiltroAno(String(new Date().getFullYear())); }}>↺ Limpar</button>
+
+        {/* Toggle modo data */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button className={`btn btn-sm ${modoData === 'mes' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setModoData('mes')}>📅 Mês</button>
+          <button className={`btn btn-sm ${modoData === 'periodo' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setModoData('periodo')}>📆 Período</button>
+        </div>
+
+        {modoData === 'mes' && (<>
+          <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
+            <option value="todos">Todos os meses</option>
+            {MESES.map((m, i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+          </select>
+          <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+            {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </>)}
+
+        {modoData === 'periodo' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="date" className="form-input" style={{ fontSize: 12, padding: '6px 8px' }} value={dtInicio} onChange={e => setDtInicio(e.target.value)} />
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>até</span>
+            <input type="date" className="form-input" style={{ fontSize: 12, padding: '6px 8px' }} value={dtFim} onChange={e => setDtFim(e.target.value)} />
+          </div>
+        )}
+
+        {(busca || filtroStatus !== 'Em andamento' || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0')) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => {
+            setBusca(''); setFiltroStatus('Em andamento'); setModoData('mes');
+            setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
+            setFiltroAno(String(new Date().getFullYear()));
+            setDtInicio(inicioMes); setDtFim(hojeStr);
+          }}>↺ Limpar</button>
         )}
       </div>
 
