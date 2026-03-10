@@ -62,6 +62,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [respId, setRespId]           = useState(usuario?.id || '');
   const [data, setData]               = useState(HOJE());
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
+  const [salvando, setSalvando]       = useState(false);
   const primeiroRef = useRef(null);
 
   useEffect(() => { primeiroRef.current?.focus(); }, []);
@@ -85,6 +86,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
     if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
     const validas = linhas.filter(l => l.numero.trim());
     if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
+    setSalvando(true);
     const dt = data || HOJE();
     await onSalvar(validas.map(l => ({
       numero_interno: l.numero.trim(),
@@ -214,8 +216,10 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={salvar}>✓ Salvar Todos</button>
+          <button className="btn btn-secondary" onClick={onClose} disabled={salvando}>Cancelar</button>
+          <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+            {salvando ? '⏳ Salvando...' : '✓ Salvar Todos'}
+          </button>
         </div>
       </div>
     </div></Portal>
@@ -326,6 +330,7 @@ export default function Processos() {
   const [editingId, setEditingId]       = useState(null);
   const [editRow, setEditRow]           = useState({});
   const [newRow, setNewRow]             = useState(null);
+  const [salvandoNovo, setSalvandoNovo] = useState(false);
   const [modalNovoInt, setModalNovoInt] = useState(null);
   const [modalRapido, setModalRapido]   = useState(false);
   const [processoDetalhe, setProcessoDetalhe] = useState(null);
@@ -390,12 +395,15 @@ export default function Processos() {
 
   const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
+    if (salvandoNovo) return;
+    setSalvandoNovo(true);
     const numeroFinal = gerarNumeroUnico(newRow.numero_interno.trim());
     const { _sel, ...rest } = newRow;
     await addProcesso({ ...rest, numero_interno: numeroFinal, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
     if (numeroFinal !== newRow.numero_interno.trim()) {
       addToast(`Nº duplicado — salvo como "${numeroFinal}"`, 'info');
     }
+    setSalvandoNovo(false);
     setNewRow(null);
   };
 
@@ -552,8 +560,10 @@ export default function Processos() {
                 </select></td>
                 <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
-                  <button className="btn btn-primary btn-sm" onClick={saveNewRow}>✓</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setNewRow(null)}>✕</button>
+                  <button className="btn btn-primary btn-sm" onClick={saveNewRow} disabled={salvandoNovo} title="Salvar processo">
+                    {salvandoNovo ? '⏳' : '✓'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setNewRow(null)} disabled={salvandoNovo}>✕</button>
                 </div></td>
               </tr>
             )}
