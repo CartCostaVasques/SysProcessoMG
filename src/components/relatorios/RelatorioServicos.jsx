@@ -145,7 +145,7 @@ export default function RelatorioServicos() {
       mapa[cat].qtdTotal += parseInt(p.quantidade || 1);
     });
     return Object.values(mapa).sort((a, b) => a.categoria.localeCompare(b.categoria));
-  }, [processos, filtro, filtroMes, filtroAno, busca]);
+  }, [processos, filtro, filtroMes, filtroAno, busca, modoData, dtInicio, dtFim]);
 
   const totalGeral = grupos.reduce((s, g) => s + g.total, 0);
   const qtdGeral   = grupos.reduce((s, g) => s + g.qtdTotal, 0);
