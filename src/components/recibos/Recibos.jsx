@@ -151,9 +151,9 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
     </div>
     <table class="campos">
       <tr><td class="lbl">Recebi de</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
-      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr class="cpf-row"><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
       ${osHtml}
-      <tr><td class="lbl">Referente a</td><td><div class="campo-box">${recibo.descricao || '—'}</div></td></tr>
+      <tr><td class="lbl">Referente a</td><td><div class="campo-box descricao-box">${recibo.descricao || '—'}</div></td></tr>
       <tr><td class="lbl">Valor</td><td>
         <div class="campo-box valor-destaque">${valorNum}</div>
         <div class="valor-ext">${valorExt}</div>
@@ -181,7 +181,7 @@ const CSS_RECIBO = `
   @page{size:A4 portrait;margin:14mm 16mm}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff}
-  .via{padding:6mm 0;page-break-inside:avoid}
+  .via{padding:15mm 0;page-break-inside:avoid}
   .cab{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
   .logo-box{width:90px;height:72px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:4px}
   .logo-box img{max-width:100%;max-height:100%;object-fit:contain}
@@ -189,7 +189,7 @@ const CSS_RECIBO = `
   .cab-nome{font-size:16px;font-weight:bold;margin-bottom:5px}
   .cab-sub{font-size:10px;color:#444;line-height:1.8}
   .titulo-bloco{margin:16px 0 18px;background:#e8e8e8;padding:10px 16px;border-radius:2px}
-  .titulo-recibo{font-size:14px;font-weight:bold;text-align:center;letter-spacing:0.5px}
+  .titulo-recibo{font-size:17px;font-weight:bold;text-align:center;letter-spacing:0.5px}
   .via-check{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:6px}
   .check-box{font-size:13px}
   .campos{width:100%;border-collapse:collapse;margin-bottom:20px}
@@ -197,10 +197,11 @@ const CSS_RECIBO = `
   .lbl{font-size:11px;color:#555;width:80px;padding-top:8px;white-space:nowrap}
   .campo-box{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px}
   .valor-destaque{font-size:13px;font-weight:bold;display:inline-block;min-width:160px}
-  .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px}
+  .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px;margin-bottom:15mm}
   .descricao-box{min-height:72px;font-size:11px;line-height:1.7}
-  .data-linha{margin:22px 0 36px;font-size:12px;padding-left:2px}
-  .assin-bloco{display:flex;justify-content:center;margin-bottom:14px}
+  .cpf-row td{padding-top:15mm !important;padding-bottom:15mm !important}
+  .data-linha{margin:25mm 0 0;font-size:12px;padding-left:2px}
+  .assin-bloco{display:flex;justify-content:center;margin-top:25mm;margin-bottom:14px}
   .assin-linha{text-align:center;min-width:280px}
   .assin-nome{border-top:1px solid #000;padding-top:6px;font-size:11px;font-weight:bold;letter-spacing:0.5px}
   .assin-cpf{font-size:10px;color:#444;margin-top:3px}
