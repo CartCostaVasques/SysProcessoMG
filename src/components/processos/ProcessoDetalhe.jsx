@@ -254,27 +254,98 @@ function TabOficiosExpedidos({ processoId }) {
 }
 
 // ── Aba: Dados do Processo ────────────────────────────────────
-// ── Modal Novo Interessado ─────────────────────────────────────
-function ModalNovoInteressado({ nomeInicial = '', onSalvar, onClose }) {
-  const [form, setForm] = useState({ nome: nomeInicial, cpf: '', rg: '', email: '', telefone: '', endereco: '' });
+// ── Modal Adicionar Interessado (busca + cadastro) ─────────────
+function ModalAdicionarInteressado({ interessados, onAdicionar, onClose }) {
+  const [busca,    setBusca]    = useState('');
+  const [cadastro, setCadastro] = useState(false);
+  const [form,     setForm]     = useState({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '' });
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const opcoes = busca.length > 0
+    ? interessados.filter(i =>
+        i.ativo !== false &&
+        (i.nome.toLowerCase().includes(busca.toLowerCase()) || (i.cpf || '').includes(busca))
+      ).slice(0, 8)
+    : [];
+
+  const abrirCadastro = (nome) => { setForm(p => ({ ...p, nome })); setCadastro(true); };
+
+  if (cadastro) {
+    return (
+      <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal">
+          <div className="modal-header">
+            <span className="modal-title">Cadastrar Novo Interessado</span>
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
+          <div className="modal-body">
+            <div className="form-grid form-grid-2">
+              <div className="form-group form-full"><label className="form-label">Nome *</label><input className="form-input" value={form.nome} onChange={e => set('nome', e.target.value)} autoFocus /></div>
+              <div className="form-group"><label className="form-label">CPF/CNPJ</label><input className="form-input" value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" /></div>
+              <div className="form-group"><label className="form-label">RG</label><input className="form-input" value={form.rg} onChange={e => set('rg', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Telefone</label><input className="form-input" value={form.telefone} onChange={e => set('telefone', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">E-mail</label><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+              <div className="form-group form-full"><label className="form-label">Endereço</label><input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} /></div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-ghost btn-sm" onClick={() => setCadastro(false)}>← Voltar</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" onClick={() => { if (!form.nome.trim()) { alert('Nome obrigatório'); return; } onAdicionar(form, true); }}>Salvar e Adicionar</button>
+          </div>
+        </div>
+      </div></Portal>
+    );
+  }
+
   return (
-    <>
-      <div className="modal-body">
-        <div className="form-grid form-grid-2">
-          <div className="form-group form-full"><label className="form-label">Nome *</label><input className="form-input" value={form.nome} onChange={e => set('nome', e.target.value)} autoFocus /></div>
-          <div className="form-group"><label className="form-label">CPF/CNPJ</label><input className="form-input" value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" /></div>
-          <div className="form-group"><label className="form-label">RG</label><input className="form-input" value={form.rg} onChange={e => set('rg', e.target.value)} /></div>
-          <div className="form-group"><label className="form-label">Telefone</label><input className="form-input" value={form.telefone} onChange={e => set('telefone', e.target.value)} /></div>
-          <div className="form-group"><label className="form-label">E-mail</label><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
-          <div className="form-group form-full"><label className="form-label">Endereço</label><input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} /></div>
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">Adicionar Interessado</span>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">Buscar pelo nome ou CPF</label>
+            <input className="form-input" value={busca} onChange={e => setBusca(e.target.value)}
+              autoFocus placeholder="Digite para buscar..." />
+          </div>
+          <div style={{ marginTop: 8, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', minHeight: 48 }}>
+            {busca.length === 0 && (
+              <div style={{ padding: '14px 12px', fontSize: 12, color: 'var(--color-text-faint)', textAlign: 'center' }}>
+                Digite um nome para buscar
+              </div>
+            )}
+            {busca.length > 0 && opcoes.length === 0 && (
+              <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--color-text-faint)', textAlign: 'center' }}>
+                Nenhum resultado para "{busca}"
+              </div>
+            )}
+            {opcoes.map(i => (
+              <button key={i.id} onClick={() => onAdicionar(i, false)}
+                style={{ display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <span style={{ fontWeight: 600, fontSize: 13 }}>{i.nome}</span>
+                {i.cpf && <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{i.cpf}</span>}
+              </button>
+            ))}
+            {busca.length > 0 && (
+              <button onClick={() => abrirCadastro(busca)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderTop: opcoes.length > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                + Cadastrar novo: "{busca}"
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
         </div>
       </div>
-      <div className="modal-footer">
-        <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" onClick={() => { if (!form.nome.trim()) { alert('Nome obrigatório'); return; } onSalvar(form); }}>Salvar</button>
-      </div>
-    </>
+    </div></Portal>
   );
 }
 
@@ -925,19 +996,28 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const [form, setForm]                 = useState({ ...processo });
   const [salvando, setSalvando]         = useState(false);
   const [modalStatus, setModalStatus]   = useState(false);
-  const [modalNovoInt, setModalNovoInt] = useState(null); // { nome, cb }
+  const [modalNovoInt, setModalNovoInt] = useState(false);
 
   // Sincroniza se o processo mudar externamente
   useEffect(() => { if (!editando) setForm({ ...processo }); }, [processo]);
 
   const onChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleCadastrarNovoInt = (nome, cb) => setModalNovoInt({ nome, cb });
+  const adicionarInteressadoAoForm = (interessado) => {
+    const partesAtuais = (() => { try { return JSON.parse(form.partes || '[]'); } catch { return []; } })();
+    const jaExiste = partesAtuais.find(p => p.id === interessado.id);
+    if (jaExiste) return;
+    onChange('partes', JSON.stringify([...partesAtuais, { id: interessado.id, nome: interessado.nome, cpf: interessado.cpf || '', vinculo: 'Outorgante' }]));
+  };
 
-  const handleSalvarNovoInt = async (dados) => {
-    const novo = await addInteressado(dados);
-    if (novo && modalNovoInt?.cb) modalNovoInt.cb(novo);
-    setModalNovoInt(null);
+  const handleAdicionarInteressado = async (dados, isNovo) => {
+    if (isNovo) {
+      const novo = await addInteressado(dados);
+      if (novo) adicionarInteressadoAoForm(novo);
+    } else {
+      adicionarInteressadoAoForm(dados);
+    }
+    setModalNovoInt(false);
   };
 
   const salvar = async () => {
@@ -1014,10 +1094,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
                 servicos={servicos}
                 usuarios={usuarios}
                 interessados={interessados}
-                onCadastrarNovoInt={(nome) => handleCadastrarNovoInt(nome, novo => {
-                  const partesAtuais = (() => { try { return JSON.parse(form.partes || '[]'); } catch { return []; } })();
-                  onChange('partes', JSON.stringify([...partesAtuais, { id: novo.id, nome: novo.nome, cpf: novo.cpf || '', vinculo: 'Outorgante' }]));
-                })}
+                onCadastrarNovoInt={() => setModalNovoInt(true)}
               />
             )}
             {aba === 'andamentos' && (
@@ -1074,21 +1151,11 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
         />
       )}
       {modalNovoInt && (
-        <Portal>
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoInt(null)}>
-            <div className="modal">
-              <div className="modal-header">
-                <span className="modal-title">Cadastrar Interessado</span>
-                <button className="btn-icon" onClick={() => setModalNovoInt(null)}>✕</button>
-              </div>
-              <ModalNovoInteressado
-                nomeInicial={modalNovoInt.nome}
-                onSalvar={handleSalvarNovoInt}
-                onClose={() => setModalNovoInt(null)}
-              />
-            </div>
-          </div>
-        </Portal>
+        <ModalAdicionarInteressado
+          interessados={interessados}
+          onAdicionar={handleAdicionarInteressado}
+          onClose={() => setModalNovoInt(false)}
+        />
       )}
     </>
   );
