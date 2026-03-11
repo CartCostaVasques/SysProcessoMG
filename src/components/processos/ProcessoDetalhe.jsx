@@ -254,6 +254,30 @@ function TabOficiosExpedidos({ processoId }) {
 }
 
 // ── Aba: Dados do Processo ────────────────────────────────────
+// ── Modal Novo Interessado ─────────────────────────────────────
+function ModalNovoInteressado({ nomeInicial = '', onSalvar, onClose }) {
+  const [form, setForm] = useState({ nome: nomeInicial, cpf: '', rg: '', email: '', telefone: '', endereco: '' });
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  return (
+    <>
+      <div className="modal-body">
+        <div className="form-grid form-grid-2">
+          <div className="form-group form-full"><label className="form-label">Nome *</label><input className="form-input" value={form.nome} onChange={e => set('nome', e.target.value)} autoFocus /></div>
+          <div className="form-group"><label className="form-label">CPF/CNPJ</label><input className="form-input" value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" /></div>
+          <div className="form-group"><label className="form-label">RG</label><input className="form-input" value={form.rg} onChange={e => set('rg', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Telefone</label><input className="form-input" value={form.telefone} onChange={e => set('telefone', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">E-mail</label><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+          <div className="form-group form-full"><label className="form-label">Endereço</label><input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} /></div>
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={() => { if (!form.nome.trim()) { alert('Nome obrigatório'); return; } onSalvar(form); }}>Salvar</button>
+      </div>
+    </>
+  );
+}
+
 function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, onCadastrarNovoInt }) {
   const categorias  = [...new Set(servicos.map(s => s.categoria))];
   const especies    = servicos.filter(s => !proc.categoria || s.categoria === proc.categoria).map(s => s.subcategoria);
@@ -901,11 +925,20 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const [form, setForm]                 = useState({ ...processo });
   const [salvando, setSalvando]         = useState(false);
   const [modalStatus, setModalStatus]   = useState(false);
+  const [modalNovoInt, setModalNovoInt] = useState(null); // { nome, cb }
 
   // Sincroniza se o processo mudar externamente
   useEffect(() => { if (!editando) setForm({ ...processo }); }, [processo]);
 
   const onChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleCadastrarNovoInt = (nome, cb) => setModalNovoInt({ nome, cb });
+
+  const handleSalvarNovoInt = async (dados) => {
+    const novo = await addInteressado(dados);
+    if (novo && modalNovoInt?.cb) modalNovoInt.cb(novo);
+    setModalNovoInt(null);
+  };
 
   const salvar = async () => {
     if (!form.numero_interno?.trim()) { addToast('Nº Interno obrigatório.', 'error'); return; }
@@ -981,7 +1014,10 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
                 servicos={servicos}
                 usuarios={usuarios}
                 interessados={interessados}
-                onCadastrarNovoInt={() => {}}
+                onCadastrarNovoInt={(nome) => handleCadastrarNovoInt(nome, novo => {
+                  const partesAtuais = (() => { try { return JSON.parse(form.partes || '[]'); } catch { return []; } })();
+                  onChange('partes', JSON.stringify([...partesAtuais, { id: novo.id, nome: novo.nome, cpf: novo.cpf || '', vinculo: 'Outorgante' }]));
+                })}
               />
             )}
             {aba === 'andamentos' && (
@@ -1036,6 +1072,23 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
           onClose={() => setModalStatus(false)}
           onSalvar={handleAlterarStatus}
         />
+      )}
+      {modalNovoInt && (
+        <Portal>
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalNovoInt(null)}>
+            <div className="modal">
+              <div className="modal-header">
+                <span className="modal-title">Cadastrar Interessado</span>
+                <button className="btn-icon" onClick={() => setModalNovoInt(null)}>✕</button>
+              </div>
+              <ModalNovoInteressado
+                nomeInicial={modalNovoInt.nome}
+                onSalvar={handleSalvarNovoInt}
+                onClose={() => setModalNovoInt(null)}
+              />
+            </div>
+          </div>
+        </Portal>
       )}
     </>
   );
