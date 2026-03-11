@@ -151,9 +151,11 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
     </div>
     <table class="campos">
       <tr><td class="lbl">Recebi de</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
-      <tr class="cpf-row"><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr class="spacer-row"><td colspan="2"></td></tr>
       ${osHtml}
       <tr><td class="lbl">Referente a</td><td><div class="campo-box descricao-box">${recibo.descricao || '—'}</div></td></tr>
+      <tr class="spacer-row-sm"><td colspan="2"></td></tr>
       <tr><td class="lbl">Valor</td><td>
         <div class="campo-box valor-destaque">${valorNum}</div>
         <div class="valor-ext">${valorExt}</div>
@@ -193,15 +195,16 @@ const CSS_RECIBO = `
   .via-check{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:6px}
   .check-box{font-size:13px}
   .campos{width:100%;border-collapse:collapse;margin-bottom:20px}
-  .campos tr td{padding:5px 6px;vertical-align:top}
+  .campos tr td{padding:4px 6px;vertical-align:top}
   .lbl{font-size:11px;color:#555;width:80px;padding-top:8px;white-space:nowrap}
   .campo-box{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px}
   .valor-destaque{font-size:13px;font-weight:bold;display:inline-block;min-width:160px}
-  .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px;margin-bottom:15mm}
+  .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px}
   .descricao-box{min-height:72px;font-size:11px;line-height:1.7}
-  .cpf-row td{padding-top:15mm !important;padding-bottom:15mm !important}
-  .data-linha{margin:25mm 0 0;font-size:12px;padding-left:2px}
-  .assin-bloco{display:flex;justify-content:center;margin-top:25mm;margin-bottom:14px}
+  .spacer-row td{height:10mm}
+  .spacer-row-sm td{height:6mm}
+  .data-linha{margin:18mm 0 0;font-size:12px;padding-left:2px}
+  .assin-bloco{display:flex;justify-content:center;margin-top:22mm;margin-bottom:14px}
   .assin-linha{text-align:center;min-width:280px}
   .assin-nome{border-top:1px solid #000;padding-top:6px;font-size:11px;font-weight:bold;letter-spacing:0.5px}
   .assin-cpf{font-size:10px;color:#444;margin-top:3px}
