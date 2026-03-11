@@ -17,6 +17,7 @@ const STATUS_CONF = {
 };
 
 const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function parsePartes(partes) {
   try { return JSON.parse(partes || '[]'); } catch { return []; }
@@ -38,33 +39,28 @@ function NomesPartes({ partes, interessados }) {
   );
 }
 
-// Colunas fixas — mesmas em todos os quadros
 const COLS = [
-  { key: 'num',       label: 'Nº',           w: '60px'  },
-  { key: 'dt',        label: 'Dt. Cadastro', w: '96px'  },
-  { key: 'cat',       label: 'Categoria',    w: '120px' },
-  { key: 'servico',   label: 'Serviço',      w: '226px' },
-  { key: 'partes',    label: 'Interessados', w: '180px' },
-  { key: 'resp',      label: 'Resp.',        w: '60px'  },
-  { key: 'valor',     label: 'Valor',        w: '110px' },
-  { key: 'and',       label: 'Andamentos',   w: '90px'  },
-  { key: 'status',    label: 'Status',       w: '70px'  },
+  { key: 'num',     label: 'Nº',           w: '60px'  },
+  { key: 'dt',      label: 'Dt. Cadastro', w: '96px'  },
+  { key: 'cat',     label: 'Categoria',    w: '120px' },
+  { key: 'servico', label: 'Serviço',      w: '226px' },
+  { key: 'partes',  label: 'Interessados', w: '180px' },
+  { key: 'resp',    label: 'Resp.',        w: '60px'  },
+  { key: 'valor',   label: 'Valor',        w: '110px' },
+  { key: 'and',     label: 'Andamentos',   w: '90px'  },
+  { key: 'status',  label: 'Status',       w: '70px'  },
 ];
 
 function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecionar }) {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 12 }}>
-      <colgroup>
-        {COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}
-      </colgroup>
+      <colgroup>{COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}</colgroup>
       <thead>
         <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
           {COLS.map(c => (
-            <th key={c.key} style={{
-              padding: '5px 10px', fontSize: 10, fontWeight: 700,
+            <th key={c.key} style={{ padding: '5px 10px', fontSize: 10, fontWeight: 700,
               color: 'var(--color-text-faint)', textTransform: 'uppercase',
-              letterSpacing: '0.06em', textAlign: c.key === 'valor' ? 'right' : 'left',
-            }}>{c.label}</th>
+              letterSpacing: '0.06em', textAlign: c.key === 'valor' ? 'right' : 'left' }}>{c.label}</th>
           ))}
         </tr>
       </thead>
@@ -98,8 +94,7 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
               <td style={{ padding: '6px 10px' }}>
                 {resp
                   ? <div className="avatar avatar-sm" title={resp.nome_simples}>{resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2)}</div>
-                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
-                }
+                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
               </td>
               <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', textAlign: 'right',
                 color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
@@ -107,18 +102,14 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
                 {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
               </td>
               <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                {pend > 0
-                  ? <span className="badge badge-warning">{pend} pend.</span>
-                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>
-                }
+                {pend > 0 ? <span className="badge badge-warning">{pend} pend.</span>
+                           : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
               </td>
               <td style={{ padding: '6px 10px' }}>
                 <div style={{ width: 22, height: 22, borderRadius: '50%',
                   background: conf.cor + '22', border: `2px solid ${conf.cor}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, fontWeight: 800, color: conf.cor }}>
-                  {conf.sigla}
-                </div>
+                  fontSize: 9, fontWeight: 800, color: conf.cor }}>{conf.sigla}</div>
               </td>
             </tr>
           );
@@ -128,23 +119,113 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
   );
 }
 
+// ─── Impressão ──────────────────────────────────────────────────
+function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, andamentos, interessados }) {
+  const nomeCartorio = cartorio?.nome || 'Serviço Notarial e Registral';
+  const cidade = cartorio?.cidade || 'Paranatinga-MT';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const fmtBRL = v => (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtDt  = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+  const STATUS_SIGLA = { 'Em andamento':'EA','Devolvido':'DV','Em reanálise':'RA','Concluído':'CO','Encerrado':'EN' };
+
+  let totalGeralQtd = 0, totalGeralVal = 0;
+
+  const blocosHTML = grupos.map(g => {
+    let qtdGrupo = 0, valGrupo = 0;
+    const linhas = g.processos.map((p, i) => {
+      const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x => { const int = interessados?.find(z => z.id === x.id); return (int?.nome||x.nome||'').split(' ').slice(0,2).join(' '); }).filter(Boolean).join(', '); } catch { return ''; } })();
+      const resp = usuarios.find(u => u.id === p.responsavel_id);
+      const pend = (andamentos||[]).filter(a => a.processo_id === p.id && !a.concluido).length;
+      const val = parseFloat(p.valor_ato||0);
+      qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
+      return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+        <td style="font-family:monospace;font-weight:700">${p.numero_interno}</td>
+        <td>${fmtDt(p.dt_abertura)}</td>
+        <td>${p.categoria||'—'}</td>
+        <td>${p.especie||'—'}</td>
+        <td>${partes||'—'}</td>
+        <td>${resp?.nome_simples||'—'}</td>
+        <td style="text-align:right;font-family:monospace">${val>0?'R$ '+fmtBRL(val):'—'}</td>
+        <td style="text-align:center">${pend>0?`<b>${pend} pend.</b>`:'—'}</td>
+        <td style="text-align:center"><b>${STATUS_SIGLA[p.status]||'??'}</b></td>
+      </tr>`;
+    }).join('');
+
+    const cabecalho = g.isGeral ? '' : `
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;color:#fff;padding:8px 12px;margin-top:16px;border-radius:4px 4px 0 0">
+        <span style="font-weight:700;font-size:13px">${g.nome}</span>
+        <span style="font-size:12px">${qtdGrupo} processo(s) &nbsp;|&nbsp; R$ ${fmtBRL(valGrupo)}</span>
+      </div>`;
+
+    return cabecalho + `
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
+        <thead><tr style="background:#e2e8f0">
+          <th style="padding:5px 8px;text-align:left">Nº</th>
+          <th style="padding:5px 8px;text-align:left">Data</th>
+          <th style="padding:5px 8px;text-align:left">Categoria</th>
+          <th style="padding:5px 8px;text-align:left">Serviço</th>
+          <th style="padding:5px 8px;text-align:left">Interessados</th>
+          <th style="padding:5px 8px;text-align:left">Resp.</th>
+          <th style="padding:5px 8px;text-align:right">Valor</th>
+          <th style="padding:5px 8px;text-align:center">And.</th>
+          <th style="padding:5px 8px;text-align:center">Status</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:0;padding:20px}
+    @media print{body{padding:10px}}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:#475569}
+    td{border-bottom:1px solid #e2e8f0}
+    .cabecalho{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #1e293b;padding-bottom:10px}
+    .total-geral{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 14px;text-align:right;font-weight:700;font-size:12px;margin-top:12px;border-radius:4px}
+    .rodape{display:flex;justify-content:space-between;margin-top:20px;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px}
+  </style></head><body>
+  <div class="cabecalho">
+    <div>
+      <div style="font-size:14px;font-weight:700">${nomeCartorio}</div>
+      <div style="font-size:11px;color:#64748b">${cidade}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:15px;font-weight:700">${titulo}</div>
+      ${subtitulo?`<div style="font-size:11px;color:#64748b">${subtitulo}</div>`:''}
+      <div style="font-size:10px;color:#94a3b8;margin-top:2px">Emitido em ${hoje}</div>
+    </div>
+  </div>
+  ${blocosHTML}
+  <div class="total-geral">Total Geral: ${totalGeralQtd} processo(s) &nbsp;|&nbsp; R$ ${fmtBRL(totalGeralVal)}</div>
+  <div class="rodape"><span>${nomeCartorio}</span><span>${cidade} — ${hoje}</span></div>
+  </body></html>`;
+}
+
+function imprimir(params) {
+  const html = gerarHtmlImpressao(params);
+  const w = window.open('', '_blank', 'width=1000,height=800');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+// ─── Principal ──────────────────────────────────────────────────
 export default function ProcessoDetalhePage() {
-  const { processos, usuarios, andamentos, interessados } = useApp();
+  const { processos, usuarios, andamentos, interessados, cartorio } = useApp();
 
   const [selecionado,  setSelecionado]  = useState(null);
   const [busca,        setBusca]        = useState('');
   const [filtroStatus, setFiltroStatus] = useState('Em andamento');
+  const [filtroResp,   setFiltroResp]   = useState('');
   const [modoVis,      setModoVis]      = useState('lista');
   const [limite,       setLimite]       = useState(50);
   const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
   const [modoData,     setModoData]     = useState('mes');
-  const hojeStr    = new Date().toISOString().slice(0, 10);
-  const inicioMes  = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
+  const hojeStr   = new Date().toISOString().slice(0, 10);
+  const inicioMes = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
   const [dtInicio, setDtInicio] = useState(inicioMes);
   const [dtFim,    setDtFim]    = useState(hojeStr);
-
-  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   const anosDisp = useMemo(() => {
     const s = new Set();
@@ -152,6 +233,15 @@ export default function ProcessoDetalhePage() {
     if (!s.size) s.add(String(new Date().getFullYear()));
     return Array.from(s).sort((a,b) => b - a);
   }, [processos]);
+
+  const responsaveisDisp = useMemo(() => {
+    const s = new Set();
+    processos.forEach(p => {
+      const u = usuarios.find(x => x.id === p.responsavel_id);
+      if (u) s.add(u.nome_simples);
+    });
+    return Array.from(s).sort();
+  }, [processos, usuarios]);
 
   const processoAtual = selecionado
     ? processos.find(p => p.id === selecionado.id) || selecionado
@@ -164,9 +254,11 @@ export default function ProcessoDetalhePage() {
       return (int?.nome || pt.nome || '').toLowerCase();
     }).join(' ');
     const txt = (p.numero_interno + p.especie + p.categoria + nomesPartes).toLowerCase();
+
     const dtRef = ['Concluído','Encerrado'].includes(filtroStatus)
       ? (filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_encerramento)
       : p.dt_abertura;
+
     let matchData;
     if (modoData === 'periodo') {
       matchData = !dtRef ? false : (!dtInicio || dtRef >= dtInicio) && (!dtFim || dtRef <= dtFim);
@@ -175,16 +267,18 @@ export default function ProcessoDetalhePage() {
       const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
       matchData = matchAno && matchMes;
     }
-    return (!busca || txt.includes(busca.toLowerCase()))
-        && (
-          !filtroStatus ? true
-          : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
-          : p.status === filtroStatus
-        )
-        && matchData;
-  }), [processos, busca, filtroStatus, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados]);
 
-  const totalGeral = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
+    const respNome = usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '';
+    const matchResp = !filtroResp || respNome === filtroResp;
+
+    return (!busca || txt.includes(busca.toLowerCase()))
+        && (!filtroStatus ? true
+            : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
+            : p.status === filtroStatus)
+        && matchData && matchResp;
+  }), [processos, busca, filtroStatus, filtroResp, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios]);
+
+  const totalGeral    = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
   const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
 
   const grupos = useMemo(() => {
@@ -198,6 +292,50 @@ export default function ProcessoDetalhePage() {
     });
     return Object.values(mapa).sort((a, b) => a.nome.localeCompare(b.nome));
   }, [lista, usuarios]);
+
+  // Label período para impressão
+  const labelPeriodo = useMemo(() => {
+    if (modoData === 'periodo') {
+      const fmtDt = d => { if (!d) return ''; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+      return `Período: ${fmtDt(dtInicio)} a ${fmtDt(dtFim)}`;
+    }
+    const nomeMes = filtroMes === 'todos' ? 'Todos os meses' : MESES[parseInt(filtroMes)-1];
+    return `${nomeMes} / ${filtroAno}`;
+  }, [modoData, dtInicio, dtFim, filtroMes, filtroAno]);
+
+  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus || 'Todos os status';
+
+  const imprimirLista = () => imprimir({
+    titulo: 'Relatório de Processos',
+    subtitulo: `${labelPeriodo} · ${labelStatus}${filtroResp ? ' · ' + filtroResp : ''}`,
+    grupos: [{ nome: '', isGeral: true, processos: lista }],
+    cartorio, usuarios, andamentos, interessados,
+  });
+
+  const imprimirPorResponsavel = (grupo) => imprimir({
+    titulo: `Processos — ${grupo.nome}`,
+    subtitulo: `${labelPeriodo} · ${labelStatus}`,
+    grupos: [{ ...grupo, isGeral: true }],
+    cartorio, usuarios, andamentos, interessados,
+  });
+
+  const imprimirTodosResponsaveis = () => imprimir({
+    titulo: 'Processos por Responsável',
+    subtitulo: `${labelPeriodo} · ${labelStatus}`,
+    grupos,
+    cartorio, usuarios, andamentos, interessados,
+  });
+
+  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp
+    || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0'));
+
+  const limparFiltros = () => {
+    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp('');
+    setModoData('mes');
+    setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
+    setFiltroAno(String(new Date().getFullYear()));
+    setDtInicio(inicioMes); setDtFim(hojeStr);
+  };
 
   if (processoAtual) {
     return (
@@ -217,22 +355,28 @@ export default function ProcessoDetalhePage() {
           <div className="page-title">Processos — Detalhe</div>
           <div className="page-sub">
             {lista.length} processo(s)
-            {modoVis === 'lista' && totalGeral > 0 && (
+            {totalGeral > 0 && (
               <span style={{ marginLeft: 8, fontFamily: 'var(--font-mono)', color: 'var(--color-success)', fontWeight: 600 }}>
                 · R$ {formatBRL(totalGeral)}
               </span>
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-          {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
-            <button key={id} onClick={() => setModoVis(id)} style={{
-              padding: '6px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: modoVis === id ? 700 : 400,
-              background: modoVis === id ? 'var(--color-surface-3)' : 'transparent',
-              color: modoVis === id ? 'var(--color-text)' : 'var(--color-text-muted)',
-              borderRight: id === 'lista' ? '1px solid var(--color-border)' : 'none',
-            }}>{label}</button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn btn-secondary btn-sm" disabled={lista.length === 0}
+            onClick={modoVis === 'lista' ? imprimirLista : imprimirTodosResponsaveis}>
+            🖨 {modoVis === 'lista' ? 'Imprimir Lista' : 'Imprimir Todos'}
+          </button>
+          <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+            {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
+              <button key={id} onClick={() => setModoVis(id)} style={{
+                padding: '6px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: modoVis === id ? 700 : 400,
+                background: modoVis === id ? 'var(--color-surface-3)' : 'transparent',
+                color: modoVis === id ? 'var(--color-text)' : 'var(--color-text-muted)',
+                borderRight: id === 'lista' ? '1px solid var(--color-border)' : 'none',
+              }}>{label}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -242,6 +386,7 @@ export default function ProcessoDetalhePage() {
           <span className="search-bar-icon">⌕</span>
           <input placeholder="Buscar por nº, serviço, categoria, interessado..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
+
         <select className="form-select" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
           <option value="">Todos os status</option>
           <option value="pendentes">⏳ Pendentes (todos)</option>
@@ -252,7 +397,11 @@ export default function ProcessoDetalhePage() {
           <option value="Encerrado">Encerrado</option>
         </select>
 
-        {/* Toggle modo data */}
+        <select className="form-select" value={filtroResp} onChange={e => setFiltroResp(e.target.value)}>
+          <option value="">Todos os responsáveis</option>
+          {responsaveisDisp.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+
         <div style={{ display: 'flex', gap: 4 }}>
           <button className={`btn btn-sm ${modoData === 'mes' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setModoData('mes')}>📅 Mês</button>
@@ -278,13 +427,8 @@ export default function ProcessoDetalhePage() {
           </div>
         )}
 
-        {(busca || filtroStatus !== 'Em andamento' || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0')) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => {
-            setBusca(''); setFiltroStatus('Em andamento'); setModoData('mes');
-            setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
-            setFiltroAno(String(new Date().getFullYear()));
-            setDtInicio(inicioMes); setDtFim(hojeStr);
-          }}>↺ Limpar</button>
+        {temFiltroAtivo && (
+          <button className="btn btn-ghost btn-sm" onClick={limparFiltros}>↺ Limpar</button>
         )}
       </div>
 
@@ -318,7 +462,6 @@ export default function ProcessoDetalhePage() {
           : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {grupos.map(g => (
                 <div key={g.nome} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                  {/* Cabeçalho do grupo com total */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10,
                     padding: '9px 16px', background: 'var(--color-surface-2)',
                     borderBottom: '1px solid var(--color-border)' }}>
@@ -330,6 +473,10 @@ export default function ProcessoDetalhePage() {
                         R$ {formatBRL(g.total)}
                       </span>
                     )}
+                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontSize: 11 }}
+                      onClick={e => { e.stopPropagation(); imprimirPorResponsavel(g); }}>
+                      🖨 Imprimir
+                    </button>
                   </div>
                   <TabelaProcessos lista={g.processos} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
                 </div>
