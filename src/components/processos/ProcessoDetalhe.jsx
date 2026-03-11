@@ -324,11 +324,11 @@ function ModalAdicionarInteressado({ interessados, onAdicionar, onClose }) {
             )}
             {opcoes.map(i => (
               <button key={i.id} onClick={() => onAdicionar(i, false)}
-                style={{ display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
+                style={{ display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer', color: 'var(--color-text)' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>{i.nome}</span>
-                {i.cpf && <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{i.cpf}</span>}
+                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text)' }}>{i.nome}</span>
+                {i.cpf && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{i.cpf}</span>}
               </button>
             ))}
             {busca.length > 0 && (
