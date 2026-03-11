@@ -126,7 +126,6 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
   const hoje = new Date().toLocaleDateString('pt-BR');
   const fmtBRL = v => (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fmtDt  = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
-  const STATUS_SIGLA = { 'Em andamento':'EA','Devolvido':'DV','Em reanálise':'RA','Concluído':'CO','Encerrado':'EN' };
 
   let totalGeralQtd = 0, totalGeralVal = 0;
 
@@ -134,20 +133,14 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     let qtdGrupo = 0, valGrupo = 0;
     const linhas = g.processos.map((p, i) => {
       const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x => { const int = interessados?.find(z => z.id === x.id); return (int?.nome||x.nome||'').split(' ').slice(0,2).join(' '); }).filter(Boolean).join(', '); } catch { return ''; } })();
-      const resp = usuarios.find(u => u.id === p.responsavel_id);
-      const pend = (andamentos||[]).filter(a => a.processo_id === p.id && !a.concluido).length;
       const val = parseFloat(p.valor_ato||0);
       qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
       return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="font-family:monospace;font-weight:700">${p.numero_interno}</td>
-        <td>${fmtDt(p.dt_abertura)}</td>
-        <td>${p.categoria||'—'}</td>
+        <td style="font-family:monospace;font-weight:700;white-space:nowrap">${p.numero_interno}</td>
+        <td style="white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
         <td>${p.especie||'—'}</td>
         <td>${partes||'—'}</td>
-        <td>${resp?.nome_simples||'—'}</td>
-        <td style="text-align:right;font-family:monospace">${val>0?'R$ '+fmtBRL(val):'—'}</td>
-        <td style="text-align:center">${pend>0?`<b>${pend} pend.</b>`:'—'}</td>
-        <td style="text-align:center"><b>${STATUS_SIGLA[p.status]||'??'}</b></td>
+        <td style="text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -160,15 +153,11 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     return cabecalho + `
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
         <thead><tr style="background:#e2e8f0">
-          <th style="padding:5px 8px;text-align:left">Nº</th>
-          <th style="padding:5px 8px;text-align:left">Data</th>
-          <th style="padding:5px 8px;text-align:left">Categoria</th>
+          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Nº</th>
+          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Data</th>
           <th style="padding:5px 8px;text-align:left">Serviço</th>
           <th style="padding:5px 8px;text-align:left">Interessados</th>
-          <th style="padding:5px 8px;text-align:left">Resp.</th>
-          <th style="padding:5px 8px;text-align:right">Valor</th>
-          <th style="padding:5px 8px;text-align:center">And.</th>
-          <th style="padding:5px 8px;text-align:center">Status</th>
+          <th style="padding:5px 8px;text-align:right;white-space:nowrap">Valor</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
       </table>`;
@@ -179,7 +168,7 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:0;padding:20px}
     @media print{body{padding:10px}}
     th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:#475569}
-    td{border-bottom:1px solid #e2e8f0}
+    td{border-bottom:1px solid #e2e8f0;padding:5px 8px}
     .cabecalho{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #1e293b;padding-bottom:10px}
     .total-geral{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 14px;text-align:right;font-weight:700;font-size:12px;margin-top:12px;border-radius:4px}
     .rodape{display:flex;justify-content:space-between;margin-top:20px;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px}
@@ -307,21 +296,21 @@ export default function ProcessoDetalhePage() {
 
   const imprimirLista = () => imprimir({
     titulo: 'Relatório de Processos',
-    subtitulo: `${labelPeriodo} · ${labelStatus}${filtroResp ? ' · ' + filtroResp : ''}`,
+    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>${filtroResp ? ' · ' + filtroResp : ''}`,
     grupos: [{ nome: '', isGeral: true, processos: lista }],
     cartorio, usuarios, andamentos, interessados,
   });
 
   const imprimirPorResponsavel = (grupo) => imprimir({
     titulo: `Processos — ${grupo.nome}`,
-    subtitulo: `${labelPeriodo} · ${labelStatus}`,
+    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>`,
     grupos: [{ ...grupo, isGeral: true }],
     cartorio, usuarios, andamentos, interessados,
   });
 
   const imprimirTodosResponsaveis = () => imprimir({
     titulo: 'Processos por Responsável',
-    subtitulo: `${labelPeriodo} · ${labelStatus}`,
+    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>`,
     grupos,
     cartorio, usuarios, andamentos, interessados,
   });
