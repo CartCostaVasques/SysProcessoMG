@@ -45,14 +45,14 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
       const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x=>(x.nome||'').split(' ').slice(0,2).join(' ')).filter(Boolean).join(', '); } catch { return ''; } })();
       const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       return `<tr>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;">${p.numero_interno||''}</td>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;">${dt}</td>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;">${p.especie||'—'}</td>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;">${partes||'—'}</td>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:center;">
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.numero_interno||''}</td>
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;white-space:nowrap;">${dt}</td>
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.especie||'—'}</td>
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${partes||'—'}</td>
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:center;">
           <span style="display:inline-block;padding:1px 3px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
         </td>
-        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:right;">R$ ${formatBRL(p.valor_ato)}</td>
+        <td style="padding:3px 4px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:right;white-space:nowrap;">R$ ${formatBRL(p.valor_ato)}</td>
       </tr>`;
     }).join('');
     return `
@@ -61,12 +61,12 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
         <span style="float:right;font-weight:600;font-size:11px;">${g.processos.reduce((s,p)=>s+parseInt(p.quantidade||1),0)} serviço(s) &nbsp;|&nbsp; R$ ${formatBRL(g.total)}</span>
       </td></tr>
       <tr style="background:#eef4f9;">
-        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Nº</th>
-        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">${thData}</th>
-        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Espécie</th>
-        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Interessados</th>
-        <th style="padding:2px;font-size:10px;text-align:center;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">St.</th>
-        <th style="padding:2px;font-size:10px;text-align:right;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Valor</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Nº</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">${thData}</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Espécie</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Interessados</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:center;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">St.</th>
+        <th style="padding:3px 4px;font-size:10px;text-align:right;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Valor</th>
       </tr>
       ${linhasProc}`;
   }).join('');
@@ -99,7 +99,7 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
 </div>
 <div class="titulo">${titulo}</div>
 <div class="subtitulo">Período: ${periodoLabel||'Todos'} &nbsp;|&nbsp; Emitido em ${hoje} &nbsp;|&nbsp; ${qtdGeral} processo(s)</div>
-<table><colgroup><col style="width:55px"><col style="width:55px"><col style="width:24%"><col><col style="width:30px"><col style="width:65px"></colgroup><tbody>${linhasGrupos}</tbody></table>
+<table><colgroup><col style="width:52px"><col style="width:66px"><col style="width:26%"><col><col style="width:28px"><col style="width:72px"></colgroup><tbody>${linhasGrupos}</tbody></table>
 <div class="total-geral">Total Geral: ${qtdGeral} processo(s) &nbsp;|&nbsp; R$ ${formatBRL(totalGeral)}</div>
 <div class="rodape"><span>${nomeCartorio}</span><span>${cidade} — ${hoje}</span></div>
 </body></html>`;
