@@ -99,7 +99,7 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
 </div>
 <div class="titulo">${titulo}</div>
 <div class="subtitulo">Período: ${periodoLabel||'Todos'} &nbsp;|&nbsp; Emitido em ${hoje} &nbsp;|&nbsp; ${qtdGeral} processo(s)</div>
-<table><colgroup><col style="width:40px"><col style="width:40px"><col style="width:22%"><col><col style="width:22px"><col style="width:60px"></colgroup><tbody>${linhasGrupos}</tbody></table>
+<table><colgroup><col style="width:55px"><col style="width:55px"><col style="width:24%"><col><col style="width:30px"><col style="width:65px"></colgroup><tbody>${linhasGrupos}</tbody></table>
 <div class="total-geral">Total Geral: ${qtdGeral} processo(s) &nbsp;|&nbsp; R$ ${formatBRL(totalGeral)}</div>
 <div class="rodape"><span>${nomeCartorio}</span><span>${cidade} — ${hoje}</span></div>
 </body></html>`;
