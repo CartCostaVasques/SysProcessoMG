@@ -210,7 +210,6 @@ export default function Oficios() {
           }, {})
         ).sort((a, b) => b[1] - a[1]);
         const total = oficios.length || 1;
-        const medalhas = ['🥇','🥈','🥉'];
         return (
           <div style={{
             background: 'var(--color-surface)',
@@ -229,9 +228,7 @@ export default function Oficios() {
                 return (
                   <div key={resp} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
                     onClick={() => setFiltroResp(filtroResp === resp ? '' : resp)}>
-                    <span style={{ fontSize: 14, width: 22, textAlign: 'center', flexShrink: 0 }}>
-                      {idx < 3 ? medalhas[idx] : <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{idx + 1}º</span>}
-                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)', width: 22, textAlign: 'center', flexShrink: 0 }}>{idx + 1}º</span>
                     <div className="avatar avatar-sm" style={{ flexShrink: 0 }}>{initials}</div>
                     <span style={{ fontSize: 13, fontWeight: 600, minWidth: 130, color: filtroResp === resp ? 'var(--color-accent)' : 'var(--color-text)' }}>
                       {resp}
