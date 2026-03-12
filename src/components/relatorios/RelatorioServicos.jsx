@@ -31,29 +31,42 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
   const thData       = isConcluido ? 'Dt. Conclusão' : 'Dt. Abertura';
   const periodoLabel = [filtroMes !== 'todos' ? MESES[parseInt(filtroMes)-1] : null, filtroAno].filter(Boolean).join(' ');
 
+  const SP = {
+    'Em andamento': { sigla: 'EA', cor: '#b45309', bg: '#fef3c7' },
+    'Devolvido':    { sigla: 'DV', cor: '#dc2626', bg: '#fee2e2' },
+    'Em reanálise': { sigla: 'RA', cor: '#7c3aed', bg: '#ede9fe' },
+    'Concluído':    { sigla: 'CO', cor: '#16a34a', bg: '#dcfce7' },
+    'Encerrado':    { sigla: 'EN', cor: '#475569', bg: '#f1f5f9' },
+  };
+
   const linhasGrupos = grupos.map(g => {
     const linhasProc = g.processos.map(p => {
       const dt = isConcluido ? (p.dt_conclusao ? formatDate(p.dt_conclusao) : '—') : formatDate(p.dt_abertura);
       const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x=>(x.nome||'').split(' ').slice(0,2).join(' ')).filter(Boolean).join(', '); } catch { return ''; } })();
+      const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       return `<tr>
-        <td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;font-size:11px;width:80px;">${p.numero_interno||''}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;font-size:11px;width:90px;">${dt}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;font-size:11px;width:150px;">${p.especie||'—'}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;font-size:11px;">${partes||'—'}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:right;width:100px;">R$ ${formatBRL(p.valor_ato)}</td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;width:40px;">${p.numero_interno||''}</td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;width:40px;">${dt}</td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;">${p.especie||'—'}</td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;width:90px;">${partes||'—'}</td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:center;width:20px;">
+          <span style="display:inline-block;padding:1px 3px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
+        </td>
+        <td style="padding:2px;border-bottom:1px solid #e0e0e0;font-size:11px;text-align:right;width:55px;">R$ ${formatBRL(p.valor_ato)}</td>
       </tr>`;
     }).join('');
     return `
-      <tr><td colspan="5" style="padding:6px 10px;background:#d6e4f0;font-size:12px;font-weight:bold;border-top:2px solid #aac;">
+      <tr><td colspan="6" style="padding:6px 10px;background:#d6e4f0;font-size:12px;font-weight:bold;border-top:2px solid #aac;">
         ${g.categoria}
         <span style="float:right;font-weight:600;font-size:11px;">${g.processos.reduce((s,p)=>s+parseInt(p.quantidade||1),0)} serviço(s) &nbsp;|&nbsp; R$ ${formatBRL(g.total)}</span>
       </td></tr>
       <tr style="background:#eef4f9;">
-        <th style="padding:4px 8px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Nº Interno</th>
-        <th style="padding:4px 8px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">${thData}</th>
-        <th style="padding:4px 8px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Espécie</th>
-        <th style="padding:4px 8px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Interessados</th>
-        <th style="padding:4px 8px;font-size:10px;text-align:right;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Valor</th>
+        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Nº</th>
+        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">${thData}</th>
+        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Espécie</th>
+        <th style="padding:2px;font-size:10px;text-align:left;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Interessados</th>
+        <th style="padding:2px;font-size:10px;text-align:center;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">St.</th>
+        <th style="padding:2px;font-size:10px;text-align:right;color:#555;font-weight:700;text-transform:uppercase;border-bottom:1px solid #ccc;">Valor</th>
       </tr>
       ${linhasProc}`;
   }).join('');
