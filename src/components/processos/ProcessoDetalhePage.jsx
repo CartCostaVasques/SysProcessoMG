@@ -145,14 +145,14 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
       const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
       return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="font-family:monospace;font-weight:700;white-space:nowrap">${p.numero_interno}</td>
-        <td style="white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
-        <td>${p.especie||'—'}</td>
-        <td>${partes||'—'}</td>
-        <td style="text-align:center;white-space:nowrap">
-          <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
+        <td style="padding:4px 6px;font-family:monospace;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.numero_interno}</td>
+        <td style="padding:4px 6px;white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
+        <td style="padding:4px 6px;overflow:hidden;text-overflow:ellipsis">${p.especie||'—'}</td>
+        <td style="padding:4px 6px;overflow:hidden;text-overflow:ellipsis">${partes||'—'}</td>
+        <td style="padding:4px 6px;text-align:center;white-space:nowrap">
+          <span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
         </td>
-        <td style="text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
+        <td style="padding:4px 6px;text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -163,14 +163,22 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
       </div>`;
 
     return cabecalho + `
-      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;table-layout:fixed">
+        <colgroup>
+          <col style="width:80px">
+          <col style="width:72px">
+          <col style="width:18%">
+          <col>
+          <col style="width:40px">
+          <col style="width:90px">
+        </colgroup>
         <thead><tr style="background:#e2e8f0">
-          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Nº</th>
-          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Data</th>
-          <th style="padding:5px 8px;text-align:left">Serviço</th>
-          <th style="padding:5px 8px;text-align:left">Interessados</th>
-          <th style="padding:5px 8px;text-align:center;white-space:nowrap">Status</th>
-          <th style="padding:5px 8px;text-align:right;white-space:nowrap">Valor</th>
+          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Nº</th>
+          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Data</th>
+          <th style="padding:4px 6px;text-align:left">Serviço</th>
+          <th style="padding:4px 6px;text-align:left">Interessados</th>
+          <th style="padding:4px 6px;text-align:center">St.</th>
+          <th style="padding:4px 6px;text-align:right;white-space:nowrap">Valor</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
       </table>`;
