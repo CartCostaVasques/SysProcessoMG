@@ -127,6 +127,14 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
   const fmtBRL = v => (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fmtDt  = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
 
+  const SP = {
+    'Em andamento': { sigla: 'EA', cor: '#b45309', bg: '#fef3c7' },
+    'Devolvido':    { sigla: 'DV', cor: '#dc2626', bg: '#fee2e2' },
+    'Em reanálise': { sigla: 'RA', cor: '#7c3aed', bg: '#ede9fe' },
+    'Concluído':    { sigla: 'CO', cor: '#16a34a', bg: '#dcfce7' },
+    'Encerrado':    { sigla: 'EN', cor: '#475569', bg: '#f1f5f9' },
+  };
+
   let totalGeralQtd = 0, totalGeralVal = 0;
 
   const blocosHTML = grupos.map(g => {
@@ -134,12 +142,16 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     const linhas = g.processos.map((p, i) => {
       const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x => { const int = interessados?.find(z => z.id === x.id); return (int?.nome||x.nome||'').split(' ').slice(0,2).join(' '); }).filter(Boolean).join(', '); } catch { return ''; } })();
       const val = parseFloat(p.valor_ato||0);
+      const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
       return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
         <td style="font-family:monospace;font-weight:700;white-space:nowrap">${p.numero_interno}</td>
         <td style="white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
         <td>${p.especie||'—'}</td>
         <td>${partes||'—'}</td>
+        <td style="text-align:center;white-space:nowrap">
+          <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
+        </td>
         <td style="text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
       </tr>`;
     }).join('');
@@ -157,6 +169,7 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
           <th style="padding:5px 8px;text-align:left;white-space:nowrap">Data</th>
           <th style="padding:5px 8px;text-align:left">Serviço</th>
           <th style="padding:5px 8px;text-align:left">Interessados</th>
+          <th style="padding:5px 8px;text-align:center;white-space:nowrap">Status</th>
           <th style="padding:5px 8px;text-align:right;white-space:nowrap">Valor</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
