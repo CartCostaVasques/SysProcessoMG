@@ -43,7 +43,7 @@ const COLS = [
   { key: 'num',     label: 'Nº',           w: '60px'  },
   { key: 'dt',      label: 'Dt. Cadastro', w: '96px'  },
   { key: 'cat',     label: 'Categoria',    w: '120px' },
-  { key: 'servico', label: 'Serviço',      w: '226px' },
+  { key: 'servico', label: 'Serviço',      w: '300px' },
   { key: 'partes',  label: 'Interessados', w: '180px' },
   { key: 'resp',    label: 'Resp.',        w: '60px'  },
   { key: 'valor',   label: 'Valor',        w: '110px' },
@@ -165,11 +165,11 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     return cabecalho + `
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;table-layout:fixed">
         <colgroup>
+          <col style="width:60px">
           <col style="width:62px">
-          <col style="width:64px">
-          <col style="width:16%">
-          <col style="width:28%">
-          <col style="width:36px">
+          <col>
+          <col style="width:30%">
+          <col style="width:34px">
           <col style="width:86px">
         </colgroup>
         <thead><tr style="background:#e2e8f0">
