@@ -145,14 +145,14 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
       const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
       return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="padding:4px 6px;font-family:monospace;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.numero_interno}</td>
-        <td style="padding:4px 6px;white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
-        <td style="padding:4px 6px;overflow:hidden;text-overflow:ellipsis">${p.especie||'—'}</td>
-        <td style="padding:4px 6px;overflow:hidden;text-overflow:ellipsis">${partes||'—'}</td>
-        <td style="padding:4px 6px;text-align:center;white-space:nowrap">
+        <td style="padding:4px 4px;font-family:monospace;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.numero_interno}</td>
+        <td style="padding:4px 4px;white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
+        <td style="padding:4px 4px;overflow:hidden;text-overflow:ellipsis">${p.especie||'—'}</td>
+        <td style="padding:4px 4px;overflow:hidden;text-overflow:ellipsis">${partes||'—'}</td>
+        <td style="padding:4px 4px;text-align:center;white-space:nowrap">
           <span style="display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
         </td>
-        <td style="padding:4px 6px;text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
+        <td style="padding:4px 4px;text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -165,20 +165,20 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     return cabecalho + `
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;table-layout:fixed">
         <colgroup>
-          <col style="width:80px">
-          <col style="width:72px">
-          <col style="width:18%">
-          <col>
-          <col style="width:40px">
-          <col style="width:90px">
+          <col style="width:62px">
+          <col style="width:64px">
+          <col style="width:16%">
+          <col style="width:28%">
+          <col style="width:36px">
+          <col style="width:86px">
         </colgroup>
         <thead><tr style="background:#e2e8f0">
-          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Nº</th>
-          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Data</th>
-          <th style="padding:4px 6px;text-align:left">Serviço</th>
-          <th style="padding:4px 6px;text-align:left">Interessados</th>
-          <th style="padding:4px 6px;text-align:center">St.</th>
-          <th style="padding:4px 6px;text-align:right;white-space:nowrap">Valor</th>
+          <th style="padding:4px 4px;text-align:left;white-space:nowrap">Nº</th>
+          <th style="padding:4px 4px;text-align:left;white-space:nowrap">Data</th>
+          <th style="padding:4px 4px;text-align:left">Serviço</th>
+          <th style="padding:4px 4px;text-align:left">Interessados</th>
+          <th style="padding:4px 4px;text-align:center">St.</th>
+          <th style="padding:4px 4px;text-align:right;white-space:nowrap">Valor</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
       </table>`;
@@ -189,7 +189,7 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:0;padding:20px}
     @media print{body{padding:10px}}
     th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:#475569}
-    td{border-bottom:1px solid #e2e8f0;padding:5px 8px}
+    td{border-bottom:1px solid #e2e8f0;padding:4px 4px}
     .cabecalho{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #1e293b;padding-bottom:10px}
     .total-geral{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 14px;text-align:right;font-weight:700;font-size:12px;margin-top:12px;border-radius:4px}
     .rodape{display:flex;justify-content:space-between;margin-top:20px;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px}
