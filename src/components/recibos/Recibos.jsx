@@ -65,6 +65,11 @@ function valorPorExtenso(valor) {
   return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
+function formatarCidade(cidade) {
+  if (!cidade) return '';
+  return /\-[A-Z]{2}$/.test(cidade.trim()) ? cidade.trim() : cidade.trim() + '-MT';
+}
+
 function cabecalhoHtml(cartorio) {
   const logo     = cartorio.logo_url || '';
   const nomeCart = cartorio.nome || 'Cartório';
@@ -73,14 +78,19 @@ function cabecalhoHtml(cartorio) {
   const endereco = cartorio.endereco || '';
   const telefone = cartorio.telefone || '';
   const email    = cartorio.email || '';
+  const cidadeFormatada = formatarCidade(cidade);
+  // Nome completo com prefixo oficial
+  const nomeExibido = nomeCart.toLowerCase().startsWith('2') || nomeCart.toLowerCase().startsWith('2º') || nomeCart.toLowerCase().startsWith('segundo')
+    ? nomeCart
+    : '2º Serviço Notarial e Registral de Paranatinga-MT';
   return `
   <div class="cab">
     <div class="logo-box">${logo ? `<img src="${logo}" alt="Logo">` : '<span style="font-size:9px;color:#aaa">Logo</span>'}</div>
     <div class="cab-info">
-      <div class="cab-nome">${nomeCart}</div>
+      <div class="cab-nome">${nomeExibido}</div>
       <div class="cab-sub">
         ${endereco ? endereco + '<br>' : ''}
-        ${[telefone, email].filter(Boolean).join(' - ')}${cidade ? '<br>' + cidade + '-MT' : ''}
+        ${[telefone, email].filter(Boolean).join(' - ')}${cidadeFormatada ? '<br>' + cidadeFormatada : ''}
         ${cnpj ? '<br>CNPJ - ' + cnpj : ''}
       </div>
     </div>
@@ -106,14 +116,14 @@ function gerarViaColaborador(recibo, interessado, cartorio, label) {
     </div>
     <table class="campos">
       <tr><td class="lbl">Nome</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
-      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box campo-meio">${interessado?.cpf || '—'}</div></td></tr>
       <tr><td class="lbl">Valor</td><td>
-        <div class="campo-box valor-destaque">${valorNum}</div>
+        <div class="campo-box valor-destaque campo-meio">${valorNum}</div>
         <div class="valor-ext">${valorExt}</div>
       </td></tr>
       <tr><td class="lbl">Descrição</td><td><div class="campo-box descricao-box">${descTexto}</div></td></tr>
     </table>
-    <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
+    <div class="data-linha">${cidade ? formatarCidade(cidade) + ',&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
     <div class="assin-bloco">
       <div class="assin-linha">
         <div class="assin-nome">${(interessado?.nome || '').toUpperCase()}</div>
@@ -190,7 +200,7 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
       </tr>
       ${obsHtml}
     </table>
-    <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
+    <div class="data-linha">${cidade ? formatarCidade(cidade) + ',&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
     <div class="assin-bloco">
       <div class="assin-linha">
         <div class="assin-nome">${nomeAssin.toUpperCase()}</div>
@@ -214,7 +224,7 @@ const CSS_RECIBO = `
   body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff}
   .via{padding:15mm 0;page-break-inside:avoid}
   .cab{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
-  .logo-box{width:90px;height:72px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:4px}
+  .logo-box{width:110px;height:90px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:4px}
   .logo-box img{max-width:100%;max-height:100%;object-fit:contain}
   .cab-info{flex:1;text-align:center}
   .cab-nome{font-size:16px;font-weight:bold;margin-bottom:5px}
