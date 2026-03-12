@@ -200,6 +200,55 @@ export default function Oficios() {
         ))}
       </div>
 
+      {/* Ranking por responsável */}
+      {(() => {
+        const ranking = Object.entries(
+          oficios.reduce((acc, o) => {
+            const r = o.responsavel || '— Sem responsável';
+            acc[r] = (acc[r] || 0) + 1;
+            return acc;
+          }, {})
+        ).sort((a, b) => b[1] - a[1]);
+        const total = oficios.length || 1;
+        const medalhas = ['🥇','🥈','🥉'];
+        return (
+          <div style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 18px',
+            marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 12 }}>
+              Ranking de Emissão
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {ranking.map(([resp, qtd], idx) => {
+                const pct = Math.round((qtd / total) * 100);
+                const initials = resp.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                return (
+                  <div key={resp} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                    onClick={() => setFiltroResp(filtroResp === resp ? '' : resp)}>
+                    <span style={{ fontSize: 14, width: 22, textAlign: 'center', flexShrink: 0 }}>
+                      {idx < 3 ? medalhas[idx] : <span style={{ fontSize: 11, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{idx + 1}º</span>}
+                    </span>
+                    <div className="avatar avatar-sm" style={{ flexShrink: 0 }}>{initials}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, minWidth: 130, color: filtroResp === resp ? 'var(--color-accent)' : 'var(--color-text)' }}>
+                      {resp}
+                    </span>
+                    <div style={{ flex: 1, height: 6, background: 'var(--color-surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: pct + '%', background: idx === 0 ? 'var(--color-accent)' : 'var(--color-text-faint)', borderRadius: 99, transition: 'width 0.4s' }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-text)', minWidth: 28, textAlign: 'right' }}>{qtd}</span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-faint)', minWidth: 36, textAlign: 'right' }}>{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="filter-bar">
         <div className="search-bar" style={{ flex: 1 }}>
           <span className="search-bar-icon">⌕</span>
