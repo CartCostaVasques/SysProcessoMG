@@ -11,7 +11,7 @@ const formatBRL = v => {
 const COLS = [
   { key: 'num',       label: 'Nº Interno',    w: '90px',  align: 'left'  },
   { key: 'data',      label: 'Data',           w: '100px', align: 'left'  },
-  { key: 'especie',   label: 'Espécie',        w: '160px', align: 'left'  },
+  { key: 'especie',   label: 'Espécie',        w: '240px', align: 'left'  },
   { key: 'partes',    label: 'Interessados',   w: 'auto',  align: 'left'  },
   { key: 'valor',     label: 'Valor',          w: '110px', align: 'right' },
 ];
