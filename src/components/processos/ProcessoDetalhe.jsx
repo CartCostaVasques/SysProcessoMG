@@ -1,490 +1,1162 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
-import ProcessoDetalhe from './ProcessoDetalhe.jsx';
 import { formatDate } from '../../data/mockData.js';
 
-function formatBRL(v) {
-  const n = parseFloat(v) || 0;
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+const HOJE = () => new Date().toISOString().split('T')[0];
+const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vendedor', 'Credor', 'Devedor', 'Representante', 'Outros'];
+const STATUS_OPTS   = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
+const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
+const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
-const STATUS_CONF = {
-  'Em andamento': { cor: 'var(--color-warning)', sigla: 'EA' },
-  'Devolvido':    { cor: 'var(--color-danger)',  sigla: 'DV' },
-  'Em reanálise': { cor: '#a78bfa',              sigla: 'RA' },
-  'Concluído':    { cor: 'var(--color-success)', sigla: 'CO' },
-  'Encerrado':    { cor: '#64748b',              sigla: 'EN' },
+const STATUS_CONF_GLOBAL = {
+  'Em andamento': { cor: 'var(--color-warning)',  sigla: 'EA', icon: '🔄' },
+  'Devolvido':    { cor: 'var(--color-danger)',   sigla: 'DV', icon: '↩️' },
+  'Em reanálise': { cor: '#a78bfa',               sigla: 'RA', icon: '🔍' },
+  'Concluído':    { cor: 'var(--color-success)',  sigla: 'CO', icon: '✅' },
+  'Encerrado':    { cor: '#64748b',               sigla: 'EN', icon: '🔒' },
 };
 
+// Status que ainda estão "na fila" (pendentes)
 const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function parsePartes(partes) {
-  try { return JSON.parse(partes || '[]'); } catch { return []; }
-}
+// ── Modal Alterar Status ──────────────────────────────────────
+function ModalAlterarStatus({ processo, onClose, onSalvar }) {
+  const [novoStatus, setNovoStatus] = useState('');
+  const [obs, setObs]               = useState('');
+  const [salvando, setSalvando]     = useState(false);
 
-function NomesPartes({ partes, interessados }) {
-  const arr = parsePartes(partes);
-  if (!arr.length) return <span style={{ color: 'var(--color-text-faint)' }}>—</span>;
+  const statusDisponiveis = STATUS_OPTS.filter(s => s !== processo.status);
+
+  const salvar = async () => {
+    if (!novoStatus) return;
+    setSalvando(true);
+    await onSalvar(novoStatus, obs);
+    setSalvando(false);
+    onClose();
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      {arr.slice(0, 2).map((p, i) => {
-        const int = interessados.find(x => x.id === p.id);
-        const nome = int?.nome || p.nome || '';
-        const primeiros = nome.trim().split(/\s+/).slice(0, 2).join(' ');
-        return <span key={i} style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{primeiros}</span>;
-      })}
-      {arr.length > 2 && <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>+{arr.length - 2}</span>}
-    </div>
-  );
-}
-
-const COLS = [
-  { key: 'num',     label: 'Nº',           w: '60px'  },
-  { key: 'dt',      label: 'Dt. Cadastro', w: '96px'  },
-  { key: 'cat',     label: 'Categoria',    w: '120px' },
-  { key: 'servico', label: 'Serviço',      w: '226px' },
-  { key: 'partes',  label: 'Interessados', w: '180px' },
-  { key: 'resp',    label: 'Resp.',        w: '60px'  },
-  { key: 'valor',   label: 'Valor',        w: '110px' },
-  { key: 'and',     label: 'Andamentos',   w: '90px'  },
-  { key: 'status',  label: 'Status',       w: '70px'  },
-];
-
-function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecionar }) {
-  return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 12 }}>
-      <colgroup>{COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}</colgroup>
-      <thead>
-        <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-          {COLS.map(c => (
-            <th key={c.key} style={{ padding: '5px 10px', fontSize: 10, fontWeight: 700,
-              color: 'var(--color-text-faint)', textTransform: 'uppercase',
-              letterSpacing: '0.06em', textAlign: c.key === 'valor' ? 'right' : 'left' }}>{c.label}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {lista.length === 0 && (
-          <tr><td colSpan={9}>
-            <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
-              <div className="empty-state-text">Nenhum processo encontrado</div>
+    <Portal>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div style={{ width: 'min(460px, 96vw)', background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="modal-header">
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Alterar Status do Processo</div>
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Status atual */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Status atual</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: (STATUS_CONF_GLOBAL[processo.status]?.cor || '#888') + '22', border: `1px solid ${STATUS_CONF_GLOBAL[processo.status]?.cor || '#888'}` }}>
+                <span>{STATUS_CONF_GLOBAL[processo.status]?.icon}</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: STATUS_CONF_GLOBAL[processo.status]?.cor }}>{processo.status}</span>
+              </div>
             </div>
-          </td></tr>
-        )}
-        {lista.map((p, i) => {
-          const conf = STATUS_CONF[p.status] || { cor: 'var(--color-text-faint)', sigla: '??' };
-          const resp = usuarios.find(u => u.id === p.responsavel_id);
-          const pend = andamentos.filter(a => a.processo_id === p.id && !a.concluido).length;
-          return (
-            <tr key={p.id} onClick={() => onSelecionar(p)}
-              style={{ cursor: 'pointer', borderBottom: '1px solid var(--color-border)',
-                background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)',
-                opacity: ['Concluído','Encerrado'].includes(p.status) ? 0.75 : 1 }}>
-              <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.numero_interno}</td>
-              <td style={{ padding: '6px 10px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{formatDate(p.dt_abertura)}</td>
-              <td style={{ padding: '6px 10px', overflow: 'hidden' }}>
-                <span className="badge badge-neutral" style={{ fontSize: 10, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{p.categoria}</span>
-              </td>
-              <td style={{ padding: '6px 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.especie || '—'}</td>
-              <td style={{ padding: '6px 10px', overflow: 'hidden' }}>
-                <NomesPartes partes={p.partes} interessados={interessados} />
-              </td>
-              <td style={{ padding: '6px 10px' }}>
-                {resp
-                  ? <div className="avatar avatar-sm" title={resp.nome_simples}>{resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2)}</div>
-                  : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
-              </td>
-              <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', textAlign: 'right',
-                color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
-                fontWeight: p.valor_ato > 0 ? 600 : 400 }}>
-                {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
-              </td>
-              <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                {pend > 0 ? <span className="badge badge-warning">{pend} pend.</span>
-                           : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
-              </td>
-              <td style={{ padding: '6px 10px' }}>
-                <div style={{ width: 22, height: 22, borderRadius: '50%',
-                  background: conf.cor + '22', border: `2px solid ${conf.cor}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 9, fontWeight: 800, color: conf.cor }}>{conf.sigla}</div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+            {/* Novo status */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Novo status *</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {statusDisponiveis.map(s => {
+                  const c = STATUS_CONF_GLOBAL[s] || {};
+                  const sel = novoStatus === s;
+                  return (
+                    <button key={s} onClick={() => setNovoStatus(s)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: `2px solid ${sel ? c.cor : 'var(--color-border)'}`, background: sel ? c.cor + '22' : 'var(--color-surface-2)', cursor: 'pointer', fontWeight: sel ? 700 : 400, fontSize: 13, color: sel ? c.cor : 'var(--color-text-muted)', transition: 'all .15s' }}>
+                      <span>{c.icon}</span> {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Observação */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Observação (opcional)</label>
+              <textarea className="form-input" rows={3} value={obs} onChange={e => setObs(e.target.value)} placeholder="Ex: Documento faltante, aguardando assinatura..." style={{ fontSize: 13, resize: 'vertical' }} />
+            </div>
+          </div>
+          <div className="modal-footer" style={{ gap: 8 }}>
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" onClick={salvar} disabled={!novoStatus || salvando}>
+              {salvando ? 'Salvando...' : '✓ Confirmar Alteração'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Portal>
   );
 }
 
-// ─── Impressão ──────────────────────────────────────────────────
-function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, andamentos, interessados }) {
-  const nomeCartorio = cartorio?.nome || 'Serviço Notarial e Registral';
-  const cidade = cartorio?.cidade || 'Paranatinga-MT';
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  const fmtBRL = v => (parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const fmtDt  = d => { if (!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+// ── Aba: Histórico de Situações ───────────────────────────────
+function TabHistorico({ processoId }) {
+  const { processoHistorico } = useApp();
+  const historico = processoHistorico.filter(h => h.processo_id === processoId);
 
-  const SP = {
-    'Em andamento': { sigla: 'EA', cor: '#b45309', bg: '#fef3c7' },
-    'Devolvido':    { sigla: 'DV', cor: '#dc2626', bg: '#fee2e2' },
-    'Em reanálise': { sigla: 'RA', cor: '#7c3aed', bg: '#ede9fe' },
-    'Concluído':    { sigla: 'CO', cor: '#16a34a', bg: '#dcfce7' },
-    'Encerrado':    { sigla: 'EN', cor: '#475569', bg: '#f1f5f9' },
-  };
-
-  let totalGeralQtd = 0, totalGeralVal = 0;
-
-  const blocosHTML = grupos.map(g => {
-    let qtdGrupo = 0, valGrupo = 0;
-    const linhas = g.processos.map((p, i) => {
-      const partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x => { const int = interessados?.find(z => z.id === x.id); return (int?.nome||x.nome||'').split(' ').slice(0,2).join(' '); }).filter(Boolean).join(', '); } catch { return ''; } })();
-      const val = parseFloat(p.valor_ato||0);
-      const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
-      qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
-      return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="font-family:monospace;font-weight:700;white-space:nowrap">${p.numero_interno}</td>
-        <td style="white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
-        <td>${p.especie||'—'}</td>
-        <td>${partes||'—'}</td>
-        <td style="text-align:center;white-space:nowrap">
-          <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
-        </td>
-        <td style="text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
-      </tr>`;
-    }).join('');
-
-    const cabecalho = g.isGeral ? '' : `
-      <div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;color:#fff;padding:8px 12px;margin-top:16px;border-radius:4px 4px 0 0">
-        <span style="font-weight:700;font-size:13px">${g.nome}</span>
-        <span style="font-size:12px">${qtdGrupo} processo(s) &nbsp;|&nbsp; R$ ${fmtBRL(valGrupo)}</span>
-      </div>`;
-
-    return cabecalho + `
-      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px">
-        <thead><tr style="background:#e2e8f0">
-          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Nº</th>
-          <th style="padding:5px 8px;text-align:left;white-space:nowrap">Data</th>
-          <th style="padding:5px 8px;text-align:left">Serviço</th>
-          <th style="padding:5px 8px;text-align:left">Interessados</th>
-          <th style="padding:5px 8px;text-align:center;white-space:nowrap">Status</th>
-          <th style="padding:5px 8px;text-align:right;white-space:nowrap">Valor</th>
-        </tr></thead>
-        <tbody>${linhas}</tbody>
-      </table>`;
-  }).join('');
-
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
-  <style>
-    body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:0;padding:20px}
-    @media print{body{padding:10px}}
-    th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:#475569}
-    td{border-bottom:1px solid #e2e8f0;padding:5px 8px}
-    .cabecalho{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:2px solid #1e293b;padding-bottom:10px}
-    .total-geral{background:#f1f5f9;border:1px solid #cbd5e1;padding:8px 14px;text-align:right;font-weight:700;font-size:12px;margin-top:12px;border-radius:4px}
-    .rodape{display:flex;justify-content:space-between;margin-top:20px;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px}
-  </style></head><body>
-  <div class="cabecalho">
-    <div>
-      <div style="font-size:14px;font-weight:700">${nomeCartorio}</div>
-      <div style="font-size:11px;color:#64748b">${cidade}</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:15px;font-weight:700">${titulo}</div>
-      ${subtitulo?`<div style="font-size:11px;color:#64748b">${subtitulo}</div>`:''}
-      <div style="font-size:10px;color:#94a3b8;margin-top:2px">Emitido em ${hoje}</div>
-    </div>
-  </div>
-  ${blocosHTML}
-  <div class="total-geral">Total Geral: ${totalGeralQtd} processo(s) &nbsp;|&nbsp; R$ ${fmtBRL(totalGeralVal)}</div>
-  <div class="rodape"><span>${nomeCartorio}</span><span>${cidade} — ${hoje}</span></div>
-  </body></html>`;
-}
-
-function imprimir(params) {
-  const html = gerarHtmlImpressao(params);
-  const w = window.open('', '_blank', 'width=1000,height=800');
-  w.document.write(html);
-  w.document.close();
-  setTimeout(() => w.print(), 600);
-}
-
-// ─── Principal ──────────────────────────────────────────────────
-export default function ProcessoDetalhePage() {
-  const { processos, usuarios, andamentos, interessados, cartorio } = useApp();
-
-  const [selecionado,  setSelecionado]  = useState(null);
-  const [busca,        setBusca]        = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('Em andamento');
-  const [filtroResp,   setFiltroResp]   = useState('');
-  const [modoVis,      setModoVis]      = useState('lista');
-  const [limite,       setLimite]       = useState(50);
-  const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
-  const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
-  const [modoData,     setModoData]     = useState('mes');
-  const hojeStr   = new Date().toISOString().slice(0, 10);
-  const inicioMes = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
-  const [dtInicio, setDtInicio] = useState(inicioMes);
-  const [dtFim,    setDtFim]    = useState(hojeStr);
-
-  const anosDisp = useMemo(() => {
-    const s = new Set();
-    processos.forEach(p => { const d = p.dt_conclusao || p.dt_abertura; if (d) s.add(d.substring(0,4)); });
-    if (!s.size) s.add(String(new Date().getFullYear()));
-    return Array.from(s).sort((a,b) => b - a);
-  }, [processos]);
-
-  const responsaveisDisp = useMemo(() => {
-    const s = new Set();
-    processos.forEach(p => {
-      const u = usuarios.find(x => x.id === p.responsavel_id);
-      if (u) s.add(u.nome_simples);
-    });
-    return Array.from(s).sort();
-  }, [processos, usuarios]);
-
-  const processoAtual = selecionado
-    ? processos.find(p => p.id === selecionado.id) || selecionado
-    : null;
-
-  const lista = useMemo(() => processos.filter(p => {
-    const partes = parsePartes(p.partes);
-    const nomesPartes = partes.map(pt => {
-      const int = interessados.find(x => x.id === pt.id);
-      return (int?.nome || pt.nome || '').toLowerCase();
-    }).join(' ');
-    const txt = (p.numero_interno + p.especie + p.categoria + nomesPartes).toLowerCase();
-
-    const dtRef = ['Concluído','Encerrado'].includes(filtroStatus)
-      ? (filtroStatus === 'Concluído' ? p.dt_conclusao : p.dt_encerramento)
-      : p.dt_abertura;
-
-    let matchData;
-    if (modoData === 'periodo') {
-      matchData = !dtRef ? false : (!dtInicio || dtRef >= dtInicio) && (!dtFim || dtRef <= dtFim);
-    } else {
-      const matchAno = !filtroAno || !dtRef ? true : dtRef.startsWith(filtroAno);
-      const matchMes = filtroMes === 'todos' || !dtRef ? true : dtRef.substring(5,7) === filtroMes;
-      matchData = matchAno && matchMes;
-    }
-
-    const respNome = usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '';
-    const matchResp = !filtroResp || respNome === filtroResp;
-
-    return (!busca || txt.includes(busca.toLowerCase()))
-        && (!filtroStatus ? true
-            : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
-            : p.status === filtroStatus)
-        && matchData && matchResp;
-  }), [processos, busca, filtroStatus, filtroResp, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios]);
-
-  const totalGeral    = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
-  const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
-
-  const grupos = useMemo(() => {
-    const mapa = {};
-    lista.forEach(p => {
-      const resp = usuarios.find(u => u.id === p.responsavel_id);
-      const key  = resp?.nome_simples || '— Sem responsável';
-      if (!mapa[key]) mapa[key] = { nome: key, avatar: resp ? resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2) : '?', processos: [], total: 0 };
-      mapa[key].processos.push(p);
-      mapa[key].total += parseFloat(p.valor_ato || 0);
-    });
-    return Object.values(mapa).sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [lista, usuarios]);
-
-  // Label período para impressão
-  const labelPeriodo = useMemo(() => {
-    if (modoData === 'periodo') {
-      const fmtDt = d => { if (!d) return ''; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
-      return `Período: ${fmtDt(dtInicio)} a ${fmtDt(dtFim)}`;
-    }
-    const nomeMes = filtroMes === 'todos' ? 'Todos os meses' : MESES[parseInt(filtroMes)-1];
-    return `${nomeMes} / ${filtroAno}`;
-  }, [modoData, dtInicio, dtFim, filtroMes, filtroAno]);
-
-  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus || 'Todos os status';
-
-  const imprimirLista = () => imprimir({
-    titulo: 'Relatório de Processos',
-    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>${filtroResp ? ' · ' + filtroResp : ''}`,
-    grupos: [{ nome: '', isGeral: true, processos: lista }],
-    cartorio, usuarios, andamentos, interessados,
-  });
-
-  const imprimirPorResponsavel = (grupo) => imprimir({
-    titulo: `Processos — ${grupo.nome}`,
-    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>`,
-    grupos: [{ ...grupo, isGeral: true }],
-    cartorio, usuarios, andamentos, interessados,
-  });
-
-  const imprimirTodosResponsaveis = () => imprimir({
-    titulo: 'Processos por Responsável',
-    subtitulo: `${labelPeriodo} · <b>${labelStatus}</b>`,
-    grupos,
-    cartorio, usuarios, andamentos, interessados,
-  });
-
-  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp
-    || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0'));
-
-  const limparFiltros = () => {
-    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp('');
-    setModoData('mes');
-    setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
-    setFiltroAno(String(new Date().getFullYear()));
-    setDtInicio(inicioMes); setDtFim(hojeStr);
-  };
-
-  if (processoAtual) {
+  if (historico.length === 0) {
     return (
-      <div className="fade-in">
-        <button className="btn btn-ghost btn-sm" onClick={() => setSelecionado(null)} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-          ← Voltar à lista
-        </button>
-        <ProcessoDetalhe processo={processoAtual} onClose={() => setSelecionado(null)} inline />
+      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-faint)' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+        <div>Nenhuma alteração de status registrada ainda.</div>
+        <div style={{ fontSize: 12, marginTop: 4 }}>As mudanças de status aparecerão aqui com data e observação.</div>
       </div>
     );
   }
 
   return (
-    <div className="fade-in">
-      <div className="page-header">
-        <div>
-          <div className="page-title">Processos — Detalhe</div>
-          <div className="page-sub">
-            {lista.length} processo(s)
-            {totalGeral > 0 && (
-              <span style={{ marginLeft: 8, fontFamily: 'var(--font-mono)', color: 'var(--color-success)', fontWeight: 600 }}>
-                · R$ {formatBRL(totalGeral)}
-              </span>
+    <div style={{ position: 'relative', paddingLeft: 28 }}>
+      {/* Linha vertical */}
+      <div style={{ position: 'absolute', left: 10, top: 8, bottom: 8, width: 2, background: 'var(--color-border)', borderRadius: 2 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {historico.map((h, i) => {
+          const c = STATUS_CONF_GLOBAL[h.status_novo] || { cor: '#888', icon: '●' };
+          return (
+            <div key={h.id} style={{ position: 'relative', paddingBottom: 20 }}>
+              {/* Bolinha na linha do tempo */}
+              <div style={{ position: 'absolute', left: -22, top: 4, width: 14, height: 14, borderRadius: '50%', background: c.cor, border: '2px solid var(--color-surface)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }} />
+              <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: h.obs ? 6 : 0 }}>
+                  {/* Novo status */}
+                  <span style={{ fontSize: 12, fontWeight: 700, color: c.cor }}>{c.icon} {h.status_novo}</span>
+                  {/* De qual status veio */}
+                  {h.status_anterior && (
+                    <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
+                      ← {h.status_anterior}
+                    </span>
+                  )}
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+                    {/* Data */}
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{formatDate(h.dt_alteracao)}</span>
+                    {/* Usuário */}
+                    {h.usuarios?.nome_simples && (
+                      <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>por {h.usuarios.nome_simples}</span>
+                    )}
+                  </div>
+                </div>
+                {h.obs && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic', borderTop: '1px solid var(--color-border)', paddingTop: 6, marginTop: 4 }}>"{h.obs}"</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function formatBRL(v) {
+  // v vem do banco como número (ex: 143.54) — formata direto sem manipular string
+  const n = parseFloat(v) || 0;
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function parseBRL(s) {
+  // Usuário digita estilo BR (1.234,56) ou US (1234.56) — normaliza ambos
+  const str = String(s || '').trim();
+  // Se tem vírgula, trata como BR: remove pontos de milhar, troca vírgula por ponto
+  if (str.includes(',')) {
+    return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Sem vírgula: número direto (ex: 143.54)
+  return parseFloat(str) || 0;
+}
+
+// ── Seção colapsável ─────────────────────────────────────────
+function Secao({ titulo, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)',
+          padding: '6px 0', cursor: 'pointer', color: 'var(--color-text-muted)',
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
+        }}
+      >
+        <span style={{ transition: 'transform 0.15s', display: 'inline-block', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+        {titulo}
+      </button>
+      {open && <div style={{ paddingTop: 12 }}>{children}</div>}
+    </div>
+  );
+}
+
+// ── Campo readonly / editável ─────────────────────────────────
+function Campo({ label, children, full }) {
+  return (
+    <div className="form-group" style={full ? { gridColumn: '1/-1', marginBottom: 10 } : { marginBottom: 10 }}>
+      <label className="form-label" style={{ fontSize: 10, marginBottom: 3 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+// ── Aba: Ofícios Expedidos ────────────────────────────────────
+function TabOficiosExpedidos({ processoId }) {
+  const { oficios, usuarios } = useApp();
+  const lista = (oficios || []).filter(o => o.processo_id === processoId);
+
+  const statusBadge = (s) => {
+    const conf = {
+      'Enviado':    { bg: '#dbeafe', color: '#1e40af' },
+      'Respondido': { bg: '#dcfce7', color: '#15803d' },
+      'Pendente':   { bg: '#fef9c3', color: '#854d0e' },
+      'Arquivado':  { bg: '#f3f4f6', color: '#6b7280' },
+    };
+    const c = conf[s] || conf['Pendente'];
+    return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: c.bg, color: c.color }}>{s}</span>;
+  };
+
+  if (lista.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-faint)' }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>✉</div>
+        <div>Nenhum ofício expedido vinculado a este processo.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {lista.map(o => {
+        const resp = usuarios.find(u => u.id === o.responsavel_id);
+        return (
+          <div key={o.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', background: 'var(--color-surface-2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 13 }}>
+                    {o.numero || '—'}
+                  </span>
+                  {statusBadge(o.status)}
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{o.assunto}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                  Destinatário: <strong>{o.destinatario}</strong>
+                </div>
+                {resp && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 2 }}>
+                    Responsável: {resp.nome_simples}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  {o.dt_oficio ? new Date(o.dt_oficio + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                </div>
+                {o.mes_ano && <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{o.mes_ano}</div>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Aba: Dados do Processo ────────────────────────────────────
+// ── Modal Adicionar Interessado (busca + cadastro) ─────────────
+function ModalAdicionarInteressado({ interessados, onAdicionar, onClose }) {
+  const [busca,    setBusca]    = useState('');
+  const [cadastro, setCadastro] = useState(false);
+  const [form,     setForm]     = useState({ nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '' });
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const opcoes = busca.length > 0
+    ? interessados.filter(i =>
+        i.ativo !== false &&
+        (i.nome.toLowerCase().includes(busca.toLowerCase()) || (i.cpf || '').includes(busca))
+      ).slice(0, 8)
+    : [];
+
+  const abrirCadastro = (nome) => { setForm(p => ({ ...p, nome })); setCadastro(true); };
+
+  if (cadastro) {
+    return (
+      <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal">
+          <div className="modal-header">
+            <span className="modal-title">Cadastrar Novo Interessado</span>
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
+          <div className="modal-body">
+            <div className="form-grid form-grid-2">
+              <div className="form-group form-full"><label className="form-label">Nome *</label><input className="form-input" value={form.nome} onChange={e => set('nome', e.target.value)} autoFocus /></div>
+              <div className="form-group"><label className="form-label">CPF/CNPJ</label><input className="form-input" value={form.cpf} onChange={e => set('cpf', e.target.value)} placeholder="000.000.000-00" /></div>
+              <div className="form-group"><label className="form-label">RG</label><input className="form-input" value={form.rg} onChange={e => set('rg', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">Telefone</label><input className="form-input" value={form.telefone} onChange={e => set('telefone', e.target.value)} /></div>
+              <div className="form-group"><label className="form-label">E-mail</label><input className="form-input" type="email" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+              <div className="form-group form-full"><label className="form-label">Endereço</label><input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} /></div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-ghost btn-sm" onClick={() => setCadastro(false)}>← Voltar</button>
+            <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" onClick={() => { if (!form.nome.trim()) { alert('Nome obrigatório'); return; } onAdicionar(form, true); }}>Salvar e Adicionar</button>
+          </div>
+        </div>
+      </div></Portal>
+    );
+  }
+
+  return (
+    <Portal><div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">Adicionar Interessado</span>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">Buscar pelo nome ou CPF</label>
+            <input className="form-input" value={busca} onChange={e => setBusca(e.target.value)}
+              autoFocus placeholder="Digite para buscar..." />
+          </div>
+          <div style={{ marginTop: 8, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', minHeight: 48 }}>
+            {busca.length === 0 && (
+              <div style={{ padding: '14px 12px', fontSize: 12, color: 'var(--color-text-faint)', textAlign: 'center' }}>
+                Digite um nome para buscar
+              </div>
+            )}
+            {busca.length > 0 && opcoes.length === 0 && (
+              <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--color-text-faint)', textAlign: 'center' }}>
+                Nenhum resultado para "{busca}"
+              </div>
+            )}
+            {opcoes.map(i => (
+              <button key={i.id} onClick={() => onAdicionar(i, false)}
+                style={{ display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer', color: 'var(--color-text)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text)' }}>{i.nome}</span>
+                {i.cpf && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{i.cpf}</span>}
+              </button>
+            ))}
+            {busca.length > 0 && (
+              <button onClick={() => abrirCadastro(busca)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'none', border: 'none', borderTop: opcoes.length > 0 ? '1px solid var(--color-border)' : 'none', cursor: 'pointer', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                + Cadastrar novo: "{busca}"
+              </button>
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="btn btn-secondary btn-sm" disabled={lista.length === 0}
-            onClick={modoVis === 'lista' ? imprimirLista : imprimirTodosResponsaveis}>
-            🖨 {modoVis === 'lista' ? 'Imprimir Lista' : 'Imprimir Todos'}
-          </button>
-          <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-            {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
-              <button key={id} onClick={() => setModoVis(id)} style={{
-                padding: '6px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: modoVis === id ? 700 : 400,
-                background: modoVis === id ? 'var(--color-surface-3)' : 'transparent',
-                color: modoVis === id ? 'var(--color-text)' : 'var(--color-text-muted)',
-                borderRight: id === 'lista' ? '1px solid var(--color-border)' : 'none',
-              }}>{label}</button>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div></Portal>
+  );
+}
+
+function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, onCadastrarNovoInt }) {
+  const categorias  = [...new Set(servicos.map(s => s.categoria))];
+  const especies    = servicos.filter(s => !proc.categoria || s.categoria === proc.categoria).map(s => s.subcategoria);
+  const partes      = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+
+  const inp = (v, k, opts = {}) => editando
+    ? <input className="form-input" value={v || ''} onChange={e => onChange(k, e.target.value)} style={{ fontSize: 12, ...opts.style }} placeholder={opts.ph || ''} />
+    : <div style={{ fontSize: 13, padding: '6px 0', color: v ? 'var(--color-text)' : 'var(--color-text-faint)', minHeight: 28 }}>{v || '—'}</div>;
+
+  const sel = (v, k, options, label = '—') => editando
+    ? <select className="form-select" value={v || ''} onChange={e => onChange(k, e.target.value)} style={{ fontSize: 12 }}>
+        <option value="">{label}</option>
+        {options.map(o => <option key={o}>{o}</option>)}
+      </select>
+    : <div style={{ fontSize: 13, padding: '6px 0' }}>{v || '—'}</div>;
+
+  const setVinculo = (idx, vl) => {
+    const arr = [...partes]; arr[idx] = { ...arr[idx], vinculo: vl };
+    onChange('partes', JSON.stringify(arr));
+  };
+  const removerParte = (idx) => {
+    const arr = partes.filter((_, i) => i !== idx);
+    onChange('partes', JSON.stringify(arr));
+  };
+
+  return (
+    <div>
+      <Secao titulo="Identificação">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+          <Campo label="Nº Interno *">{inp(proc.numero_interno, 'numero_interno')}</Campo>
+          <Campo label="Dt. Cadastro">{inp(proc.dt_abertura, 'dt_abertura', { style: { }, ph: '' })}</Campo>
+          <Campo label="Responsável">
+            {editando
+              ? <select className="form-select" value={proc.responsavel_id || ''} onChange={e => onChange('responsavel_id', e.target.value || null)} style={{ fontSize: 12 }}>
+                  <option value="">—</option>
+                  {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome_simples}</option>)}
+                </select>
+              : <div style={{ fontSize: 13, padding: '6px 0' }}>{usuarios.find(u => u.id === proc.responsavel_id)?.nome_simples || '—'}</div>
+            }
+          </Campo>
+          <Campo label="Status">
+            {editando
+              ? <select className="form-select" value={proc.status || ''} onChange={e => {
+                  const s = e.target.value;
+                  onChange('status', s);
+                  if (s === 'Concluído' && !proc.dt_conclusao) onChange('dt_conclusao', HOJE());
+                  if (s === 'Encerrado' && !proc.dt_encerramento) onChange('dt_encerramento', HOJE());
+                }} style={{ fontSize: 12 }}>
+                  {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
+                </select>
+              : <div style={{ fontSize: 13, padding: '6px 0', color: STATUS_CONF_GLOBAL[proc.status]?.cor || 'var(--color-text)', fontWeight: 600 }}>
+                  {STATUS_CONF_GLOBAL[proc.status]?.icon} {proc.status || '—'}
+                </div>
+            }
+          </Campo>
+          {(editando || proc.dt_conclusao) && proc.status === 'Concluído' && (
+            <Campo label="Dt. Conclusão">
+              {editando
+                ? <input className="form-input" type="date" value={proc.dt_conclusao || ''} onChange={e => onChange('dt_conclusao', e.target.value)} style={{ fontSize: 12 }} />
+                : <div style={{ fontSize: 13, padding: '6px 0', color: 'var(--color-success)', fontWeight: 600 }}>{formatDate(proc.dt_conclusao)}</div>
+              }
+            </Campo>
+          )}
+          {(editando || proc.dt_encerramento) && proc.status === 'Encerrado' && (
+            <Campo label="Dt. Encerramento">
+              {editando
+                ? <input className="form-input" type="date" value={proc.dt_encerramento || ''} onChange={e => onChange('dt_encerramento', e.target.value)} style={{ fontSize: 12 }} />
+                : <div style={{ fontSize: 13, padding: '6px 0', color: '#64748b', fontWeight: 600 }}>{formatDate(proc.dt_encerramento)}</div>
+              }
+            </Campo>
+          )}
+          <Campo label="Categoria">
+            {editando
+              ? <select className="form-select" value={proc.categoria || ''} onChange={e => { onChange('categoria', e.target.value); onChange('especie', ''); }} style={{ fontSize: 12 }}>
+                  <option value="">—</option>{categorias.map(c => <option key={c}>{c}</option>)}
+                </select>
+              : <div style={{ fontSize: 13, padding: '6px 0' }}>{proc.categoria || '—'}</div>
+            }
+          </Campo>
+          <Campo label="Serviço / Espécie">
+            {editando
+              ? <select className="form-select" value={proc.especie || ''} onChange={e => onChange('especie', e.target.value)} style={{ fontSize: 12 }}>
+                  <option value="">—</option>
+                  {/* Garante que o valor atual apareça mesmo se não estiver na lista filtrada */}
+                  {proc.especie && !especies.includes(proc.especie) && <option value={proc.especie}>{proc.especie}</option>}
+                  {especies.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              : <div style={{ fontSize: 13, padding: '6px 0' }}>{proc.especie || '—'}</div>
+            }
+          </Campo>
+          <Campo label="Valor do Ato">
+            {editando
+              ? <input className="form-input" defaultValue={formatBRL(proc.valor_ato)} onBlur={e => onChange('valor_ato', parseBRL(e.target.value))} style={{ fontSize: 12, textAlign: 'right' }} />
+              : <div style={{ fontSize: 13, padding: '6px 0', fontFamily: 'var(--font-mono)' }}>{proc.valor_ato > 0 ? `R$ ${formatBRL(proc.valor_ato)}` : '—'}</div>
+            }
+          </Campo>
+          <Campo label="Quantidade">
+            {editando
+              ? <input className="form-input" type="number" min="1" value={proc.quantidade || 1} onChange={e => onChange('quantidade', parseInt(e.target.value)||1)} style={{ fontSize: 12 }} />
+              : <div style={{ fontSize: 13, padding: '6px 0', fontWeight: (proc.quantidade||1) > 1 ? 700 : 400, color: (proc.quantidade||1) > 1 ? 'var(--color-accent)' : 'var(--color-text)' }}>
+                  {proc.quantidade || 1}{(proc.quantidade||1) > 1 && <span style={{ fontSize:11, color:'var(--color-text-muted)', marginLeft:5 }}>serviços neste lançamento</span>}
+                </div>
+            }
+          </Campo>
+          <Campo label="Nº Judicial">{inp(proc.numero_judicial, 'numero_judicial')}</Campo>
+        </div>
+      </Secao>
+
+      <Secao titulo="Partes do Processo">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {partes.length === 0 && <div style={{ fontSize: 12, color: 'var(--color-text-faint)', padding: '4px 0' }}>Nenhuma parte vinculada.</div>}
+          {partes.map((p, idx) => {
+            const int = interessados.find(i => i.id === p.id);
+            return (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                {editando
+                  ? <select value={p.vinculo || 'Outorgante'} onChange={e => setVinculo(idx, e.target.value)}
+                      style={{ fontSize: 11, background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 6px', color: 'var(--color-text-muted)', cursor: 'pointer', minWidth: 110 }}>
+                      {TIPOS_VINCULO.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  : <span style={{ fontSize: 11, color: 'var(--color-text-muted)', minWidth: 110 }}>{p.vinculo || 'Outorgante'}</span>
+                }
+                <span style={{ color: 'var(--color-border-light)' }}>·</span>
+                <strong style={{ flex: 1, fontSize: 13 }}>{int?.nome || p.nome}</strong>
+                {int?.cpf && <span style={{ color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{int.cpf}</span>}
+                {editando && (
+                  <button onClick={() => removerParte(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 13, padding: '0 4px' }}>✕</button>
+                )}
+              </div>
+            );
+          })}
+          {editando && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: 4, alignSelf: 'flex-start' }}
+              onClick={() => onCadastrarNovoInt('')}
+            >+ Adicionar Interessado</button>
+          )}
+        </div>
+      </Secao>
+
+      <Secao titulo="Escritura / Procuração / Conclusão" defaultOpen={!!(proc.livro_ato || proc.esc_natureza || proc.dt_conclusao || proc.obs)}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <Campo label="Livro / Ato">{inp(proc.livro_ato, 'livro_ato')}</Campo>
+          <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
+          <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+          <Campo label="Descrição do Ato / Dados do Imóvel" full>
+            {editando
+              ? <textarea className="form-input" value={proc.esc_descricao || ''} onChange={e => onChange('esc_descricao', e.target.value)} rows={5} style={{ resize: 'vertical', fontSize: 12 }} placeholder="Ex: Imóvel urbano, matrícula nº 15000, RGI de Paranatinga-MT. Cartório: 1º Ofício. Descrição: lote nº 12, quadra 5..." />
+              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.esc_descricao ? 'var(--color-text)' : 'var(--color-text-faint)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{proc.esc_descricao || '—'}</div>
+            }
+          </Campo>
+          <Campo label="Observações do Processo" full>
+            {editando
+              ? <textarea className="form-input" value={proc.obs || ''} onChange={e => onChange('obs', e.target.value)} rows={2} style={{ resize: 'vertical', fontSize: 12 }} />
+              : <div style={{ fontSize: 13, padding: '6px 0', color: proc.obs ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{proc.obs || '—'}</div>
+            }
+          </Campo>
+        </div>
+      </Secao>
+    </div>
+  );
+}
+
+// ── Aba: Andamentos ───────────────────────────────────────────
+function TabAndamentos({ processoId, usuarios }) {
+  const { andamentos, addAndamento, editAndamento, deleteAndamento, usuario, addToast } = useApp();
+  const lista = andamentos.filter(a => a.processo_id === processoId).sort((a, b) => b.dt_andamento.localeCompare(a.dt_andamento));
+
+  const EMPTY_AND = { processo_id: processoId, dt_andamento: HOJE(), tipo: '', descricao: '', responsavel: usuario?.nome_simples || '', vencimento: '', concluido: false };
+  const [form, setForm]   = useState(null); // null = fechado, {} = novo, obj = editando
+  const [editId, setEditId] = useState(null);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const abrirNovo = () => { setForm({ ...EMPTY_AND }); setEditId(null); };
+  const abrirEdit = (a) => { setForm({ ...a }); setEditId(a.id); };
+  const fechar    = () => { setForm(null); setEditId(null); };
+
+  const salvar = async () => {
+    if (!form.descricao.trim()) { addToast('Descrição obrigatória.', 'error'); return; }
+    if (editId) { await editAndamento(editId, form); addToast('Andamento atualizado!', 'success'); }
+    else { await addAndamento(form); addToast('Andamento registrado!', 'success'); }
+    fechar();
+  };
+
+  const concluir = async (a) => {
+    await editAndamento(a.id, { concluido: !a.concluido });
+    addToast(a.concluido ? 'Reaberto.' : 'Concluído!', 'success');
+  };
+
+  const excluir = async (a) => {
+    if (window.confirm('Remover este andamento?')) {
+      await deleteAndamento(a.id);
+      addToast('Removido.', 'info');
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{lista.length} andamento(s)</span>
+        <button className="btn btn-primary btn-sm" onClick={abrirNovo}>+ Novo Andamento</button>
+      </div>
+
+      {/* Formulário inline */}
+      {form && (
+        <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+            {editId ? 'Editar Andamento' : 'Novo Andamento'}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 160px 1fr 130px', gap: 10, marginBottom: 10 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Data *</label>
+              <input className="form-input" type="date" value={form.dt_andamento} onChange={e => set('dt_andamento', e.target.value)} style={{ fontSize: 12 }} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Tipo</label>
+              <select className="form-select" value={form.tipo} onChange={e => set('tipo', e.target.value)} style={{ fontSize: 12 }}>
+                <option value="">—</option>
+                {TIPOS_AND.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Descrição *</label>
+              <input className="form-input" value={form.descricao} onChange={e => set('descricao', e.target.value)} style={{ fontSize: 12 }} placeholder="Descreva o andamento" />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Vencimento</label>
+              <input className="form-input" type="date" value={form.vencimento || ''} onChange={e => set('vencimento', e.target.value)} style={{ fontSize: 12 }} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr auto', gap: 10, alignItems: 'end' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Responsável</label>
+              <select className="form-select" value={form.responsavel || ''} onChange={e => set('responsavel', e.target.value)} style={{ fontSize: 12 }}>
+                <option value="">—</option>
+                {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.nome_simples}>{u.nome_simples}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10 }}>Obs. / Detalhe</label>
+              <input className="form-input" value={form.obs_and || ''} onChange={e => set('obs_and', e.target.value)} style={{ fontSize: 12 }} placeholder="Opcional" />
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" onClick={fechar}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={salvar}>✓ Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lista */}
+      {lista.length === 0 && !form && (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
+          Nenhum andamento registrado para este processo.
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {lista.map(a => (
+          <div key={a.id} style={{ display: 'flex', gap: 12, padding: '10px 14px', background: a.concluido ? 'transparent' : 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', opacity: a.concluido ? 0.6 : 1, alignItems: 'flex-start' }}>
+            <div style={{ minWidth: 80, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-muted)', paddingTop: 2 }}>{formatDate(a.dt_andamento)}</div>
+            {a.tipo && <span className="badge badge-neutral" style={{ flexShrink: 0, marginTop: 1 }}>{a.tipo}</span>}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: a.concluido ? 400 : 500 }}>{a.descricao}</div>
+              {a.obs_and && <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 2 }}>{a.obs_and}</div>}
+              <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11, color: 'var(--color-text-faint)' }}>
+                {a.responsavel && <span>👤 {a.responsavel}</span>}
+                {a.vencimento && (
+                  <span style={{ color: !a.concluido && a.vencimento < HOJE() ? 'var(--color-danger)' : 'inherit' }}>
+                    ⏱ {formatDate(a.vencimento)}{!a.concluido && a.vencimento < HOJE() ? ' — VENCIDO' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+              <button className="btn-icon btn-sm" title={a.concluido ? 'Reabrir' : 'Concluir'} onClick={() => concluir(a)} style={{ color: a.concluido ? 'var(--color-text-faint)' : 'var(--color-success)' }}>{a.concluido ? '↩' : '✓'}</button>
+              <button className="btn-icon btn-sm" title="Editar" onClick={() => abrirEdit(a)}>✎</button>
+              <button className="btn-icon btn-sm" title="Excluir" onClick={() => excluir(a)} style={{ color: 'var(--color-danger)' }}>✕</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Aba: Pedido de Certidões ──────────────────────────────────
+function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  // Busca o primeiro interessado do processo na tabela usuarios pelo nome
+  const primeiraNome = partes[0]?.nome || '';
+  const usr = usuarios.find(u => u.nome_completo?.toLowerCase().trim() === primeiraNome.toLowerCase().trim())
+           || usuarios.find(u => u.nome_simples?.toLowerCase().trim() === primeiraNome.toLowerCase().trim());
+  const req = usr
+    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: usr.cep||'', email: usr.email||'', telefone: usr.celular||'' }
+    : { nome: primeiraNome, cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
+
+  const hoje         = new Date().toLocaleDateString('pt-BR');
+  const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
+  const nomeCartorio = cartorio?.nome || '';
+  const oficial      = 'Oficial Registrador';
+
+  const linhasCert = certidoes.map(c => {
+    const matriculas = (c.descricao || c.obs || '').split('\n').filter(l => l.trim());
+    const totalLinhas = Math.max(1, matriculas.length);
+    if (totalLinhas <= 1) {
+      return `<tr>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+      </tr>`;
+    }
+    // Múltiplas matrículas: primeira linha com rowspan para data e tipo
+    const primeiraLinha = `<tr>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${c.tipo||''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]}</td>
+    </tr>`;
+    const demaisLinhas = matriculas.slice(1).map(m => `<tr>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td>
+    </tr>`).join('');
+    return primeiraLinha + demaisLinhas;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A4 portrait; margin: 16mm 18mm 16mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
+  .cab { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+  .cab h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 3px; }
+  .cab-sep { border: none; border-top: 1px solid #000; width: 55%; margin: 5px auto; }
+  .cab h3 { font-size: 12px; font-weight: normal; }
+  .titulo-req { background: #ddd; text-align: center; font-size: 15px; font-weight: bold; padding: 6px; margin-bottom: 10px; }
+  .proc-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .proc-box { border: 1px solid #888; padding: 3px 14px 3px 10px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .proc-box strong { font-size: 16px; }
+  /* Campos */
+  .campo-bloco { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .campo-bloco td { border: 1px solid #999; padding: 3px 8px; vertical-align: top; }
+  .flabel { font-size: 9px; color: #555; display: block; margin-bottom: 1px; }
+  .fval   { font-size: 12px; min-height: 17px; display: block; }
+  /* Tabela certidões */
+  .tab-cert { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .tab-cert th { border: 1px solid #aaa; padding: 4px 8px; background: #eee; font-size: 11px; text-align: left; }
+  /* Assinatura */
+  .assin-area { margin-top: 36px; text-align: center; }
+  .assin-linha { display: inline-block; border-top: 1px solid #000; padding-top: 4px; min-width: 240px; text-align: center; font-size: 12px; }
+  /* LGPD */
+  .lgpd { border: 1px solid #ccc; padding: 9px 12px; margin-top: 22px; font-size: 10px; line-height: 1.55; text-align: justify; }
+  .lgpd p { margin-bottom: 6px; }
+  .lgpd p:last-child { margin-bottom: 0; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head><body>
+
+<div class="cab">
+  <h2>${nomeCartorio}</h2>
+  <hr class="cab-sep">
+  <h3>${oficial}</h3>
+</div>
+
+<div class="titulo-req">Requerimento - Pedido de Certidão</div>
+
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno||''}</strong></div>
+</div>
+
+<!-- Requerente -->
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Requerente</span><span class="fval">${req.nome||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:50%;"><span class="flabel">CPF</span><span class="fval">${req.cpf||''}</span></td>
+  <td style="width:50%;"><span class="flabel">Registro Geral</span><span class="fval">${req.rg||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Endereço</span><span class="fval">${req.endereco||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Cidade</span><span class="fval">${req.cidade||cidadeData}</span></td>
+  <td style="width:40%;"><span class="flabel">CEP</span><span class="fval">${req.cep||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Email</span><span class="fval">${req.email||''}</span></td>
+  <td style="width:40%;"><span class="flabel">Celular</span><span class="fval">${req.telefone||''}</span></td>
+</tr></table>
+
+<!-- Certidões -->
+<table class="tab-cert">
+  <thead><tr>
+    <th style="width:90px;">Dt Pedido</th>
+    <th style="width:170px;">Tipo Certidão</th>
+    <th>Detalhes do Pedido - Matrícula</th>
+  </tr></thead>
+  <tbody>${linhasCert}</tbody>
+</table>
+
+<div style="font-size:12px;margin-top:16px;">${cidadeData}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
+
+<div class="assin-area">
+  <div class="assin-linha">
+    <div>${req.nome||''}</div>
+    <div style="font-size:10px;color:#555;">Requerente</div>
+  </div>
+</div>
+
+<div class="lgpd">
+  <p>Estou ciente de que os dados são tratados de acordo com o regime jurídico da publicidade notarial e registral, bem como nos processos judiciais ou administrativos, atos notariais e registrais ou cidadania, consoante os §§ 4º e 5º, artigo 233, da Lei Federal nº13.709/2018 – LGPD, e que os dados coletados têm finalidade para efetuar qualificação notarial e/ou registral, cadastramento no sistema interno, publicações de editais onde há previsão legal e compartilhamento com Centrais Nacionais, Conselho Nacional de Justiça e a Central Eletrônica de Informações e Integração (CEI-MT).</p>
+  <p>Art. 31 Para a expedição de certidão ou Informação restrita ao que constar nos Indicadores e Índices pessoais deverá ser exigida a identificação do requerente, por escrito, bem como a finalidade da solicitação, para fins de anotação da solicitação em prontuário, mantido em pasta física ou digital, que viabilizará o exercício da autodeterminação informativa do titular do dado pessoal, não se responsabilizando o delegatário pelo exame desta finalidade, salvo na hipótese de manifesta ilicitude penal, caso em que deverá negar o pedido.</p>
+  <p>Art. 23. O tratamento de dados pessoais pelas pessoas jurídicas de direito público referidas no parágrafo único do art. 1º da Lei nº 12.527, de 18 de novembro de 2011 (Lei de Acesso à Informação), deverá ser realizado para o atendimento de sua finalidade pública, na persecução do interesse público, com o objetivo de executar as competências legais ou cumprir as atribuições legais do serviço público, desde que: § 4º Os serviços notariais e de registro exercidos em caráter privado, por delegação do Poder Público, terão o mesmo tratamento dispensado às pessoas jurídicas referidas no caput deste artigo, nos termos desta Lei. § 5º Os órgãos notariais e de registro devem fornecer acesso aos dados por meio eletrônico para a administração pública, tendo em vista as finalidades de que trata o caput deste artigo.</p>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=1100');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+
+function gerarArquivoAtos(proc, interessados, cartorio) {
+  const partes      = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const nomeSimples = cartorio?.nome_simples || cartorio?.nome || '';
+  const endereco    = cartorio?.endereco || '';
+  const cidade      = cartorio?.cidade   || '';
+  const telefone    = cartorio?.telefone || '';
+  const email       = cartorio?.email    || '';
+  const logo        = cartorio?.logo     || '';
+  const dtConc      = proc.dt_conclusao
+    ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+
+  const linhasPartes = partes.map(p => {
+    const int     = interessados.find(i => String(i.id) === String(p.id));
+    const nome    = int?.nome || p.nome || '';
+    const vinculo = p.vinculo || 'Parte';
+    return `<tr>
+      <td style="width:130px;padding:5px 10px;border:1px solid #aaa;background:#f0f0f0;font-size:12px;">${vinculo}</td>
+      <td style="padding:5px 10px;border:1px solid #aaa;font-size:12px;">${nome}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A4 portrait; margin: 20mm 20mm 20mm 20mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; }
+
+  /* === CABEÇALHO === */
+  .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+  .logo-box { width: 88px; height: 68px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-txt { font-size: 9px; color: #aaa; }
+  .cab-info { flex: 1; text-align: center; }
+  .cab-nome { font-size: 17px; font-weight: bold; line-height: 1.2; margin-bottom: 4px; }
+  .cab-sub  { font-size: 11px; color: #222; line-height: 1.6; }
+
+  /* === FAIXA: 3cm abaixo do cabeçalho === */
+  .titulo { margin-top: 1.5cm; background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 6px 0; }
+  .sep { border: none; border-top: 1px solid #888; margin: 3px 0; }
+
+  /* === Nº INTERNO: 2.5cm abaixo da faixa === */
+  .proc-row { margin-top: 1.25cm; display: flex; justify-content: flex-end; }
+  .proc-box { border: 1px solid #888; padding: 4px 16px 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 10px; }
+  .proc-box strong { font-size: 18px; font-weight: bold; }
+
+  /* === ESPÉCIE: 3cm abaixo do Nº interno === */
+  .bloco-especie { margin-top: 1.5cm; }
+  .label { font-size: 10px; color: #555; margin-bottom: 3px; }
+  .caixa { border: 1px solid #888; padding: 5px 10px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; }
+
+  /* === INTERESSADOS: 2.5cm abaixo da espécie === */
+  .bloco-partes { margin-top: 1.25cm; }
+  .tab-partes { width: 100%; border-collapse: collapse; }
+
+  /* === DESCRIÇÃO: 3cm abaixo dos interessados === */
+  .bloco-desc { margin-top: 1.5cm; }
+  .desc-box { border: 1px solid #888; padding: 7px 10px; font-size: 12px; min-height: 48px; width: 100%; }
+
+  /* === QUADRO ATO: 3.5cm abaixo da descrição === */
+  .bloco-ato { margin-top: 1.75cm; display: flex; justify-content: flex-end; }
+  .livro-tab { border-collapse: collapse; }
+  .livro-tab td { border: 1px solid #888; padding: 5px 14px; font-size: 12px; }
+  .livro-tab .lbl { background: #f0f0f0; width: 80px; }
+  .livro-tab .val { font-weight: bold; min-width: 110px; text-align: right; }
+
+  /* === RODAPÉ === */
+  .rodape { clear: both; border-top: 1px solid #888; margin-top: 40px; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head><body>
+
+<div class="cab">
+  <div class="logo-box">
+    ${logo ? `<img src="${logo}" alt="Logo">` : '<span class="logo-txt">Logo</span>'}
+  </div>
+  <div class="cab-info">
+    <div class="cab-nome">${nomeSimples}</div>
+    <div class="cab-sub">
+      ${endereco}<br>
+      ${[telefone, email].filter(Boolean).join(' - ')}<br>
+      ${cidade}
+    </div>
+  </div>
+</div>
+
+<div class="titulo">Controle de Acervo Extrajudicial</div>
+<hr class="sep"><hr class="sep" style="margin-top:2px;">
+
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
+</div>
+
+<div class="bloco-especie">
+  <div class="label">Especie</div>
+  <div class="caixa">${proc.especie || ''}</div>
+</div>
+
+<div class="bloco-partes">
+  <table class="tab-partes">${linhasPartes}</table>
+</div>
+
+<div class="bloco-desc">
+  <div class="label">Descrição Ato</div>
+  <div class="desc-box">${proc.esc_descricao || proc.obs || ''}</div>
+</div>
+
+<div class="bloco-ato">
+  <table class="livro-tab">
+    <tr><td class="lbl">Livro Ato</td><td class="val">${proc.livro_ato   || ''}</td></tr>
+    <tr><td class="lbl">Folhas Ato</td><td class="val">${proc.folhas_ato || ''}</td></tr>
+    <tr><td class="lbl">Data</td><td class="val">${dtConc}</td></tr>
+  </table>
+</div>
+
+<div class="rodape"></div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=840,height=1150');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+
+function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso }) {
+  const [certLocal, setCertLocal] = useState(
+    () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
+  );
+
+  // Sincroniza quando proc.certidoes muda externamente
+  useEffect(() => {
+    try { setCertLocal(JSON.parse(proc.certidoes || '[]')); } catch { setCertLocal([]); }
+  }, [proc.certidoes]);
+
+  const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
+
+  const salvarCertidoes = (nova) => {
+    setCertLocal(nova);
+    const json = JSON.stringify(nova);
+    onChange('certidoes', json);
+    editProcesso(processoId, { ...proc, certidoes: json });
+  };
+
+  const add    = () => salvarCertidoes([...certLocal, { ...EMPTY_CERT }]);
+  const remove = (idx) => salvarCertidoes(certLocal.filter((_, i) => i !== idx));
+
+  // update local sem salvar ainda (evita requisição por tecla)
+  const updateLocal = (idx, k, v) => {
+    setCertLocal(prev => prev.map((c, i) => i === idx ? { ...c, [k]: v } : c));
+  };
+  // flush: salva no banco ao sair do campo
+  const flush = () => {
+    const json = JSON.stringify(certLocal);
+    onChange('certidoes', json);
+    editProcesso(processoId, { ...proc, certidoes: json });
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certLocal.length} pedido(s) de certidão</span>
+        <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
+      </div>
+
+      {certLocal.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
+          Clique em "+ Adicionar" para registrar um pedido.
+        </div>
+      )}
+
+      {certLocal.length > 0 && (
+        <div>
+          {/* Cabeçalho */}
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {certLocal.map((c, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
+                <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
+                <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
+                  <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
+                </select>
+                <textarea
+                  className="form-input"
+                  value={c.descricao || ''}
+                  onChange={e => updateLocal(idx, 'descricao', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + String.fromCharCode(10)); } }}
+                  rows={Math.max(1, (c.descricao || '').split(String.fromCharCode(10)).length)}
+                  style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
+                  placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
+                  onBlur={flush}
+                />
+                <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
+                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio)}>
+                  🖨 Imprimir
+                </button>
+                <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
+              </div>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Filtros */}
-      <div className="filter-bar" style={{ flexWrap: 'wrap' }}>
-        <div className="search-bar" style={{ flex: '1 1 200px' }}>
-          <span className="search-bar-icon">⌕</span>
-          <input placeholder="Buscar por nº, serviço, categoria, interessado..." value={busca} onChange={e => setBusca(e.target.value)} />
-        </div>
-
-        <select className="form-select" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
-          <option value="">Todos os status</option>
-          <option value="pendentes">⏳ Pendentes (todos)</option>
-          <option value="Em andamento">Em andamento</option>
-          <option value="Devolvido">Devolvido</option>
-          <option value="Em reanálise">Em reanálise</option>
-          <option value="Concluído">Concluído</option>
-          <option value="Encerrado">Encerrado</option>
-        </select>
-
-        <select className="form-select" value={filtroResp} onChange={e => setFiltroResp(e.target.value)}>
-          <option value="">Todos os responsáveis</option>
-          {responsaveisDisp.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
-
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className={`btn btn-sm ${modoData === 'mes' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setModoData('mes')}>📅 Mês</button>
-          <button className={`btn btn-sm ${modoData === 'periodo' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setModoData('periodo')}>📆 Período</button>
-        </div>
-
-        {modoData === 'mes' && (<>
-          <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
-            <option value="todos">Todos os meses</option>
-            {MESES.map((m, i) => <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>)}
-          </select>
-          <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
-            {anosDisp.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </>)}
-
-        {modoData === 'periodo' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="date" className="form-input" style={{ fontSize: 12, padding: '6px 8px' }} value={dtInicio} onChange={e => setDtInicio(e.target.value)} />
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>até</span>
-            <input type="date" className="form-input" style={{ fontSize: 12, padding: '6px 8px' }} value={dtFim} onChange={e => setDtFim(e.target.value)} />
-          </div>
-        )}
-
-        {temFiltroAtivo && (
-          <button className="btn btn-ghost btn-sm" onClick={limparFiltros}>↺ Limpar</button>
-        )}
-      </div>
-
-      {/* ── Modo Lista ── */}
-      {modoVis === 'lista' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {lista.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Exibindo {listaLimitada.length} de {lista.length}</span>
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas:</span>
-                {[50, 70, 100, 'todos'].map(v => (
-                  <button key={v} className={`btn btn-sm ${limite === v ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => setLimite(v)} style={{ minWidth: 36, fontSize: 11 }}>
-                    {v === 'todos' ? 'Todos' : v}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <TabelaProcessos lista={listaLimitada} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
-        </div>
-      )}
-
-      {/* ── Modo Por Responsável ── */}
-      {modoVis === 'responsavel' && (
-        grupos.length === 0
-          ? <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <TabelaProcessos lista={[]} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
-            </div>
-          : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {grupos.map(g => (
-                <div key={g.nome} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 16px', background: 'var(--color-surface-2)',
-                    borderBottom: '1px solid var(--color-border)' }}>
-                    <div className="avatar avatar-sm">{g.avatar}</div>
-                    <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{g.nome}</span>
-                    <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length} processo{g.processos.length !== 1 ? 's' : ''}</span>
-                    {g.total > 0 && (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-success)', marginLeft: 8 }}>
-                        R$ {formatBRL(g.total)}
-                      </span>
-                    )}
-                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontSize: 11 }}
-                      onClick={e => { e.stopPropagation(); imprimirPorResponsavel(g); }}>
-                      🖨 Imprimir
-                    </button>
-                  </div>
-                  <TabelaProcessos lista={g.processos} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
-                </div>
-              ))}
-            </div>
       )}
     </div>
+  );
+}
+
+// ── Modal Principal ───────────────────────────────────────────
+export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
+  const [aba, setAba]                   = useState('dados');
+  const [editando, setEditando]         = useState(false);
+  const [form, setForm]                 = useState({ ...processo });
+  const [salvando, setSalvando]         = useState(false);
+  const [modalStatus, setModalStatus]   = useState(false);
+  const [modalNovoInt, setModalNovoInt] = useState(false);
+
+  // Sincroniza se o processo mudar externamente
+  useEffect(() => { if (!editando) setForm({ ...processo }); }, [processo]);
+
+  const onChange = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const adicionarInteressadoAoForm = (interessado) => {
+    const partesAtuais = (() => { try { return JSON.parse(form.partes || '[]'); } catch { return []; } })();
+    const jaExiste = partesAtuais.find(p => p.id === interessado.id);
+    if (jaExiste) return;
+    onChange('partes', JSON.stringify([...partesAtuais, { id: interessado.id, nome: interessado.nome, cpf: interessado.cpf || '', vinculo: 'Outorgante' }]));
+  };
+
+  const handleAdicionarInteressado = async (dados, isNovo) => {
+    if (isNovo) {
+      const novo = await addInteressado(dados);
+      if (novo) adicionarInteressadoAoForm(novo);
+    } else {
+      adicionarInteressadoAoForm(dados);
+    }
+    setModalNovoInt(false);
+  };
+
+  const salvar = async () => {
+    if (!form.numero_interno?.trim()) { addToast('Nº Interno obrigatório.', 'error'); return; }
+    setSalvando(true);
+    await editProcesso(processo.id, form);
+    setSalvando(false);
+    setEditando(false);
+  };
+
+  const descartar = () => { setForm({ ...processo }); setEditando(false); };
+
+  const handleAlterarStatus = async (novoStatus, obs) => {
+    await alterarStatusProcesso(processo.id, processo.status, novoStatus, obs);
+  };
+
+  const conf = STATUS_CONF_GLOBAL[form.status] || { cor: 'var(--color-text-faint)', sigla: '??', icon: '?' };
+  const isPendente = STATUS_PENDENTES.includes(form.status);
+
+  const andsDoProcesso = useApp().andamentos.filter(a => a.processo_id === processo.id);
+  const andsPendentes  = andsDoProcesso.filter(a => !a.concluido).length;
+  const qtdHistorico   = (processoHistorico || []).filter(h => h.processo_id === processo.id).length;
+
+  const inner = (
+    <div style={inline ? { display: 'flex', flexDirection: 'column' } : { width: 'min(900px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }} className={inline ? '' : 'modal modal-lg'}>
+
+          {/* Header */}
+          <div className="modal-header" style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: conf.cor + '22', border: `2px solid ${conf.cor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: conf.cor }}>
+                {conf.sigla}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-mono)' }}>Processo Nº {form.numero_interno}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 1 }}>
+                  {form.especie || '—'} · {form.categoria || '—'} · Cadastrado em {formatDate(form.dt_abertura)}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              {!editando && (
+                <>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setModalStatus(true)}
+                    style={{ background: conf.cor + '18', borderColor: conf.cor, color: conf.cor }}>
+                    {conf.icon} Alterar Status
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditando(true)}>✎ Editar</button>
+                </>
+              )}
+              <button className="btn-icon" onClick={onClose}>✕</button>
+            </div>
+          </div>
+
+          {/* Abas */}
+          <div className="tabs" style={{ flexShrink: 0, padding: '0 20px', borderBottom: '1px solid var(--color-border)' }}>
+            {[
+              ['dados', 'Dados do Processo'],
+              ['andamentos', `Andamentos${andsPendentes > 0 ? ` (${andsPendentes})` : ''}`],
+              ['historico', `Histórico${qtdHistorico > 0 ? ` (${qtdHistorico})` : ''}`],
+              ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
+              ['certidoes', 'Pedido de Certidões'],
+            ].map(([id, label]) => (
+              <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
+            ))}
+          </div>
+
+          {/* Corpo com scroll */}
+          <div className="modal-body" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+            {aba === 'dados' && (
+              <TabDados
+                proc={form}
+                editando={editando}
+                onChange={onChange}
+                servicos={servicos}
+                usuarios={usuarios}
+                interessados={interessados}
+                onCadastrarNovoInt={() => setModalNovoInt(true)}
+              />
+            )}
+            {aba === 'andamentos' && (
+              <TabAndamentos processoId={processo.id} usuarios={usuarios} />
+            )}
+            {aba === 'historico' && (
+              <TabHistorico processoId={processo.id} />
+            )}
+            {aba === 'oficios' && (
+              <TabOficiosExpedidos processoId={processo.id} />
+            )}
+            {aba === 'certidoes' && (
+              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} />
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer" style={{ flexShrink: 0, gap: 8, flexWrap: 'wrap' }}>
+            {aba === 'dados' && !editando && (
+              <button className="btn btn-secondary btn-sm" onClick={() => gerarArquivoAtos(form, interessados, cartorio)} style={{ marginRight: 'auto' }}>
+                🖨 Arquivo de Atos
+              </button>
+            )}
+
+            {editando ? (
+              <>
+                <button className="btn btn-secondary" onClick={descartar}>✕ Descartar</button>
+                <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+                  {salvando ? 'Salvando...' : '✓ Salvar Alterações'}
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+            )}
+          </div>
+
+    </div>
+  );
+
+  return (
+    <>
+      {inline ? inner : (
+        <Portal>
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+            {inner}
+          </div>
+        </Portal>
+      )}
+      {modalStatus && (
+        <ModalAlterarStatus
+          processo={form}
+          onClose={() => setModalStatus(false)}
+          onSalvar={handleAlterarStatus}
+        />
+      )}
+      {modalNovoInt && (
+        <ModalAdicionarInteressado
+          interessados={interessados}
+          onAdicionar={handleAdicionarInteressado}
+          onClose={() => setModalNovoInt(false)}
+        />
+      )}
+    </>
   );
 }
