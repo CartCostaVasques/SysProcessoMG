@@ -139,8 +139,24 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
   const cargoAssin = assinante?.id === '__tabelia_cartorio__'
     ? 'Tabeliã'
     : (assinante?.cargo || assinante?.perfil || 'Tabeliã');
-  const osHtml = recibo.numero_os ? `<tr><td class="lbl">Nº Interno</td><td><div class="campo-box">${recibo.numero_os}</div></td></tr>` : '';
+
+  const isFuturo = label && label.toLowerCase().includes('futuro');
+
+  const osHtml = recibo.numero_os ? `
+    <tr>
+      <td class="lbl">Nº Interno</td>
+      <td><div class="campo-box campo-meio">${recibo.numero_os}</div></td>
+    </tr>` : '';
+
   const obsHtml = recibo.obs ? `<tr><td class="lbl">Observação</td><td><div class="campo-box descricao-box">${recibo.obs}</div></td></tr>` : '';
+
+  const obsCondicionada = isFuturo ? `
+  <div class="obs-condicionada">
+    <strong>Observação:</strong> A quitação do presente recibo fica <u>condicionada</u> à apresentação de comprovante
+    de depósito junto a conta corrente nº 12.300-5, agência nº 0778-0, de titularidade de 2º Serviço Notarial e
+    Registral de Paranatinga (CNPJ 06.182.744/0001-50) — Banco Bradesco S.A., ou à apresentação junto a esta
+    Serventia de cheque nominal a Tabeliã.
+  </div>` : '';
 
   return `
   <div class="via">
@@ -150,16 +166,28 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
       ${label ? `<div class="via-check"><span class="check-box">&#x2611;</span> ${label}</div>` : ''}
     </div>
     <table class="campos">
-      <tr><td class="lbl">Recebi de</td><td><div class="campo-box">${interessado?.nome || '—'}</div></td></tr>
-      <tr><td class="lbl">CPF/CNPJ</td><td><div class="campo-box">${interessado?.cpf || '—'}</div></td></tr>
+      <tr>
+        <td class="lbl">Recebi de</td>
+        <td><div class="campo-box">${interessado?.nome || '—'}</div></td>
+      </tr>
+      <tr>
+        <td class="lbl">CPF/CNPJ</td>
+        <td><div class="campo-box campo-meio">${interessado?.cpf || '—'}</div></td>
+      </tr>
       <tr class="spacer-row"><td colspan="2"></td></tr>
       ${osHtml}
-      <tr><td class="lbl">Referente a</td><td><div class="campo-box descricao-box">${recibo.descricao || '—'}</div></td></tr>
+      <tr>
+        <td class="lbl">Valor</td>
+        <td>
+          <div class="campo-box valor-destaque campo-meio">${valorNum}</div>
+          <div class="valor-ext">${valorExt}</div>
+        </td>
+      </tr>
       <tr class="spacer-row-sm"><td colspan="2"></td></tr>
-      <tr><td class="lbl">Valor</td><td>
-        <div class="campo-box valor-destaque">${valorNum}</div>
-        <div class="valor-ext">${valorExt}</div>
-      </td></tr>
+      <tr>
+        <td class="lbl">Referente a</td>
+        <td><div class="campo-box descricao-box">${recibo.descricao || '—'}</div></td>
+      </tr>
       ${obsHtml}
     </table>
     <div class="data-linha">${cidade ? cidade + '-MT,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' : ''} ${dtRecibo}</div>
@@ -170,6 +198,7 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
         <div class="assin-cargo">${nomeCart}</div>
       </div>
     </div>
+    ${obsCondicionada}
     <div class="rodape">Nº ${numRecibo} &nbsp;|&nbsp; ${dtRecibo} &nbsp;|&nbsp; ${nomeCart}</div>
   </div>`;
 }
@@ -198,9 +227,10 @@ const CSS_RECIBO = `
   .campos tr td{padding:4px 6px;vertical-align:top}
   .lbl{font-size:11px;color:#555;width:80px;padding-top:8px;white-space:nowrap}
   .campo-box{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px}
-  .valor-destaque{font-size:13px;font-weight:bold;display:inline-block;min-width:160px}
+  .campo-meio{max-width:50%;display:inline-block;min-width:0;width:50%}
+  .valor-destaque{font-size:13px;font-weight:bold}
   .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px}
-  .descricao-box{min-height:72px;font-size:11px;line-height:1.7}
+  .descricao-box{min-height:72px;font-size:11px;line-height:1.7;max-width:100%;width:100%;display:block}
   .spacer-row td{height:10mm}
   .spacer-row-sm td{height:6mm}
   .data-linha{margin:18mm 0 0;font-size:12px;padding-left:2px}
@@ -209,6 +239,7 @@ const CSS_RECIBO = `
   .assin-nome{border-top:1px solid #000;padding-top:6px;font-size:11px;font-weight:bold;letter-spacing:0.5px}
   .assin-cpf{font-size:10px;color:#444;margin-top:3px}
   .assin-cargo{font-size:10px;color:#444;margin-top:3px}
+  .obs-condicionada{border:1px solid #999;padding:9px 12px;font-size:10.5px;line-height:1.75;color:#000;margin-top:14px;background:#fff}
   .rodape{text-align:center;font-size:9px;color:#888;border-top:1px solid #ddd;padding-top:5px;margin-top:12px}
   .sep{border:none;border-top:2px dashed #bbb;margin:8mm 0}
   @media print{body{margin:0}}
