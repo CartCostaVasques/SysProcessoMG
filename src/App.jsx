@@ -34,6 +34,7 @@ import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
 import Oficios  from './components/oficios/Oficios.jsx';
 import Recibos     from './components/recibos/Recibos.jsx';
+import RegistroCivilAtos from './components/registrocivil/RegistroCivilAtos.jsx';
 import Panoramico   from './components/panoramico/Panoramico.jsx';
 import ImportacaoCSV from './components/importacao/ImportacaoCSV.jsx';
 import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
@@ -61,6 +62,7 @@ function AppShell() {
       case 'tarefas':       return <Tarefas />;
       case 'oficios':       return <Oficios />;
       case 'recibos':       return <Recibos />;
+      case 'regcivil':      return <RegistroCivilAtos />;
       case 'panoramico':    return <Panoramico />;
       case 'importacaocsv': return <ImportacaoCSV />;
       case 'servicos':      return <Servicos />;
