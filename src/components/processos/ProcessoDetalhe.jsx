@@ -358,6 +358,39 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
     ? <input className="form-input" value={v || ''} onChange={e => onChange(k, e.target.value)} style={{ fontSize: 12, ...opts.style }} placeholder={opts.ph || ''} />
     : <div style={{ fontSize: 13, padding: '6px 0', color: v ? 'var(--color-text)' : 'var(--color-text-faint)', minHeight: 28 }}>{v || '—'}</div>;
 
+  // Campo de data com máscara dd/mm/aaaa (converte de/para ISO aaaa-mm-dd internamente)
+  const isoToBr = (iso) => {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    if (y && m && d) return `${d}/${m}/${y}`;
+    return iso;
+  };
+  const brToIso = (br) => {
+    const clean = br.replace(/\D/g, '');
+    if (clean.length === 8) return `${clean.slice(4)}-${clean.slice(2,4)}-${clean.slice(0,2)}`;
+    return br;
+  };
+  const maskDate = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0,2)}/${digits.slice(2)}`;
+    return `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}`;
+  };
+  const inpDate = (v, k) => editando
+    ? <input
+        className="form-input"
+        value={isoToBr(v)}
+        onChange={e => {
+          const masked = maskDate(e.target.value);
+          const digits = masked.replace(/\D/g, '');
+          onChange(k, digits.length === 8 ? brToIso(masked) : masked);
+        }}
+        placeholder="dd/mm/aaaa"
+        maxLength={10}
+        style={{ fontSize: 12 }}
+      />
+    : <div style={{ fontSize: 13, padding: '6px 0', color: v ? 'var(--color-text)' : 'var(--color-text-faint)', minHeight: 28 }}>{isoToBr(v) || '—'}</div>;
+
   const sel = (v, k, options, label = '—') => editando
     ? <select className="form-select" value={v || ''} onChange={e => onChange(k, e.target.value)} style={{ fontSize: 12 }}>
         <option value="">{label}</option>
@@ -494,7 +527,7 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <Campo label="Livro / Ato">{inp(proc.livro_ato, 'livro_ato')}</Campo>
           <Campo label="Folhas / Ato">{inp(proc.folhas_ato, 'folhas_ato')}</Campo>
-          <Campo label="Dt. Conclusão">{inp(proc.dt_conclusao, 'dt_conclusao')}</Campo>
+          <Campo label="Dt. Conclusão">{inpDate(proc.dt_conclusao, 'dt_conclusao')}</Campo>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
           <Campo label="Descrição do Ato / Dados do Imóvel" full>
