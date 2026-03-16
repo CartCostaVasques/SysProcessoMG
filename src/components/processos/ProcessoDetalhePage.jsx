@@ -167,8 +167,8 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
         <colgroup>
           <col style="width:65px">
           <col style="width:72px">
-          <col style="width:55%">
-          <col style="width:160px">
+          <col style="width:40%">
+          <col style="width:200px">
           <col style="width:28px">
           <col style="width:75px">
         </colgroup>
