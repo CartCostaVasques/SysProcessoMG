@@ -145,14 +145,14 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
       const sc = SP[p.status] || { sigla: '??', cor: '#94a3b8', bg: '#f1f5f9' };
       qtdGrupo++; valGrupo += val; totalGeralQtd++; totalGeralVal += val;
       return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="padding:2px;font-family:monospace;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.numero_interno}</td>
-        <td style="padding:2px;white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
-        <td style="padding:2px;overflow:hidden;text-overflow:ellipsis">${p.especie||'—'}</td>
-        <td style="padding:2px;overflow:hidden;text-overflow:ellipsis">${partes||'—'}</td>
-        <td style="padding:2px;text-align:center;white-space:nowrap">
+        <td style="padding:3px 6px;font-family:monospace;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.numero_interno}</td>
+        <td style="padding:3px 6px;white-space:nowrap">${fmtDt(p.dt_abertura)}</td>
+        <td style="padding:3px 6px;overflow:hidden;text-overflow:ellipsis">${p.especie||'—'}</td>
+        <td style="padding:3px 6px;overflow:hidden;text-overflow:ellipsis">${partes||'—'}</td>
+        <td style="padding:3px 2px;text-align:center;white-space:nowrap">
           <span style="display:inline-block;padding:1px 3px;border-radius:3px;font-size:10px;font-weight:800;background:${sc.bg};color:${sc.cor}">${sc.sigla}</span>
         </td>
-        <td style="padding:2px;text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
+        <td style="padding:3px 6px;text-align:right;font-family:monospace;white-space:nowrap">${val>0?'R$ '+fmtBRL(val):'—'}</td>
       </tr>`;
     }).join('');
 
@@ -165,20 +165,20 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     return cabecalho + `
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;table-layout:fixed">
         <colgroup>
-          <col style="width:40px">
-          <col style="width:40px">
+          <col style="width:65px">
+          <col style="width:72px">
           <col>
-          <col style="width:90px">
-          <col style="width:20px">
-          <col style="width:55px">
+          <col style="width:130px">
+          <col style="width:28px">
+          <col style="width:75px">
         </colgroup>
         <thead><tr style="background:#e2e8f0">
-          <th style="padding:2px;text-align:left;white-space:nowrap">Nº</th>
-          <th style="padding:2px;text-align:left;white-space:nowrap">Data</th>
-          <th style="padding:2px;text-align:left">Serviço</th>
-          <th style="padding:2px;text-align:left">Interessados</th>
-          <th style="padding:2px;text-align:center">St.</th>
-          <th style="padding:2px;text-align:right;white-space:nowrap">Valor</th>
+          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Nº</th>
+          <th style="padding:4px 6px;text-align:left;white-space:nowrap">Data</th>
+          <th style="padding:4px 6px;text-align:left">Serviço</th>
+          <th style="padding:4px 6px;text-align:left">Interessados</th>
+          <th style="padding:4px 2px;text-align:center">St.</th>
+          <th style="padding:4px 6px;text-align:right;white-space:nowrap">Valor</th>
         </tr></thead>
         <tbody>${linhas}</tbody>
       </table>`;
