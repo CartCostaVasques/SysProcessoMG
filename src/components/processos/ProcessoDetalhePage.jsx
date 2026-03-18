@@ -46,7 +46,7 @@ const COLS = [
   { key: 'servico', label: 'Serviço',      w: '300px' },
   { key: 'partes',  label: 'Interessados', w: '180px' },
   { key: 'resp',    label: 'Resp.',        w: '60px'  },
-  { key: 'valor',   label: 'Valor',        w: '110px' },
+  { key: 'valor',   label: 'Valor',        w: '135px' },
   { key: 'and',     label: 'Andamentos',   w: '90px'  },
   { key: 'status',  label: 'Status',       w: '70px'  },
 ];
