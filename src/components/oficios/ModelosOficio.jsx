@@ -516,8 +516,118 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 }
 
 // ── Componente Principal ─────────────────────────────────────
+// ── Aba de edição de textos ──────────────────────────────────
+function AbaTextos({ situacoes, textosSalvos, onSalvar, onReset }) {
+  const [selecionada, setSelecionada] = useState(null);
+  const [textoEdit,   setTextoEdit]   = useState('');
+  const [salvando,    setSalvando]    = useState(false);
+  const [salvo,       setSalvo]       = useState(false);
+
+  const getSalvo = (modeloId, situacaoId) =>
+    textosSalvos.find(t => t.modelo_id === modeloId && t.situacao_id === situacaoId);
+
+  const handleSelect = (s) => {
+    setSelecionada(s);
+    const salvo = getSalvo(s.modeloId, s.id);
+    setTextoEdit(salvo ? salvo.corpo : s.corpo);
+    setSalvo(false);
+  };
+
+  const handleSalvar = async () => {
+    if (!selecionada) return;
+    setSalvando(true);
+    await onSalvar(selecionada.modeloId, selecionada.id, textoEdit);
+    setSalvando(false);
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 2500);
+  };
+
+  const handleReset = async () => {
+    if (!selecionada) return;
+    if (!window.confirm('Restaurar o texto original padrão? O texto personalizado será removido.')) return;
+    await onReset(selecionada.modeloId, selecionada.id);
+    setTextoEdit(selecionada.corpo);
+    setSalvo(false);
+  };
+
+  // Agrupa por modelo
+  const grupos = situacoes.reduce((acc, s) => {
+    if (!acc[s.modeloLabel]) acc[s.modeloLabel] = [];
+    acc[s.modeloLabel].push(s);
+    return acc;
+  }, {});
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, alignItems: 'start' }}>
+      {/* Lista de situações */}
+      <div className="card" style={{ padding: 0 }}>
+        <div className="card-header"><div className="card-title" style={{ fontSize: 13 }}>Situações</div></div>
+        {Object.entries(grupos).map(([modeloLabel, sits]) => (
+          <div key={modeloLabel}>
+            <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+              {modeloLabel}
+            </div>
+            {sits.map(s => {
+              const temCustom = !!getSalvo(s.modeloId, s.id);
+              const ativo = selecionada?.modeloId === s.modeloId && selecionada?.id === s.id;
+              return (
+                <div key={s.id} onClick={() => handleSelect(s)}
+                  style={{ padding: '9px 14px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)', background: ativo ? 'color-mix(in srgb, var(--color-accent) 10%, var(--color-surface))' : 'transparent', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: ativo ? 700 : 400, color: ativo ? 'var(--color-accent)' : 'var(--color-text)' }}>{s.label}</span>
+                  {temCustom && <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 6, background: 'var(--color-accent)', color: '#fff', flexShrink: 0 }}>editado</span>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Editor */}
+      <div className="card" style={{ padding: 0 }}>
+        {!selecionada
+          ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>← Selecione uma situação para editar o texto base</div>
+          : (<>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div className="card-title" style={{ fontSize: 13 }}>{selecionada.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{selecionada.modeloLabel}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {getSalvo(selecionada.modeloId, selecionada.id) && (
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={handleReset}>↺ Restaurar original</button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={handleSalvar} disabled={salvando} style={{ minWidth: 80 }}>
+                  {salvando ? '...' : salvo ? '✓ Salvo!' : '💾 Salvar'}
+                </button>
+              </div>
+            </div>
+            <div style={{ padding: '12px 16px' }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginBottom: 8 }}>
+                Este texto será usado como base ao selecionar esta situação. Use [COLCHETES] para campos editáveis.
+              </div>
+              <textarea
+                className="form-input"
+                value={textoEdit}
+                onChange={e => { setTextoEdit(e.target.value); setSalvo(false); }}
+                rows={18}
+                style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.7, width: '100%' }}
+              />
+            </div>
+          </>)
+        }
+      </div>
+    </div>
+  );
+}
+
 export default function ModelosOficio() {
-  const { oficios, processos, cartorio, usuarios, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato, oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico } = useApp();
+  const { oficios, processos, cartorio, usuarios, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato, oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico, oficioModelosTextos, salvarOficioModeloTexto, resetOficioModeloTexto } = useApp();
+  // Retorna texto personalizado salvo ou o padrão do código
+  const getCorpo = (modeloId, situacaoId, corpoPadrao) => {
+    const salvo = (oficioModelosTextos||[]).find(t => t.modelo_id === modeloId && t.situacao_id === situacaoId);
+    return salvo ? salvo.corpo : corpoPadrao;
+  };
+
   const [aba,           setAba]           = useState('emitir');
   const [oficioSel,     setOficioSel]     = useState('');
   const [modeloSel,     setModeloSel]     = useState('');
@@ -586,12 +696,28 @@ export default function ModelosOficio() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-          {[['emitir','✉ Emitir'],['historico','📋 Histórico']].map(([id,label]) => (
-            <button key={id} onClick={() => setAba(id)} style={{ padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: aba===id?700:400, background: aba===id?'var(--color-surface-3)':'transparent', color: aba===id?'var(--color-text)':'var(--color-text-muted)', borderRight: id==='emitir'?'1px solid var(--color-border)':'none' }}>{label}</button>
+          {[['emitir','✉ Emitir'],['historico','📋 Histórico'],['textos','✏ Textos']].map(([id,label]) => (
+            <button key={id} onClick={() => setAba(id)} style={{ padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: aba===id?700:400, background: aba===id?'var(--color-surface-3)':'transparent', color: aba===id?'var(--color-text)':'var(--color-text-muted)', borderRight: id!=='textos'?'1px solid var(--color-border)':'none' }}>{label}</button>
           ))}
         </div>
         <button className="btn btn-secondary btn-sm" onClick={() => setModalContatos(true)}>📋 Contatos ({oficioContatos?.length||0})</button>
       </div>
+
+      {/* Textos */}
+      {aba === 'textos' && (() => {
+        const todasSituacoes = [
+          ...SITUACOES_FORUM.filter(s => s.id !== 'livre').map(s => ({ ...s, modeloId: 'forum_cumprimento', modeloLabel: 'Fórum / Juízo' })),
+          ...SITUACOES_PROTESTO.filter(s => s.id !== 'livre').map(s => ({ ...s, modeloId: 'protesto', modeloLabel: 'Protesto' })),
+        ];
+        return (
+          <AbaTextos
+            situacoes={todasSituacoes}
+            textosSalvos={oficioModelosTextos||[]}
+            onSalvar={salvarOficioModeloTexto}
+            onReset={resetOficioModeloTexto}
+          />
+        );
+      })()}
 
       {/* Histórico */}
       {aba === 'historico' && (
@@ -718,9 +844,10 @@ export default function ModelosOficio() {
                       <div key={s.id}
                         onClick={() => {
                           setD('situacao', s.id);
-                          if (s.corpo && !dados.corpo_editado) setD('corpo', s.corpo);
-                          else if (s.corpo) { if (window.confirm('Substituir o corpo do ofício pelo texto padrão desta situação?')) { setD('corpo', s.corpo); setD('corpo_editado', false); } }
-                          else if (!s.corpo) setD('corpo', '');
+                          const corpo = getCorpo('forum_cumprimento', s.id, s.corpo);
+                          if (corpo && !dados.corpo_editado) setD('corpo', corpo);
+                          else if (corpo) { if (window.confirm('Substituir o corpo do ofício pelo texto padrão desta situação?')) { setD('corpo', corpo); setD('corpo_editado', false); } }
+                          else setD('corpo', '');
                         }}
                         style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.situacao===s.id?'var(--color-accent)':'var(--color-border)'}`, background: dados.situacao===s.id?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 13, fontWeight: dados.situacao===s.id?700:400, color: dados.situacao===s.id?'var(--color-accent)':'var(--color-text)' }}>
                         {dados.situacao===s.id?'● ':'○ '}{s.label}
@@ -770,7 +897,7 @@ export default function ModelosOficio() {
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Corpo do Ofício</div>
                     {dados.situacao && dados.situacao !== 'livre' && (
                       <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
-                        onClick={() => { const s = SITUACOES_FORUM.find(x => x.id===dados.situacao); if(s) { setD('corpo', s.corpo); setD('corpo_editado', false); } }}>
+                        onClick={() => { const s = SITUACOES_FORUM.find(x => x.id===dados.situacao); if(s) { setD('corpo', getCorpo('forum_cumprimento', s.id, s.corpo)); setD('corpo_editado', false); } }}>
                         ↺ Restaurar texto padrão
                       </button>
                     )}
@@ -798,8 +925,9 @@ export default function ModelosOficio() {
                       <div key={s.id}
                         onClick={() => {
                           setD('situacao_prot', s.id);
-                          if (s.corpo && !dados.corpo_editado) setD('corpo', s.corpo);
-                          else if (s.corpo) { if (window.confirm('Substituir o corpo pelo texto padrão?')) { setD('corpo', s.corpo); setD('corpo_editado', false); } }
+                          const corpo = getCorpo('protesto', s.id, s.corpo);
+                          if (corpo && !dados.corpo_editado) setD('corpo', corpo);
+                          else if (corpo) { if (window.confirm('Substituir o corpo pelo texto padrão?')) { setD('corpo', corpo); setD('corpo_editado', false); } }
                           else setD('corpo', '');
                         }}
                         style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.situacao_prot===s.id?'var(--color-accent)':'var(--color-border)'}`, background: dados.situacao_prot===s.id?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 13, fontWeight: dados.situacao_prot===s.id?700:400, color: dados.situacao_prot===s.id?'var(--color-accent)':'var(--color-text)' }}>
@@ -851,7 +979,7 @@ export default function ModelosOficio() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Corpo do Ofício</div>
                     {dados.situacao_prot && dados.situacao_prot !== 'livre' && (
-                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => { const s = SITUACOES_PROTESTO.find(x => x.id===dados.situacao_prot); if(s) { setD('corpo', s.corpo); setD('corpo_editado', false); } }}>↺ Restaurar texto padrão</button>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => { const s = SITUACOES_PROTESTO.find(x => x.id===dados.situacao_prot); if(s) { setD('corpo', getCorpo('protesto', s.id, s.corpo)); setD('corpo_editado', false); } }}>↺ Restaurar texto padrão</button>
                     )}
                   </div>
                   <textarea className="form-input" rows={15} value={dados.corpo||''} onChange={e => { setD('corpo', e.target.value); setD('corpo_editado', true); }} placeholder="Texto do ofício..." style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6, minHeight: 280 }} />
