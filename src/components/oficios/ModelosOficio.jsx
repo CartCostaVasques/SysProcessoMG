@@ -374,6 +374,11 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ? new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [9071], rows: linhasPartes })
       : null;
 
+    const numPartes  = [parte1, parte2].filter(Boolean).length;
+    const corpoFinal = numPartes >= 2
+      ? corpo.replace('no qual figura a parte acima requerida', 'no qual figuram as partes acima requeridas')
+      : corpo;
+
     return [
       ...cabecalho,
       pEmpty(),
@@ -395,12 +400,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         tabelaPartes,
         pEmpty(),
       ] : []),
-      // Substitui singular/plural conforme nº de partes (cumprimento de mandado)
-      const numPartes = [parte1, parte2].filter(Boolean).length;
-      const corpoFinal = numPartes >= 2
-        ? corpo.replace('no qual figura a parte acima requerida', 'no qual figuram as partes acima requeridas')
-        : corpo;
-
       // Corpo editável com indent de 3cm (1701 DXA)
       ...corpoFinal.split('\n').map(l => new Paragraph({
         alignment: AlignmentType.JUSTIFIED,
