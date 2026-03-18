@@ -159,18 +159,12 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       const mime      = mimeMatch?.[1] || 'image/jpeg';
       const imgType   = mime.includes('png') ? 'png' : 'jpg';
 
-      // Detecta dimensões reais via Image para calcular altura proporcional
-      const imgDims = await new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-        img.onerror = () => resolve({ w: 940, h: 130 });
-        img.src = cabecalhoImg;
-      });
-
-      // Largura alvo em pontos docx (largura útil da página)
-      const targetW = 512; // pontos ≈ largura útil A4 com margens 2cm
-      const targetH = Math.round((imgDims.h / imgDims.w) * targetW);
-      headerHeightDXA = Math.round(targetH * 20) + 300; // altura em DXA + folga
+      // A4 útil com margens 2cm cada lado: 11906 - 2*1134 = 9638 DXA
+      // 1 DXA = 1/20 pt | largura útil em pt = 9638/20 = 481.9pt
+      // Altura 3.5cm = 3.5/2.54 * 72 ≈ 99pt
+      const targetW = 482; // pt ≈ largura útil com margens 2cm
+      const targetH = 99;  // pt = 3.5 cm
+      headerHeightDXA = Math.round(targetH * 20) + 400; // DXA + folga para o corpo
 
       headerParagraphs = [
         new Paragraph({
