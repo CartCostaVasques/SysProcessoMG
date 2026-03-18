@@ -24,6 +24,7 @@ export function AppProvider({ children }) {
   const [oficios,    setOficios]    = useState([]);
   const [oficioContatos, setOficioContatos] = useState([]);
   const [oficioModelosHistorico, setOficioModelosHistorico] = useState([]);
+  const [oficioModelosTextos,    setOficioModelosTextos]    = useState([]);
   const [setores,    setSetores]    = useState([]);
   const [servicos,   setServicos]   = useState([]);
   const [logs,       setLogs]       = useState([]);
@@ -135,6 +136,7 @@ export function AppProvider({ children }) {
       fetchOficios(),
       fetchOficioContatos(),
       fetchOficioModelosHistorico(),
+      fetchOficioModelosTextos(),
       fetchUsuarios(),
       fetchInteressados(),
       fetchLogs(),
@@ -247,6 +249,7 @@ export function AppProvider({ children }) {
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
   const fetchOficioContatos = async () => { try { const {data} = await supabase.from('oficio_contatos').select('*').order('nome'); if(data) setOficioContatos(data); } catch(e){} };
   const fetchOficioModelosHistorico = async () => { try { const {data} = await supabase.from('oficio_modelos_historico').select('*').order('gerado_em',{ascending:false}).limit(200); if(data) setOficioModelosHistorico(data); } catch(e){} };
+  const fetchOficioModelosTextos    = async () => { try { const {data} = await supabase.from('oficio_modelos_textos').select('*'); if(data) setOficioModelosTextos(data); } catch(e){} };
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
@@ -417,7 +420,33 @@ export function AppProvider({ children }) {
     return () => supabase.removeChannel(channel);
   }, [usuario?.id]);
 
-  // ── Oficio Modelos Histórico ───────────────────────────────
+  // ── Oficio Modelos Textos (textos editáveis das situações) ─
+  const salvarOficioModeloTexto = useCallback(async (modelo_id, situacao_id, corpo) => {
+    try {
+      const existente = oficioModelosTextos.find(t => t.modelo_id === modelo_id && t.situacao_id === situacao_id);
+      let data, error;
+      if (existente) {
+        ({ data, error } = await supabase.from('oficio_modelos_textos').update({ corpo, atualizado_em: new Date().toISOString() }).eq('id', existente.id).select().single());
+        if (error) throw error;
+        setOficioModelosTextos(p => p.map(t => t.id === existente.id ? data : t));
+      } else {
+        ({ data, error } = await supabase.from('oficio_modelos_textos').insert({ modelo_id, situacao_id, corpo }).select().single());
+        if (error) throw error;
+        setOficioModelosTextos(p => [...p, data]);
+      }
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, [oficioModelosTextos]);
+
+  const resetOficioModeloTexto = useCallback(async (modelo_id, situacao_id) => {
+    try {
+      const existente = oficioModelosTextos.find(t => t.modelo_id === modelo_id && t.situacao_id === situacao_id);
+      if (existente) {
+        await supabase.from('oficio_modelos_textos').delete().eq('id', existente.id);
+        setOficioModelosTextos(p => p.filter(t => t.id !== existente.id));
+      }
+    } catch(e) { addToast(e.message, 'error'); }
+  }, [oficioModelosTextos]);
   const addOficioModeloHistorico = useCallback(async (d) => {
     try {
       const { data, error } = await supabase.from('oficio_modelos_historico').insert({ ...d, gerado_por: usuario?.id }).select().single();
@@ -481,6 +510,7 @@ export function AppProvider({ children }) {
       oficios, addOficio, editOficio, deleteOficio,
       oficioContatos, addOficioContato, editOficioContato, deleteOficioContato,
       oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico,
+      oficioModelosTextos, salvarOficioModeloTexto, resetOficioModeloTexto,
       setores, addSetor, editSetor, deleteSetor,
       servicos, addServico, editServico, deleteServico,
       logs, cartorio, salvarCartorio,
