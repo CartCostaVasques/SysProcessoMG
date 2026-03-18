@@ -22,6 +22,7 @@ export function AppProvider({ children }) {
   const [andamentos, setAndamentos] = useState([]);
   const [tarefas,    setTarefas]    = useState([]);
   const [oficios,    setOficios]    = useState([]);
+  const [oficioContatos, setOficioContatos] = useState([]);
   const [setores,    setSetores]    = useState([]);
   const [servicos,   setServicos]   = useState([]);
   const [logs,       setLogs]       = useState([]);
@@ -131,6 +132,7 @@ export function AppProvider({ children }) {
       fetchAndamentos(),
       fetchTarefas(),
       fetchOficios(),
+      fetchOficioContatos(),
       fetchUsuarios(),
       fetchInteressados(),
       fetchLogs(),
@@ -241,6 +243,7 @@ export function AppProvider({ children }) {
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
+  const fetchOficioContatos = async () => { try { const {data} = await supabase.from('oficio_contatos').select('*').order('nome'); if(data) setOficioContatos(data); } catch(e){} };
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
@@ -411,6 +414,32 @@ export function AppProvider({ children }) {
     return () => supabase.removeChannel(channel);
   }, [usuario?.id]);
 
+  // ── Oficio Contatos ────────────────────────────────────────
+  const addOficioContato = useCallback(async (d) => {
+    try {
+      const { data, error } = await supabase.from('oficio_contatos').insert(d).select().single();
+      if (error) throw error;
+      setOficioContatos(p => [...p, data].sort((a,b) => a.nome.localeCompare(b.nome)));
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, []);
+
+  const editOficioContato = useCallback(async (id, d) => {
+    try {
+      const { data, error } = await supabase.from('oficio_contatos').update(d).eq('id', id).select().single();
+      if (error) throw error;
+      setOficioContatos(p => p.map(c => c.id === id ? data : c));
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, []);
+
+  const deleteOficioContato = useCallback(async (id) => {
+    try {
+      await supabase.from('oficio_contatos').delete().eq('id', id);
+      setOficioContatos(p => p.filter(c => c.id !== id));
+    } catch(e) { addToast(e.message, 'error'); }
+  }, []);
+
   if (authLoading) {
     return (
       <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#111',color:'#fff',flexDirection:'column',gap:12}}>
@@ -430,6 +459,7 @@ export function AppProvider({ children }) {
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
       oficios, addOficio, editOficio, deleteOficio,
+      oficioContatos, addOficioContato, editOficioContato, deleteOficioContato,
       setores, addSetor, editSetor, deleteSetor,
       servicos, addServico, editServico, deleteServico,
       logs, cartorio, salvarCartorio,
