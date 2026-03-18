@@ -40,9 +40,7 @@ Permanecemos à inteira disposição de Vossa Excelência para o que mais se fiz
   {
     id: 'sustacao_protesto',
     label: 'Sustação de Protesto',
-    corpo: `Venho por meio do presente, em atendimento ao referido Mandado Judicial, informar a Vossa Excelência o cumprimento do mesmo, procedendo com a sustação do protesto do(s) título(s) indicado(s) nos autos.
-
-Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.`,
+    corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA], esta Serventia procedeu as baixas dos protestos em que figura como devedor a parte acima indicado, conforme certidão negativa de protesto anexa ao presente.`,
   },
   {
     id: 'livre',
@@ -411,7 +409,9 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
     const numPartes  = [parte1, parte2].filter(Boolean).length;
     const corpoFinal = numPartes >= 2
-      ? corpo.replace('no qual figura a parte acima requerida', 'no qual figuram as partes acima requeridas')
+      ? corpo
+          .replace('no qual figura a parte acima requerida', 'no qual figuram as partes acima requeridas')
+          .replace('figura como devedor a parte acima indicado', 'figuram como devedores as partes acima indicados')
       : corpo;
 
     return [
