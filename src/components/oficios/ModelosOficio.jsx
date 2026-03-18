@@ -301,27 +301,26 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 320 }, children: [new TextRun({ text: `Ofício nº ${numOficio}`, font: 'Arial', size: 24, bold: true })] }),
   ];
 
-  const rodape = [
-    pEmpty(),
-    pIndent('Valemo-nos da oportunidade para reiterar à Vossa Senhoria, protestos de estima e apreço.', { after: 200 }),
-    pEmpty(),
-    pIndent('Atenciosamente,', { after: 400 }),
+  // pIndent deve ser declarado ANTES de rodape
+  const pIndent = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false })] });
+
+  const assinaturaParags = [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: '333333', space: 6 } }, children: [new TextRun({ text: nomeAssin, font: 'Arial', size: 24, bold: true })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: funcaoAssin, font: 'Arial', size: 22, color: '555555' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: 'Arial', size: 22, color: '555555' })] }),
   ];
 
-  // Rodapé com indent para ofícios do Fórum
-  const pIndent = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false })] });
-  const rodapeForum = [
+  // Rodapé RC (sem indent)
+  const rodape = [
     pEmpty(),
     pIndent('Valemo-nos da oportunidade para reiterar à Vossa Senhoria, protestos de estima e apreço.', { after: 200 }),
     pEmpty(),
     pIndent('Atenciosamente,', { after: 400 }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: '333333', space: 6 } }, children: [new TextRun({ text: nomeAssin, font: 'Arial', size: 24, bold: true })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: funcaoAssin, font: 'Arial', size: 22, color: '555555' })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: 'Arial', size: 22, color: '555555' })] }),
+    ...assinaturaParags,
   ];
+
+  // Rodapé Fórum/Protesto (com indent — idêntico ao rodape agora)
+  const rodapeForum = rodape;
 
   const buildRC = () => {
     const tipoLabel  = (dados.tipo_rc || 'casamento').toLowerCase();
@@ -798,7 +797,7 @@ export default function ModelosOficio() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Nome / Razão Social</label>
-                      <AutocompleteContato value={dados.dest_nome||oficio?.destinatario||''} onChange={v => setD('dest_nome',v)} tipoContato="protesto_dest" placeholder="Ex: CRA - Central de Remessa de Arquivos" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'protesto_dest', descricao: dados.dest_endereco||''})} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} onSelect={c => { if(c.descricao) setD('dest_endereco', c.descricao); }} />
+                      <AutocompleteContato value={dados.dest_nome||oficio?.destinatario||''} onChange={v => setD('dest_nome',v)} tipoContato="protesto_dest" placeholder="Ex: CRA - Central de Remessa de Arquivos" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({ tipo:'protesto_dest', nome: d.nome, descricao: dados.dest_endereco||'' })} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} onSelect={c => { if(c.descricao) setD('dest_endereco', c.descricao); }} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Endereço Completo</label>
