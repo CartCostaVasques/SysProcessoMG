@@ -670,6 +670,170 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
   const fmtDV = (v) => v === 0 ? '—' : (v > 0 ? `+R$ ${Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}` : `-R$ ${Number(Math.abs(v)).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}`);
   const fmtDQ = (v) => v === 0 ? '—' : (v > 0 ? `+${v}` : `${v}`);
 
+  const AGRUP_LABEL_PRINT = { especie: 'Tipo de Serviço', categoria: 'Categoria', setor: 'Setor' };
+
+  const imprimirEvolucao = () => {
+    const n = colunas.length;
+
+    const getDadoPrint = (dadoMes, chave) => {
+      const fonte = agrup === 'categoria' ? dadoMes.porCategoria : agrup === 'setor' ? dadoMes.porSetor : dadoMes.porEspecie;
+      return fonte[chave] || { qtd: 0, valor: 0 };
+    };
+
+    const totaisCols = colunas.map((_, ci) => ({
+      qtd:   chaves.reduce((s, k) => s + getDadoPrint(dados[ci], k).qtd,   0),
+      valor: chaves.reduce((s, k) => s + getDadoPrint(dados[ci], k).valor, 0),
+    }));
+
+    const resumoPorChave = chaves.reduce((acc, k) => {
+      acc[k] = colunas.reduce((s, _, ci) => {
+        const d = getDadoPrint(dados[ci], k);
+        return { qtd: s.qtd + d.qtd, valor: s.valor + d.valor };
+      }, { qtd: 0, valor: 0 });
+      return acc;
+    }, {});
+
+    const resumoTotal = chaves.reduce((s, k) => ({
+      qtd:   s.qtd   + resumoPorChave[k].qtd,
+      valor: s.valor + resumoPorChave[k].valor,
+    }), { qtd: 0, valor: 0 });
+
+    const getLabelPrint = (chave) => {
+      if (agrup === 'especie') { const p = chave.split(' › '); return { label: p[1] || chave, sub: p[0] || '' }; }
+      return { label: chave, sub: '' };
+    };
+
+    const fmtBRLp = (v) => Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtVp   = (v) => Number(v||0) > 0 ? `R$ ${fmtBRLp(v)}` : '—';
+    const fmtDQp  = (v) => v > 0 ? `+${v} proc.` : v < 0 ? `${v} proc.` : '—';
+    const fmtDVp  = (v) => v > 0 ? `+R$ ${fmtBRLp(v)}` : v < 0 ? `-R$ ${fmtBRLp(Math.abs(v))}` : '—';
+
+    // Larguras: col fixo 160px + por mês (Qtd 45px + Valor 110px + Delta 80px) + resumo (45+110)
+    const colW = `${160 + n * 235 + 155}px`;
+
+    const thStyle = (extra='') => `padding:4px 6px;text-align:right;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;${extra}`;
+    const tdStyle = (extra='') => `padding:3px 6px;font-family:monospace;font-size:11px;border-bottom:1px solid #e2e8f0;${extra}`;
+
+    // thead linha 1: meses
+    const thead1 = `<tr style="background:#e2e8f0">
+      <th style="padding:4px 8px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;min-width:160px;border-right:2px solid #cbd5e1" rowspan="2">${AGRUP_LABEL_PRINT[agrup]}</th>
+      ${colunas.map((col, ci) => `<th colspan="${ci < n-1 ? 3 : 2}" style="${thStyle('text-align:center;border-left:1px solid #cbd5e1;')}">${col.label}</th>`).join('')}
+      <th colspan="2" style="${thStyle('text-align:center;border-left:3px solid #2563eb;color:#2563eb;background:#eff6ff')}">∑ Período</th>
+    </tr>`;
+
+    // thead linha 2: Qtd / Valor / Δ
+    const thead2 = `<tr style="background:#f1f5f9">
+      ${colunas.map((_, ci) => `
+        <th style="${thStyle('text-align:right;border-left:1px solid #e2e8f0')}">Qtd</th>
+        <th style="${thStyle('text-align:right')}">Valor</th>
+        ${ci < n-1 ? `<th style="${thStyle('text-align:center;background:#f8fafc')}">Δ vs ant.</th>` : ''}
+      `).join('')}
+      <th style="${thStyle('text-align:right;border-left:3px solid #2563eb;color:#2563eb;background:#eff6ff')}">Qtd</th>
+      <th style="${thStyle('text-align:right;color:#2563eb;background:#eff6ff')}">Valor</th>
+    </tr>`;
+
+    // tbody
+    const tbody = chaves.map(chave => {
+      const { label, sub } = getLabelPrint(chave);
+      const resumo = resumoPorChave[chave];
+      const cells = colunas.map((_, ci) => {
+        const cur  = getDadoPrint(dados[ci], chave);
+        const prev = ci > 0 ? getDadoPrint(dados[ci-1], chave) : null;
+        const dq   = prev !== null ? cur.qtd   - prev.qtd   : null;
+        const dv   = prev !== null ? cur.valor - prev.valor : null;
+        const corDQ = dq === null ? '' : dq > 0 ? '#15803d' : dq < 0 ? '#dc2626' : '#6b7280';
+        const corDV = dv === null ? '' : dv > 0 ? '#15803d' : dv < 0 ? '#dc2626' : '#6b7280';
+        const bgDelta = dv === null ? '#f8fafc' : dv > 0 ? 'rgba(21,128,61,0.07)' : dv < 0 ? 'rgba(220,38,38,0.07)' : '#f8fafc';
+        return `
+          <td style="${tdStyle('text-align:right;border-left:1px solid #e2e8f0;font-weight:600')}">${cur.qtd || '—'}</td>
+          <td style="${tdStyle('text-align:right')}">${fmtVp(cur.valor)}</td>
+          ${ci < n-1 ? `<td style="${tdStyle(`text-align:center;background:${bgDelta}`)}">
+            ${dq !== null && dq !== 0 ? `<div style="font-size:10px;font-weight:700;color:${corDQ};white-space:nowrap">${fmtDQp(dq)}</div>` : ''}
+            ${dv !== null && dv !== 0 ? `<div style="font-size:10px;font-weight:600;color:${corDV};white-space:nowrap">${fmtDVp(dv)}</div>` : ''}
+            ${(dq === 0 && dv === 0) || dq === null ? '<span style="font-size:10px;color:#94a3b8">—</span>' : ''}
+          </td>` : ''}
+        `;
+      }).join('');
+
+      return `<tr>
+        <td style="padding:3px 8px;border-bottom:1px solid #e2e8f0;border-right:2px solid #cbd5e1;font-size:12px">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:156px">${label}</div>
+          ${sub ? `<div style="font-size:10px;color:#94a3b8">${sub}</div>` : ''}
+        </td>
+        ${cells}
+        <td style="${tdStyle('text-align:right;font-weight:700;color:#2563eb;border-left:3px solid #2563eb;background:#eff6ff')}">${resumo.qtd || '—'}</td>
+        <td style="${tdStyle('text-align:right;font-weight:600;color:#2563eb;background:#eff6ff')}">${fmtVp(resumo.valor)}</td>
+      </tr>`;
+    }).join('');
+
+    // tfoot totais
+    const tfootCells = colunas.map((_, ci) => {
+      const cur  = totaisCols[ci];
+      const prev = ci > 0 ? totaisCols[ci-1] : null;
+      const dq   = prev !== null ? cur.qtd   - prev.qtd   : null;
+      const dv   = prev !== null ? cur.valor - prev.valor : null;
+      const corDQ = dq === null ? '' : dq > 0 ? '#15803d' : dq < 0 ? '#dc2626' : '#6b7280';
+      const corDV = dv === null ? '' : dv > 0 ? '#15803d' : dv < 0 ? '#dc2626' : '#6b7280';
+      return `
+        <td style="text-align:right;font-family:monospace;font-size:12px;font-weight:700;padding:6px;border-left:1px solid #cbd5e1">${cur.qtd}</td>
+        <td style="text-align:right;font-family:monospace;font-size:12px;font-weight:700;padding:6px">${fmtVp(cur.valor)}</td>
+        ${ci < n-1 ? `<td style="text-align:center;padding:6px;background:#f1f5f9">
+          ${dq !== null && dq !== 0 ? `<div style="font-size:10px;font-weight:700;color:${corDQ}">${fmtDQp(dq)}</div>` : ''}
+          ${dv !== null && dv !== 0 ? `<div style="font-size:10px;font-weight:600;color:${corDV}">${fmtDVp(dv)}</div>` : ''}
+          ${((dq === 0 && dv === 0) || dq === null) ? '<span style="font-size:10px;color:#94a3b8">—</span>' : ''}
+        </td>` : ''}
+      `;
+    }).join('');
+
+    const periodo = `${colunas[0].label}${n > 1 ? ` a ${colunas[n-1].label}` : ''}`;
+    const hoje = new Date().toLocaleDateString('pt-BR');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Evolução Mensal — ${AGRUP_LABEL_PRINT[agrup]}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:11px;color:#1e293b;margin:0;padding:16px}
+      @media print{body{padding:8px}@page{size:landscape;margin:10mm}}
+      table{border-collapse:collapse;width:100%;min-width:${colW}}
+      .cabecalho{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;border-bottom:2px solid #1e293b;padding-bottom:10px}
+      .total-geral{background:#eff6ff;border:1px solid #bfdbfe;padding:7px 14px;text-align:right;font-weight:700;font-size:12px;margin-top:10px;border-radius:4px;color:#1d4ed8}
+      .rodape{display:flex;justify-content:space-between;margin-top:16px;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:8px}
+      .hint{font-size:10px;color:#94a3b8;margin-bottom:10px}
+    </style></head><body>
+    <div class="cabecalho">
+      <div>
+        <div style="font-size:15px;font-weight:700">Serviço Notarial e Registral de Paranatinga</div>
+        <div style="font-size:11px;color:#64748b">Paranatinga - MT</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:700">Evolução Mensal — ${AGRUP_LABEL_PRINT[agrup]}</div>
+        <div style="font-size:11px;color:#64748b">${periodo}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px">Emitido em ${hoje}</div>
+      </div>
+    </div>
+    <div class="hint">Δ = diferença em relação ao mês anterior &nbsp;·&nbsp; verde = crescimento &nbsp;·&nbsp; vermelho = queda${filtroAtivo ? ` &nbsp;·&nbsp; ${chaves.length} de ${totalChaves} linhas (filtro ativo)` : ''}</div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>${thead1}${thead2}</thead>
+        <tbody>${tbody}</tbody>
+        <tfoot>
+          <tr style="font-weight:700;background:#e2e8f0;border-top:2px solid #cbd5e1">
+            <td style="padding:6px 8px;font-size:12px;border-right:2px solid #cbd5e1">Total</td>
+            ${tfootCells}
+            <td style="text-align:right;font-family:monospace;font-size:12px;font-weight:800;color:#2563eb;padding:6px;border-left:3px solid #2563eb;background:#dbeafe">${resumoTotal.qtd}</td>
+            <td style="text-align:right;font-family:monospace;font-size:12px;font-weight:700;color:#2563eb;padding:6px;background:#dbeafe">${fmtVp(resumoTotal.valor)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="total-geral">Total do Período: ${resumoTotal.qtd} processo(s) &nbsp;|&nbsp; R$ ${fmtBRLp(resumoTotal.valor)}</div>
+    <div class="rodape"><span>Serviço Notarial e Registral de Paranatinga</span><span>Paranatinga - MT — ${hoje}</span></div>
+    </body></html>`;
+
+    const w = window.open('', '_blank', 'width=1200,height=800');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 600);
+  };
+
   const getDado = (dadoMes, chave) => {
     const fonte = agrup === 'categoria' ? dadoMes.porCategoria
                 : agrup === 'setor'     ? dadoMes.porSetor
@@ -712,7 +876,7 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
   return (
     <div className="card" style={{ padding: 0, marginBottom: 20, overflowX: 'auto' }}>
       <div className="card-header">
-        <div>
+        <div style={{ flex: 1 }}>
           <div className="card-title">📊 Evolução Mensal — {AGRUP_LABEL[agrup]}</div>
           <div className="card-subtitle" style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
             Δ = diferença em relação ao mês anterior &nbsp;·&nbsp; verde = crescimento &nbsp;·&nbsp; vermelho = queda
@@ -723,6 +887,14 @@ function TabelaSequencia({ colunas, dados, chaves, agrup, filtroAtivo, totalChav
             )}
           </div>
         </div>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={imprimirEvolucao}
+          disabled={chaves.length === 0}
+          style={{ flexShrink: 0 }}
+        >
+          🖨 Imprimir
+        </button>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table className="data-table" style={{ minWidth: 200 + n * 260 + 180, fontSize: 12 }}>
