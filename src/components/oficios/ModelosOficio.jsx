@@ -51,6 +51,8 @@ const SITUACOES_PROTESTO = [
     label: 'Retirada de Apontamento',
     corpo: `Venho através da presente informar aos senhores, que recebemos de forma manual o pedido de retirada do apontamento devido um problema interno entre a empresa sacadora e o banco apresentante, o qual por diversas tentativas não conseguiram solicitar a mesma, entrando assim em contato conosco para fazer de forma manual e não havendo prejuízo para a parte devedora.
 
+Em conversa com o apresentante ele nos informou que entrará em contato com a central para ver como proceder nos próximos, pois nesse caso ele não teve sucesso em resolver de forma online. Segue em anexo print da conversa e requerimento de retirada.
+
 Sendo apenas para o momento, aproveito a oportunidade da reiterar a Vossa Senhoria, protestos de estima e elevada consideração.`,
   },
   {
