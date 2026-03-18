@@ -427,6 +427,13 @@ export function AppProvider({ children }) {
     } catch(e) { addToast(e.message, 'error'); }
   }, [usuario]);
 
+  const deleteOficioModeloHistorico = useCallback(async (id) => {
+    try {
+      await supabase.from('oficio_modelos_historico').delete().eq('id', id);
+      setOficioModelosHistorico(p => p.filter(h => h.id !== id));
+    } catch(e) { addToast(e.message, 'error'); }
+  }, []);
+
   // ── Oficio Contatos ────────────────────────────────────────
   const addOficioContato = useCallback(async (d) => {
     try {
@@ -473,7 +480,7 @@ export function AppProvider({ children }) {
       tarefas, addTarefa, editTarefa, deleteTarefa,
       oficios, addOficio, editOficio, deleteOficio,
       oficioContatos, addOficioContato, editOficioContato, deleteOficioContato,
-      oficioModelosHistorico, addOficioModeloHistorico,
+      oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico,
       setores, addSetor, editSetor, deleteSetor,
       servicos, addServico, editServico, deleteServico,
       logs, cartorio, salvarCartorio,
