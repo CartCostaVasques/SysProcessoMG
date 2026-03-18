@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
-import { formatDate } from '../../data/mockData.js';
 
 // ── Modelos disponíveis ──────────────────────────────────────
 const MODELOS = [
@@ -9,7 +8,7 @@ const MODELOS = [
     label: 'Ofício ao Fórum — Cumprimento',
     descricao: 'Ofício simples de cumprimento dirigido ao Fórum / Juízo',
     camposExtras: [
-      { key: 'juiz', label: 'Meritíssimo(a) Juiz(a)', placeholder: 'Nome do(a) Juiz(a)' },
+      { key: 'juiz', label: 'Meritíssimo(a) Juiz(a)', placeholder: 'Nome do(a) Juiz(a)', tipoContato: 'juiz' },
       { key: 'vara', label: 'Vara / Comarca', placeholder: 'Ex: 1ª Vara Cível de Paranatinga' },
       { key: 'proc_judicial', label: 'Nº Processo Judicial (opcional)', placeholder: 'Nº do processo judicial' },
       { key: 'corpo', label: 'Corpo do Ofício', placeholder: 'Texto principal do ofício...', multiline: true },
@@ -20,7 +19,7 @@ const MODELOS = [
     label: 'Comunicação ao Registro Civil',
     descricao: 'Comunicação de ato notarial ao Registro Civil',
     camposExtras: [
-      { key: 'oficial_rc', label: 'Oficial do Registro Civil', placeholder: 'Nome do Oficial de RC' },
+      { key: 'oficial_rc', label: 'Oficial do Registro Civil', placeholder: 'Nome do Oficial de RC', tipoContato: 'cartorio_rc' },
       { key: 'tipo_ato', label: 'Tipo do Ato Comunicado', placeholder: 'Ex: Escritura de Compra e Venda' },
       { key: 'partes_ato', label: 'Partes do Ato', placeholder: 'Ex: Fulano de Tal e Beltrano da Silva' },
       { key: 'corpo', label: 'Observações / Complemento', placeholder: 'Informações adicionais...', multiline: true },
@@ -40,6 +39,175 @@ const fmtDataExtenso = (iso) => {
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 };
+
+const TIPO_LABEL = { juiz: 'Juiz(a)', cartorio_rc: 'Cartório RC', outro: 'Outro' };
+
+// ── Autocomplete com botão salvar contato ────────────────────
+function AutocompleteContato({ value, onChange, tipoContato, placeholder, contatos, onSalvar }) {
+  const [aberto, setAberto] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const ref = useRef(null);
+
+  const sugestoes = useMemo(() => {
+    if (!value || value.length < 2) return contatos.filter(c => c.tipo === tipoContato);
+    return contatos.filter(c =>
+      c.tipo === tipoContato &&
+      (c.nome.toLowerCase().includes(value.toLowerCase()) ||
+       (c.descricao || '').toLowerCase().includes(value.toLowerCase()))
+    );
+  }, [contatos, tipoContato, value]);
+
+  const jaExiste = contatos.some(c => c.tipo === tipoContato && c.nome.toLowerCase() === (value || '').toLowerCase());
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setAberto(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSalvar = async () => {
+    if (!value?.trim()) return;
+    setSalvando(true);
+    await onSalvar({ tipo: tipoContato, nome: value.trim(), descricao: '' });
+    setSalvando(false);
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          className="form-input"
+          value={value}
+          onChange={e => { onChange(e.target.value); setAberto(true); }}
+          onFocus={() => setAberto(true)}
+          placeholder={placeholder}
+          style={{ flex: 1 }}
+          autoComplete="off"
+        />
+        {value && !jaExiste && (
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleSalvar}
+            disabled={salvando}
+            title={`Salvar "${value}" como ${TIPO_LABEL[tipoContato]}`}
+            style={{ flexShrink: 0, fontSize: 11 }}
+          >
+            {salvando ? '...' : '💾 Salvar'}
+          </button>
+        )}
+        {value && jaExiste && (
+          <span style={{ alignSelf: 'center', fontSize: 11, color: 'var(--color-success, #16a34a)', flexShrink: 0 }}>✓ salvo</span>
+        )}
+      </div>
+
+      {aberto && sugestoes.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+          background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          maxHeight: 200, overflowY: 'auto', marginTop: 2,
+        }}>
+          {sugestoes.map(c => (
+            <div
+              key={c.id}
+              onMouseDown={() => { onChange(c.nome); setAberto(false); }}
+              style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
+              {c.descricao && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{c.descricao}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Modal de gerenciamento de contatos ───────────────────────
+function GerenciarContatos({ contatos, onAdd, onEdit, onDelete, onClose }) {
+  const [form,      setForm]      = useState({ tipo: 'juiz', nome: '', descricao: '' });
+  const [editando,  setEditando]  = useState(null);
+  const [filtrTipo, setFiltrTipo] = useState('');
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSalvar = async () => {
+    if (!form.nome.trim()) return;
+    if (editando) { await onEdit(editando, { nome: form.nome.trim(), descricao: form.descricao.trim(), tipo: form.tipo }); setEditando(null); }
+    else          { await onAdd({ tipo: form.tipo, nome: form.nome.trim(), descricao: form.descricao.trim() }); }
+    setForm({ tipo: form.tipo, nome: '', descricao: '' });
+  };
+
+  const iniciarEdicao = (c) => {
+    setEditando(c.id);
+    setForm({ tipo: c.tipo, nome: c.nome, descricao: c.descricao || '' });
+  };
+
+  const lista = filtrTipo ? contatos.filter(c => c.tipo === filtrTipo) : contatos;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid var(--color-border)' }}>
+          <span style={{ fontWeight: 700, fontSize: 15 }}>Gerenciar Contatos</span>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Formulário */}
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 8 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Tipo</label>
+              <select className="form-select" value={form.tipo} onChange={e => setF('tipo', e.target.value)}>
+                {Object.entries(TIPO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Nome *</label>
+              <input className="form-input" value={form.nome} onChange={e => setF('nome', e.target.value)} placeholder="Nome do juiz, cartório, etc." />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Descrição (vara, comarca, endereço...)</label>
+            <input className="form-input" value={form.descricao} onChange={e => setF('descricao', e.target.value)} placeholder="Informação complementar opcional" />
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            {editando && <button className="btn btn-secondary btn-sm" onClick={() => { setEditando(null); setForm({ tipo: form.tipo, nome: '', descricao: '' }); }}>Cancelar</button>}
+            <button className="btn btn-primary btn-sm" onClick={handleSalvar} disabled={!form.nome.trim()}>
+              {editando ? 'Salvar alteração' : '+ Adicionar'}
+            </button>
+          </div>
+        </div>
+
+        {/* Lista */}
+        <div style={{ padding: '10px 18px 6px', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 6 }}>
+          <button className={`btn btn-sm ${!filtrTipo ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltrTipo('')}>Todos</button>
+          {Object.entries(TIPO_LABEL).map(([k, v]) => (
+            <button key={k} className={`btn btn-sm ${filtrTipo === k ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltrTipo(k)}>{v}</button>
+          ))}
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {lista.length === 0
+            ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhum contato cadastrado</div>
+            : lista.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px', borderBottom: '1px solid var(--color-border)' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: 'var(--color-surface-2)', color: 'var(--color-text-muted)' }}>{TIPO_LABEL[c.tipo]}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
+                  {c.descricao && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{c.descricao}</div>}
+                </div>
+                <button className="btn-icon btn-sm" onClick={() => iniciarEdicao(c)} title="Editar">✎</button>
+                <button className="btn-icon btn-sm" onClick={() => { if (window.confirm('Remover contato?')) onDelete(c.id); }} style={{ color: 'var(--color-danger)' }} title="Remover">✕</button>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Geração do .docx via lib docx (importada dinamicamente) ──
 async function gerarDocx({ modelo, oficio, processo, interessados, cartorio, extras }) {
@@ -329,13 +497,14 @@ async function gerarDocx({ modelo, oficio, processo, interessados, cartorio, ext
 
 // ── Componente principal ─────────────────────────────────────
 export default function ModelosOficio() {
-  const { oficios, processos, interessados, cartorio, usuarios } = useApp();
+  const { oficios, processos, interessados, cartorio, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato } = useApp();
 
-  const [oficioSel,  setOficioSel]  = useState('');
-  const [modeloSel,  setModeloSel]  = useState('');
-  const [extras,     setExtras]     = useState({});
-  const [gerando,    setGerando]    = useState(false);
-  const [erro,       setErro]       = useState('');
+  const [oficioSel,       setOficioSel]       = useState('');
+  const [modeloSel,       setModeloSel]       = useState('');
+  const [extras,          setExtras]          = useState({});
+  const [gerando,         setGerando]         = useState(false);
+  const [erro,            setErro]            = useState('');
+  const [modalContatos,   setModalContatos]   = useState(false);
 
   const oficio   = useMemo(() => oficios.find(o => String(o.id) === String(oficioSel)), [oficios, oficioSel]);
   const processo = useMemo(() => oficio?.processo_id ? processos.find(p => p.id === oficio.processo_id) : null, [oficio, processos]);
@@ -343,7 +512,6 @@ export default function ModelosOficio() {
 
   const setExtra = (k, v) => setExtras(p => ({ ...p, [k]: v }));
 
-  // Ordena ofícios: mais recentes primeiro
   const oficiosOrdenados = useMemo(() =>
     [...oficios].sort((a, b) => {
       const na = parseInt((a.numero || '').split('/')[0], 10) || 0;
@@ -351,6 +519,10 @@ export default function ModelosOficio() {
       return nb - na;
     }),
   [oficios]);
+
+  const handleSalvarContato = async (dados) => {
+    await addOficioContato(dados);
+  };
 
   const handleGerar = async () => {
     if (!oficio)  { setErro('Selecione um ofício.'); return; }
@@ -376,6 +548,13 @@ export default function ModelosOficio() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
 
+      {/* Cabeçalho com botão gerenciar contatos */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button className="btn btn-secondary btn-sm" onClick={() => setModalContatos(true)}>
+          📋 Gerenciar Contatos ({oficioContatos?.length || 0})
+        </button>
+      </div>
+
       {/* Passo 1 — Selecionar ofício */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-header">
@@ -395,7 +574,6 @@ export default function ModelosOficio() {
             ))}
           </select>
 
-          {/* Resumo do ofício selecionado */}
           {oficio && (
             <div style={{ marginTop: 12, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '10px 14px', fontSize: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 20px' }}>
               <div><span style={{ color: 'var(--color-text-muted)' }}>Número: </span><strong>{oficio.numero}</strong></div>
@@ -443,13 +621,13 @@ export default function ModelosOficio() {
         </div>
       </div>
 
-      {/* Passo 3 — Campos extras do modelo */}
+      {/* Passo 3 — Campos extras */}
       {modelo && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
             <div className="card-title">3 — Preencha os Campos do Modelo</div>
             <div className="card-subtitle" style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
-              Campos em branco serão deixados como linha em branco no documento
+              Campos com 💾 podem ser salvos para reutilização futura
             </div>
           </div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -465,12 +643,21 @@ export default function ModelosOficio() {
                       placeholder={campo.placeholder}
                       style={{ resize: 'vertical', fontSize: 12 }}
                     />
-                  : <input
-                      className="form-input"
-                      value={extras[campo.key] || ''}
-                      onChange={e => setExtra(campo.key, e.target.value)}
-                      placeholder={campo.placeholder}
-                    />
+                  : campo.tipoContato
+                    ? <AutocompleteContato
+                        value={extras[campo.key] || ''}
+                        onChange={v => setExtra(campo.key, v)}
+                        tipoContato={campo.tipoContato}
+                        placeholder={campo.placeholder}
+                        contatos={oficioContatos || []}
+                        onSalvar={handleSalvarContato}
+                      />
+                    : <input
+                        className="form-input"
+                        value={extras[campo.key] || ''}
+                        onChange={e => setExtra(campo.key, e.target.value)}
+                        placeholder={campo.placeholder}
+                      />
                 }
               </div>
             ))}
@@ -496,6 +683,17 @@ export default function ModelosOficio() {
           {gerando ? '⏳ Gerando...' : '📄 Gerar .docx'}
         </button>
       </div>
+
+      {/* Modal gerenciar contatos */}
+      {modalContatos && (
+        <GerenciarContatos
+          contatos={oficioContatos || []}
+          onAdd={addOficioContato}
+          onEdit={editOficioContato}
+          onDelete={deleteOficioContato}
+          onClose={() => setModalContatos(false)}
+        />
+      )}
     </div>
   );
 }
