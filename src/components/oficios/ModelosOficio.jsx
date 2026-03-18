@@ -104,27 +104,78 @@ function GerenciarContatos({ contatos, onAdd, onEdit, onDelete, onClose }) {
 
 // ── Geração docx ─────────────────────────────────────────────
 async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante }) {
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType } = await import('docx');
-  const nomeCartorio = cartorio?.nome || 'Serviço Notarial e Registral';
-  const cidade       = cartorio?.cidade || 'Paranatinga - MT';
-  const endereco     = cartorio?.endereco || '';
-  const telefone     = cartorio?.telefone || '';
-  const dtOficio     = fmtDataExtenso(oficio.dt_oficio || new Date().toISOString().split('T')[0]);
-  const numOficio    = oficio.numero || '';
-  const nomeAssin    = assinante?.nome_completo || assinante?.nome_simples || '';
-  const funcaoAssin  = assinante?.cargo || assinante?.perfil || 'Tabelião(ã)';
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType, ImageRun } = await import('docx');
+  const nomeCartorio   = cartorio?.nome || 'Serviço Notarial e Registral';
+  const cidade         = cartorio?.cidade || 'Paranatinga - MT';
+  const endereco       = cartorio?.endereco || '';
+  const telefone       = cartorio?.telefone || '';
+  const cabecalhoImg   = cartorio?.cabecalho_img_url || null;
+  const dtOficio       = fmtDataExtenso(oficio.dt_oficio || new Date().toISOString().split('T')[0]);
+  const numOficio      = oficio.numero || '';
+  const nomeAssin      = assinante?.nome_completo || assinante?.nome_simples || '';
+  const funcaoAssin    = assinante?.cargo || assinante?.perfil || 'Tabelião(ã)';
 
   const p = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false, color: opts.color||undefined })] });
   const pEmpty = () => new Paragraph({ children: [new TextRun({ text: '', font: 'Arial', size: 24 })], spacing: { after: 80 } });
   const pMixed = (runs, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??120, line: 276 }, children: runs.map(r => new TextRun({ font: 'Arial', size: 24, ...r })) });
 
+  // ── Helpers de tabela ──────────────────────────────────────
+  const border   = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
+  const borders  = { top: border, bottom: border, left: border, right: border };
+  const cm       = { top: 80, bottom: 80, left: 120, right: 120 };
+  const cell = (runs, w, bg=null) => new TableCell({
+    borders, margins: cm,
+    width: { size: w, type: WidthType.DXA },
+    ...(bg ? { shading: { fill: bg, type: ShadingType.CLEAR } } : {}),
+    children: [new Paragraph({ children: Array.isArray(runs)
+      ? runs.map(r => new TextRun({ font: 'Arial', size: 22, ...r }))
+      : [new TextRun({ text: runs||'', font: 'Arial', size: 22 })]
+    })]
+  });
+
+  // ── Cabeçalho: imagem ou texto ─────────────────────────────
+  let cabecalhoParagraphs = [];
+  if (cabecalhoImg) {
+    try {
+      // Converte data URL para ArrayBuffer
+      const base64 = cabecalhoImg.split(',')[1];
+      const binary  = atob(base64);
+      const bytes   = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const mimeMatch = cabecalhoImg.match(/data:([^;]+);/);
+      const mime = mimeMatch?.[1] || 'image/jpeg';
+      const imgType = mime.includes('png') ? 'png' : 'jpg';
+      cabecalhoParagraphs = [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          children: [new ImageRun({ data: bytes.buffer, transformation: { width: 580, height: 90 }, type: imgType })],
+        }),
+        new Paragraph({ spacing: { after: 80 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 4 } }, children: [new TextRun({ text: '', font: 'Arial', size: 4 })] }),
+        pEmpty(),
+      ];
+    } catch(e) {
+      console.warn('Erro ao carregar imagem do cabeçalho:', e);
+      cabecalhoParagraphs = [
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 28, bold: true })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 6 } }, children: [new TextRun({ text: `${endereco} — ${cidade}${telefone ? ' · Tel.: ' + telefone : ''}`, font: 'Arial', size: 20, color: '555555' })] }),
+        pEmpty(),
+      ];
+    }
+  } else {
+    cabecalhoParagraphs = [
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 28, bold: true })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: `${endereco} — ${cidade}`, font: 'Arial', size: 20, color: '555555' })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 6 } }, children: [new TextRun({ text: telefone ? `Tel.: ${telefone}` : '', font: 'Arial', size: 20, color: '555555' })] }),
+      pEmpty(),
+    ];
+  }
+
+  // Cidade/data e número do ofício à ESQUERDA (conforme imagem)
   const cabecalho = [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 28, bold: true })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: `${endereco} — ${cidade}`, font: 'Arial', size: 20, color: '555555' })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 6 } }, children: [new TextRun({ text: telefone ? `Tel.: ${telefone}` : '', font: 'Arial', size: 20, color: '555555' })] }),
-    pEmpty(),
-    new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 80 }, children: [new TextRun({ text: `${cidade}, ${dtOficio}.`, font: 'Arial', size: 24 })] }),
-    new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 320 }, children: [new TextRun({ text: `Ofício nº ${numOficio}`, font: 'Arial', size: 24, bold: true })] }),
+    ...cabecalhoParagraphs,
+    new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40 }, children: [new TextRun({ text: `${cidade}, ${dtOficio}.`, font: 'Arial', size: 24 })] }),
+    new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 320 }, children: [new TextRun({ text: `Ofício nº ${numOficio}`, font: 'Arial', size: 24, bold: true })] }),
   ];
 
   const rodape = [
@@ -149,17 +200,50 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const parte2     = dados.parte2 || '';
     const matricula  = dados.matricula || '';
     const dadosCompl = dados.dados_complementares || '';
-    const border = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
-    const borders = { top: border, bottom: border, left: border, right: border };
-    const cm = { top: 80, bottom: 80, left: 120, right: 120 };
-    const cell = (text, w, bold=false, bg=null) => new TableCell({ borders, margins: cm, width: { size: w, type: WidthType.DXA }, ...(bg?{shading:{fill:bg,type:ShadingType.CLEAR}}:{}), children: [new Paragraph({ children: [new TextRun({ text, font: 'Arial', size: 20, bold })] })] });
+
+    // ── Tabela Assento (Livro/Folhas/Termo/Data) ──────────────
     const tabelaAssento = new Table({
-      width: { size: 9026, type: WidthType.DXA }, columnWidths: [1505,1505,1505,4511],
+      width: { size: 9026, type: WidthType.DXA }, columnWidths: [1505, 1505, 1505, 4511],
       rows: [
-        new TableRow({ children: [cell('Livro',1505,true,'E8EFF6'), cell('Folhas',1505,true,'E8EFF6'), cell('Termo',1505,true,'E8EFF6'), cell('Data do Assento',4511,true,'E8EFF6')] }),
-        new TableRow({ children: [cell(livro,1505), cell(folhas,1505), cell(termo,1505), cell(dtAssento,4511)] }),
+        new TableRow({ children: [cell('Livro', 1505, 'E8EFF6'), cell('Folhas', 1505, 'E8EFF6'), cell('Termo', 1505, 'E8EFF6'), cell('Data do Assento', 4511, 'E8EFF6')] }),
+        new TableRow({ children: [cell(livro, 1505), cell(folhas, 1505), cell(termo, 1505), cell(dtAssento, 4511)] }),
       ]
     });
+
+    // ── Tabela Dados das Partes ───────────────────────────────
+    const linhasPartes = [];
+
+    if (tipoLabel === 'casamento') {
+      if (parte1) {
+        linhasPartes.push(new TableRow({ children: [
+          cell([{ text: 'Noiva (nome de solteira): ', bold: true }, { text: parte1 }], 9026),
+        ]}));
+        if (parte1Novo) linhasPartes.push(new TableRow({ children: [
+          cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], 9026),
+        ]}));
+      }
+      if (parte2) linhasPartes.push(new TableRow({ children: [
+        cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], 9026),
+      ]}));
+    } else {
+      if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 1: ', bold: true }, { text: parte1 }], 9026)] }));
+      if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], 9026)] }));
+    }
+    if (matricula) linhasPartes.push(new TableRow({ children: [
+      cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026),
+    ]}));
+
+    const tabelaPartes = linhasPartes.length > 0
+      ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
+      : null;
+
+    // ── Tabela Dados do Ato (averbação) ───────────────────────
+    const linhasAto = dadosCompl
+      ? dadosCompl.split('\n').filter(l => l.trim()).map(l => new TableRow({ children: [cell(l, 9026)] }))
+      : [new TableRow({ children: [cell('', 9026)] }), new TableRow({ children: [cell('', 9026)] })];
+
+    const tabelaAto = new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasAto });
+
     return [
       ...cabecalho,
       pEmpty(),
@@ -171,18 +255,13 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       p(`Dados do assento de ${tipoLabel}:`, { bold: true, after: 120 }),
       tabelaAssento,
       pEmpty(),
-      ...(parte1 ? [
-        pMixed([{ text: parte1, bold: true }], { after: 40 }),
-        ...(tipoLabel==='casamento' && parte1Novo ? [
-          pMixed([{ text: ' (nome de solteira)' }], { after: 40 }),
-          pMixed([{ text: 'Após o casamento, passou a adotar o nome de: ' }, { text: parte1Novo, bold: true }], { after: 40 }),
-        ] : []),
+      ...(tabelaPartes ? [
+        p('Dados das partes:', { bold: true, after: 120 }),
+        tabelaPartes,
+        pEmpty(),
       ] : []),
-      ...(parte2 ? [pMixed([{ text: tipoLabel==='casamento'?'Contraente: ':'' }, { text: parte2, bold: true }], { after: 40 })] : []),
-      ...(matricula ? [pMixed([{ text: 'Matrícula: ' }, { text: matricula, bold: true }], { after: 40 })] : []),
-      pEmpty(),
       p('Dados do assento pertinente à comunicação:', { bold: true, after: 120 }),
-      ...(dadosCompl ? dadosCompl.split('\n').map(l => p(l, { after: 80 })) : [p('', { after: 160 }), p('', { after: 160 })]),
+      tabelaAto,
       ...rodape,
     ];
   };
@@ -206,7 +285,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
   };
 
   const children = modelo.id === 'comunicacao_rc' ? buildRC() : buildForum();
-  const doc = new Document({ styles: { default: { document: { run: { font: 'Arial', size: 24 } } } }, sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1418, right: 1134, bottom: 1134, left: 1701 } } }, children }] });
+  const doc = new Document({ styles: { default: { document: { run: { font: 'Arial', size: 24 } } } }, sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1701 } } }, children }] });
   return await Packer.toBlob(doc);
 }
 
