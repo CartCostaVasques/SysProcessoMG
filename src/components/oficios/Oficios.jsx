@@ -179,27 +179,29 @@ export default function Oficios() {
       </div>
 
       {/* Resumo por mês */}
-      {modoVis !== 'modelos' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <div
-          className="stat-card"
-          onClick={() => setFiltroMesAno('')}
-          style={{ cursor: 'pointer', minWidth: 100, flex: '0 0 auto', border: !filtroMesAno ? '1px solid var(--color-accent-dim)' : undefined }}
-        >
-          <div className="stat-card-label">Total Geral</div>
-          <div className="stat-card-value" style={{ fontSize: 22 }}>{estatisticas.total}</div>
-        </div>
-        {mesesAnos.map(ma => (
+      {modoVis !== 'modelos' && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
           <div
-            key={ma}
             className="stat-card"
-            onClick={() => setFiltroMesAno(filtroMesAno === ma ? '' : ma)}
-            style={{ cursor: 'pointer', minWidth: 100, flex: '0 0 auto', border: filtroMesAno === ma ? '1px solid var(--color-accent-dim)' : undefined }}
+            onClick={() => setFiltroMesAno('')}
+            style={{ cursor: 'pointer', minWidth: 100, flex: '0 0 auto', border: !filtroMesAno ? '1px solid var(--color-accent-dim)' : undefined }}
           >
-            <div className="stat-card-label">{ma}</div>
-            <div className="stat-card-value" style={{ fontSize: 22 }}>{estatisticas.por_mes[ma] || 0}</div>
+            <div className="stat-card-label">Total Geral</div>
+            <div className="stat-card-value" style={{ fontSize: 22 }}>{estatisticas.total}</div>
           </div>
-        ))}
-      </div>
+          {mesesAnos.map(ma => (
+            <div
+              key={ma}
+              className="stat-card"
+              onClick={() => setFiltroMesAno(filtroMesAno === ma ? '' : ma)}
+              style={{ cursor: 'pointer', minWidth: 100, flex: '0 0 auto', border: filtroMesAno === ma ? '1px solid var(--color-accent-dim)' : undefined }}
+            >
+              <div className="stat-card-label">{ma}</div>
+              <div className="stat-card-value" style={{ fontSize: 22 }}>{estatisticas.por_mes[ma] || 0}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Ranking por responsável */}
       {modoVis !== 'modelos' && (() => {
