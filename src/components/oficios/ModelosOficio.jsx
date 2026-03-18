@@ -324,7 +324,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const linhasPartes = [];
     if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerida: ', bold: true }, { text: parte1 }], 9026)] }));
     if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerente: ', bold: true }, { text: parte2 }], 9026)] }));
-    if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Processo/Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
     const tabelaPartes = linhasPartes.length > 0
       ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
       : null;
@@ -411,10 +410,10 @@ export default function ModelosOficio() {
       setDados(p => ({
         ...p,
         destinatario: p.destinatario || oficio.destinatario || '',
-        referente:    p.referente    || oficio.assunto       || '',
+        referente:    oficio.assunto || '',
       }));
     }
-  }, [oficio]);
+  }, [oficio?.id]);
 
   const setD = (k,v) => setDados(p => ({...p,[k]:v}));
 
@@ -594,7 +593,7 @@ export default function ModelosOficio() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Vara / Comarca (Destinatário)</label>
-                      <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="juiz" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} />
+                      <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="cartorio_rc" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'cartorio_rc'})} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Meritíssimo(a) Juiz(a)</label>
@@ -622,7 +621,6 @@ export default function ModelosOficio() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Parte Requerida</label><input className="form-input" value={dados.parte1||''} onChange={e => setD('parte1',e.target.value)} placeholder="Nome da parte requerida" /></div>
                     <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Parte Requerente</label><input className="form-input" value={dados.parte2||''} onChange={e => setD('parte2',e.target.value)} placeholder="Nome da parte requerente" /></div>
-                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Processo / Matrícula</label><input className="form-input" value={dados.matricula||''} onChange={e => setD('matricula',e.target.value)} placeholder="Nº do processo ou matrícula" /></div>
                   </div>
                 </div>
 
