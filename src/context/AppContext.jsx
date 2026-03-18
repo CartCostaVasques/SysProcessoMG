@@ -23,6 +23,7 @@ export function AppProvider({ children }) {
   const [tarefas,    setTarefas]    = useState([]);
   const [oficios,    setOficios]    = useState([]);
   const [oficioContatos, setOficioContatos] = useState([]);
+  const [oficioModelosHistorico, setOficioModelosHistorico] = useState([]);
   const [setores,    setSetores]    = useState([]);
   const [servicos,   setServicos]   = useState([]);
   const [logs,       setLogs]       = useState([]);
@@ -133,6 +134,7 @@ export function AppProvider({ children }) {
       fetchTarefas(),
       fetchOficios(),
       fetchOficioContatos(),
+      fetchOficioModelosHistorico(),
       fetchUsuarios(),
       fetchInteressados(),
       fetchLogs(),
@@ -244,6 +246,7 @@ export function AppProvider({ children }) {
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
   const fetchOficioContatos = async () => { try { const {data} = await supabase.from('oficio_contatos').select('*').order('nome'); if(data) setOficioContatos(data); } catch(e){} };
+  const fetchOficioModelosHistorico = async () => { try { const {data} = await supabase.from('oficio_modelos_historico').select('*').order('gerado_em',{ascending:false}).limit(200); if(data) setOficioModelosHistorico(data); } catch(e){} };
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
@@ -414,6 +417,16 @@ export function AppProvider({ children }) {
     return () => supabase.removeChannel(channel);
   }, [usuario?.id]);
 
+  // ── Oficio Modelos Histórico ───────────────────────────────
+  const addOficioModeloHistorico = useCallback(async (d) => {
+    try {
+      const { data, error } = await supabase.from('oficio_modelos_historico').insert({ ...d, gerado_por: usuario?.id }).select().single();
+      if (error) throw error;
+      setOficioModelosHistorico(p => [data, ...p]);
+      return data;
+    } catch(e) { addToast(e.message, 'error'); }
+  }, [usuario]);
+
   // ── Oficio Contatos ────────────────────────────────────────
   const addOficioContato = useCallback(async (d) => {
     try {
@@ -460,6 +473,7 @@ export function AppProvider({ children }) {
       tarefas, addTarefa, editTarefa, deleteTarefa,
       oficios, addOficio, editOficio, deleteOficio,
       oficioContatos, addOficioContato, editOficioContato, deleteOficioContato,
+      oficioModelosHistorico, addOficioModeloHistorico,
       setores, addSetor, editSetor, deleteSetor,
       servicos, addServico, editServico, deleteServico,
       logs, cartorio, salvarCartorio,
