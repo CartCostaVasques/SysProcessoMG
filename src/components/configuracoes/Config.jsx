@@ -124,7 +124,7 @@ export function Configuracoes() {
 
             {/* Logo upload */}
             <div className="form-group form-full">
-              <label className="form-label">Logomarca</label>
+              <label className="form-label">Logomarca (sistema)</label>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 <div style={{ width: 80, height: 80, background: 'var(--color-surface-2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: 'var(--color-text-faint)' }}>
                   {form.logo_url ? <img src={form.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : '🏛'}
@@ -139,6 +139,30 @@ export function Configuracoes() {
                   <label htmlFor="logo-upload" className="btn btn-secondary" style={{ display: 'inline-flex', cursor: 'pointer' }}>Carregar Logo</label>
                   {form.logo_url && <button className="btn btn-ghost btn-sm" onClick={() => set('logo_url', null)} style={{ marginLeft: 8 }}>Remover</button>}
                   <div className="form-hint" style={{ marginTop: 6 }}>PNG, SVG ou JPG. Recomendado: fundo transparente.</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cabeçalho Word upload */}
+            <div className="form-group form-full">
+              <label className="form-label">Imagem de Cabeçalho (Ofícios Word)</label>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ flex: 1, maxHeight: 100, background: 'var(--color-surface-2)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 60 }}>
+                  {form.cabecalho_img_url
+                    ? <img src={form.cabecalho_img_url} alt="Cabeçalho" style={{ maxWidth: '100%', maxHeight: 100, objectFit: 'contain' }} />
+                    : <span style={{ fontSize: 12, color: 'var(--color-text-faint)' }}>Nenhuma imagem</span>
+                  }
+                </div>
+                <div style={{ flexShrink: 0 }}>
+                  <input type="file" accept="image/*" id="cabecalho-upload" style={{ display: 'none' }}
+                    onChange={e => {
+                      const f = e.target.files?.[0];
+                      if (f) { const r = new FileReader(); r.onload = (ev) => set('cabecalho_img_url', ev.target.result); r.readAsDataURL(f); }
+                    }}
+                  />
+                  <label htmlFor="cabecalho-upload" className="btn btn-secondary" style={{ display: 'inline-flex', cursor: 'pointer' }}>Carregar Imagem</label>
+                  {form.cabecalho_img_url && <button className="btn btn-ghost btn-sm" onClick={() => set('cabecalho_img_url', null)} style={{ marginLeft: 8 }}>Remover</button>}
+                  <div className="form-hint" style={{ marginTop: 6 }}>Aparece no topo dos ofícios gerados em Word.<br/>JPG ou PNG. Largura recomendada: 1000px+.</div>
                 </div>
               </div>
             </div>
