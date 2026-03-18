@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
+import ModelosOficio from './ModelosOficio.jsx';
 
 const STATUS_OFICIO = ['Enviado', 'Aguardando Resposta', 'Respondido', 'Arquivado'];
 const EMPTY = {
@@ -164,12 +165,12 @@ export default function Oficios() {
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <div style={{ display: 'flex', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-            {[['lista','☰ Lista'],['responsavel','◫ Responsável']].map(([id, label]) => (
+            {[['lista','☰ Lista'],['responsavel','◫ Responsável'],['modelos','📄 Modelos']].map(([id, label]) => (
               <button key={id} onClick={() => setModoVis(id)} style={{
                 padding: '6px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: modoVis === id ? 700 : 400,
                 background: modoVis === id ? 'var(--color-surface-3)' : 'transparent',
                 color: modoVis === id ? 'var(--color-text)' : 'var(--color-text-muted)',
-                borderRight: id === 'lista' ? '1px solid var(--color-border)' : 'none',
+                borderRight: id !== 'modelos' ? '1px solid var(--color-border)' : 'none',
               }}>{label}</button>
             ))}
           </div>
@@ -178,7 +179,7 @@ export default function Oficios() {
       </div>
 
       {/* Resumo por mês */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      {modoVis !== 'modelos' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <div
           className="stat-card"
           onClick={() => setFiltroMesAno('')}
@@ -201,7 +202,7 @@ export default function Oficios() {
       </div>
 
       {/* Ranking por responsável */}
-      {(() => {
+      {modoVis !== 'modelos' && (() => {
         const ranking = Object.entries(
           oficios.reduce((acc, o) => {
             const r = o.responsavel || '— Sem responsável';
@@ -246,7 +247,7 @@ export default function Oficios() {
         );
       })()}
 
-      <div className="filter-bar">
+      {modoVis !== 'modelos' && <div className="filter-bar">
         <div className="search-bar" style={{ flex: 1 }}>
           <span className="search-bar-icon">⌕</span>
           <input placeholder="Buscar por número, destinatário, assunto..." value={busca} onChange={e => setBusca(e.target.value)} />
@@ -263,7 +264,7 @@ export default function Oficios() {
           <option value="">Todos</option>
           {responsaveis.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-      </div>
+      </div>}
 
       {/* ── Modo Lista (agrupado por mês) ────────────────────── */}
       {modoVis === 'lista' && (() => {
@@ -444,6 +445,9 @@ export default function Oficios() {
           </div>
         );
       })()}
+
+      {/* ── Modo Modelos ─────────────────────────────────── */}
+      {modoVis === 'modelos' && <ModelosOficio />}
 
       {modal && (
         <ModalOficio
