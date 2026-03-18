@@ -4,7 +4,43 @@ import { useApp } from '../../context/AppContext.jsx';
 const TIPOS_RC = ['Casamento', 'Divórcio', 'Óbito', 'Nascimento', 'Outros'];
 const MODELOS = [
   { id: 'comunicacao_rc',    label: 'Comunicação ao Registro Civil', descricao: 'Comunicação de ato notarial ao Registro Civil (casamento, divórcio, óbito...)' },
-  { id: 'forum_cumprimento', label: 'Ofício ao Fórum — Cumprimento', descricao: 'Ofício simples de cumprimento dirigido ao Fórum / Juízo' },
+  { id: 'forum_cumprimento', label: 'Ofício ao Fórum / Juízo',       descricao: 'Cumprimento de mandado, envio de documentos, resposta a solicitação...' },
+];
+
+// Situações pré-definidas para o Fórum
+const SITUACOES_FORUM = [
+  {
+    id: 'cumprimento_mandado',
+    label: 'Cumprimento de Mandado',
+    corpo: `Venho por meio do presente, em atendimento ao Mandado acima mencionado, no qual figura com parte requerida, [NOME DA PARTE], informar o cumprimento do mesmo, procedendo com a [DESCREVER O ATO].
+
+Desta feita, segue certidão do registro sob nº [Nº REGISTRO] do Livro [LIVRO] desta Serventia para a comprovação do ato.
+
+Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Senhoria protestos de elevada estima e consideração.`,
+  },
+  {
+    id: 'envio_documentos',
+    label: 'Envio de Documentos / Certidão',
+    corpo: `Vimos pelo presente encaminhar a Vossa Excelência, em atendimento à solicitação, os documentos abaixo relacionados:
+
+[RELACIONAR OS DOCUMENTOS ENVIADOS]
+
+Colocamo-nos à disposição para quaisquer esclarecimentos que se fizerem necessários.`,
+  },
+  {
+    id: 'resposta_solicitacao',
+    label: 'Resposta a Solicitação',
+    corpo: `Em resposta ao ofício nº [Nº OFÍCIO], datado de [DATA], vimos informar que:
+
+[DESCREVER A RESPOSTA À SOLICITAÇÃO]
+
+Permanecemos à inteira disposição de Vossa Excelência para o que mais se fizer necessário.`,
+  },
+  {
+    id: 'livre',
+    label: 'Texto Livre',
+    corpo: '',
+  },
 ];
 const TIPO_LABEL = { juiz: 'Juiz(a)', cartorio_rc: 'Cartório RC', outro: 'Outro' };
 const TABELIA_ID = '__tabelia_cartorio__';
@@ -104,7 +140,7 @@ function GerenciarContatos({ contatos, onAdd, onEdit, onDelete, onClose }) {
 
 // ── Geração docx ─────────────────────────────────────────────
 async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante }) {
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType, ImageRun, Header } = await import('docx');
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType, ImageRun, Header, UnderlineType } = await import('docx');
   const nomeCartorio   = cartorio?.nome || 'Serviço Notarial e Registral';
   const cidade         = cartorio?.cidade || 'Paranatinga - MT';
   const endereco       = cartorio?.endereco || '';
@@ -123,7 +159,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
   const p = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false, color: opts.color||undefined })] });
   const pEmpty = () => new Paragraph({ children: [new TextRun({ text: '', font: 'Arial', size: 24 })], spacing: { after: 80 } });
-  const pMixed = (runs, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??120, line: 276 }, children: runs.map(r => new TextRun({ font: 'Arial', size: 24, ...r })) });
+  const pMixed = (runs, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??120, line: 276 }, children: runs.map(r => new TextRun({ font: 'Arial', size: 24, ...r, underline: r.underline ? { type: UnderlineType.SINGLE } : undefined })) });
 
   // ── Helpers de tabela ──────────────────────────────────────
   const border   = { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' };
@@ -275,19 +311,47 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
   };
 
   const buildForum = () => {
-    const juiz  = dados.juiz || '___________________________';
-    const vara  = dados.vara || '___________________________';
-    const corpo = dados.corpo || 'Vimos, por meio do presente, encaminhar os documentos solicitados, colocando-nos à disposição para quaisquer esclarecimentos.';
+    const vara       = dados.vara       || oficio.destinatario || '___________________________';
+    const juiz       = dados.juiz       || '';
+    const procJud    = dados.proc_judicial || '';
+    const referente  = dados.referente  || '';
+    const corpo      = dados.corpo      || '';
+    const parte1     = dados.parte1     || '';
+    const parte2     = dados.parte2     || '';
+    const matricula  = dados.matricula  || '';
+
+    // Tabela de partes (mesma lógica do RC)
+    const linhasPartes = [];
+    if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerida: ', bold: true }, { text: parte1 }], 9026)] }));
+    if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerente: ', bold: true }, { text: parte2 }], 9026)] }));
+    if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Processo/Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
+    const tabelaPartes = linhasPartes.length > 0
+      ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
+      : null;
+
     return [
       ...cabecalho,
-      p('Excelentíssimo(a) Senhor(a)', { bold: true, after: 40 }),
-      p(juiz, { bold: true, after: 40 }),
-      p(vara, { after: 40 }),
-      p(cidade, { after: 320 }),
-      ...(dados.proc_judicial ? [p(`Ref.: Processo Judicial nº ${dados.proc_judicial}`, { bold: true, after: 240 })] : []),
-      pMixed([{ text: 'Assunto: ', bold: true }, { text: oficio.assunto||'' }], { after: 240 }),
-      p('Senhor(a),', { after: 200 }),
-      ...corpo.split('\n').map(l => p(l, { after: 160 })),
+      pEmpty(),
+      // Referente (negrito, antes da saudação — conforme imagem)
+      ...(referente ? [
+        pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.RIGHT }),
+      ] : []),
+      // Destinatário
+      pMixed([{ text: 'Excelentíssimo(a) Senhor(a) ' }, { text: juiz ? juiz + ',' : ',' }], { after: 80 }),
+      pMixed([{ text: vara, bold: true }], { after: 240 }),
+      pEmpty(),
+      // Nº processo judicial
+      ...(procJud ? [
+        pMixed([{ text: 'Proc. nº ' }, { text: procJud, bold: true }], { after: 200 }),
+      ] : []),
+      // Partes
+      ...(tabelaPartes ? [
+        p('Partes:', { bold: true, after: 120 }),
+        tabelaPartes,
+        pEmpty(),
+      ] : []),
+      // Corpo editável
+      ...corpo.split('\n').map(l => p(l || '', { after: 160 })),
       ...rodape,
     ];
   };
@@ -499,17 +563,84 @@ export default function ModelosOficio() {
               </>)}
 
               {modelo.id === 'forum_cumprimento' && (<>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Meritíssimo(a) Juiz(a)</label>
-                    <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={dados => addOficioContato(dados)} />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Vara / Comarca</label><input className="form-input" value={dados.vara||''} onChange={e => setD('vara',e.target.value)} placeholder="Ex: 1ª Vara Cível de Paranatinga" /></div>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Nº Processo Judicial (opcional)</label><input className="form-input" value={dados.proc_judicial||''} onChange={e => setD('proc_judicial',e.target.value)} placeholder="Nº do processo judicial" /></div>
+
+                {/* Situação pré-definida */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Corpo do Ofício</label>
-                  <textarea className="form-input" rows={5} value={dados.corpo||''} onChange={e => setD('corpo',e.target.value)} placeholder="Texto principal do ofício..." style={{ resize: 'vertical', fontSize: 12 }} />
+                  <label className="form-label">Situação / Tipo do Ofício</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {SITUACOES_FORUM.map(s => (
+                      <div key={s.id}
+                        onClick={() => {
+                          setD('situacao', s.id);
+                          if (s.corpo && !dados.corpo_editado) setD('corpo', s.corpo);
+                          else if (s.corpo) { if (window.confirm('Substituir o corpo do ofício pelo texto padrão desta situação?')) { setD('corpo', s.corpo); setD('corpo_editado', false); } }
+                          else if (!s.corpo) setD('corpo', '');
+                        }}
+                        style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.situacao===s.id?'var(--color-accent)':'var(--color-border)'}`, background: dados.situacao===s.id?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 13, fontWeight: dados.situacao===s.id?700:400, color: dados.situacao===s.id?'var(--color-accent)':'var(--color-text)' }}>
+                        {dados.situacao===s.id?'● ':'○ '}{s.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Destinatário</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Vara / Comarca (Destinatário)</label>
+                      <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="juiz" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Meritíssimo(a) Juiz(a)</label>
+                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Referência e Processo</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Referente</label>
+                      <input className="form-input" value={dados.referente||''} onChange={e => setD('referente',e.target.value)} placeholder="Ex: Cumprimento ao Mandado de Retificação de Registro, extraído dos Autos nº 1000703-22..." />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Nº Processo Judicial</label>
+                      <input className="form-input" value={dados.proc_judicial||''} onChange={e => setD('proc_judicial',e.target.value)} placeholder="Nº do processo judicial" />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Partes (opcional)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Parte Requerida</label><input className="form-input" value={dados.parte1||''} onChange={e => setD('parte1',e.target.value)} placeholder="Nome da parte requerida" /></div>
+                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Parte Requerente</label><input className="form-input" value={dados.parte2||''} onChange={e => setD('parte2',e.target.value)} placeholder="Nome da parte requerente" /></div>
+                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Processo / Matrícula</label><input className="form-input" value={dados.matricula||''} onChange={e => setD('matricula',e.target.value)} placeholder="Nº do processo ou matrícula" /></div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Corpo do Ofício</div>
+                    {dados.situacao && dados.situacao !== 'livre' && (
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
+                        onClick={() => { const s = SITUACOES_FORUM.find(x => x.id===dados.situacao); if(s) { setD('corpo', s.corpo); setD('corpo_editado', false); } }}>
+                        ↺ Restaurar texto padrão
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    className="form-input"
+                    rows={10}
+                    value={dados.corpo||''}
+                    onChange={e => { setD('corpo', e.target.value); setD('corpo_editado', true); }}
+                    placeholder="Texto do ofício..."
+                    style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6 }}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
+                    Texto editável — use [COLCHETES] para marcar campos a preencher
+                  </div>
                 </div>
               </>)}
             </div>
