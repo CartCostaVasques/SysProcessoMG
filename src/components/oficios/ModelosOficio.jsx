@@ -558,9 +558,9 @@ function AbaTextos({ situacoes, textosSalvos, onSalvar, onReset }) {
   }, {});
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16, alignItems: 'stretch' }}>
       {/* Lista de situações */}
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card" style={{ padding: 0, position: 'sticky', top: 0 }}>
         <div className="card-header"><div className="card-title" style={{ fontSize: 13 }}>Situações</div></div>
         {Object.entries(grupos).map(([modeloLabel, sits]) => (
           <div key={modeloLabel}>
@@ -583,9 +583,9 @@ function AbaTextos({ situacoes, textosSalvos, onSalvar, onReset }) {
       </div>
 
       {/* Editor */}
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column' }}>
         {!selecionada
-          ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>← Selecione uma situação para editar o texto base</div>
+          ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>← Selecione uma situação para editar o texto base</div>
           : (<>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
@@ -601,16 +601,15 @@ function AbaTextos({ situacoes, textosSalvos, onSalvar, onReset }) {
                 </button>
               </div>
             </div>
-            <div style={{ padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginBottom: 8 }}>
+            <div style={{ padding: '12px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
                 Este texto será usado como base ao selecionar esta situação. Use [COLCHETES] para campos editáveis.
               </div>
               <textarea
                 className="form-input"
                 value={textoEdit}
                 onChange={e => { setTextoEdit(e.target.value); setSalvo(false); }}
-                rows={18}
-                style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.7, width: '100%' }}
+                style={{ resize: 'none', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.7, width: '100%', flex: 1, minHeight: 300 }}
               />
             </div>
           </>)
