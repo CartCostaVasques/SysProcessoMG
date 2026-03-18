@@ -38,6 +38,13 @@ Colocamo-nos à disposição para quaisquer esclarecimentos que se fizerem neces
 Permanecemos à inteira disposição de Vossa Excelência para o que mais se fizer necessário.`,
   },
   {
+    id: 'sustacao_protesto',
+    label: 'Sustação de Protesto',
+    corpo: `Venho por meio do presente, em atendimento ao referido Mandado Judicial, informar a Vossa Excelência o cumprimento do mesmo, procedendo com a sustação do protesto do(s) título(s) indicado(s) nos autos.
+
+Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.`,
+  },
+  {
     id: 'livre',
     label: 'Texto Livre',
     corpo: '',
