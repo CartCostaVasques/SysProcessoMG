@@ -799,11 +799,35 @@ export default function ModelosOficio() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Nome / Razão Social</label>
-                      <AutocompleteContato value={dados.dest_nome||oficio?.destinatario||''} onChange={v => setD('dest_nome',v)} tipoContato="protesto_dest" placeholder="Ex: CRA - Central de Remessa de Arquivos" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({ tipo:'protesto_dest', nome: d.nome, descricao: dados.dest_endereco||'' })} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} onSelect={c => { if(c.descricao) setD('dest_endereco', c.descricao); }} />
+                      <AutocompleteContato
+                        value={dados.dest_nome||oficio?.destinatario||''}
+                        onChange={v => setD('dest_nome', v)}
+                        tipoContato="protesto_dest"
+                        placeholder="Ex: CRA - Central de Remessa de Arquivos"
+                        contatos={oficioContatos||[]}
+                        onSalvar={d => addOficioContato({ tipo:'protesto_dest', nome: d.nome, descricao: dados.dest_endereco||'' })}
+                        onEditar={(id,d) => editOficioContato(id, d)}
+                        onDeletar={id => deleteOficioContato(id)}
+                        onSelect={c => { setD('dest_nome', c.nome); if(c.descricao) setD('dest_endereco', c.descricao); }}
+                      />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Endereço Completo</label>
-                      <textarea className="form-input" rows={2} value={dados.dest_endereco||''} onChange={e => setD('dest_endereco',e.target.value)} placeholder="Ex: Rua General Amilcar Magalhães, 38 - Duque de Caxias - Cuiabá - MT" style={{ resize: 'vertical', fontSize: 12 }} />
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                        <textarea className="form-input" rows={2} value={dados.dest_endereco||''} onChange={e => setD('dest_endereco', e.target.value)} placeholder="Ex: Rua General Amilcar Magalhães, 38 - Duque de Caxias - Cuiabá - MT" style={{ resize: 'vertical', fontSize: 12, flex: 1 }} />
+                        {(() => {
+                          const contatoExistente = (oficioContatos||[]).find(c => c.tipo==='protesto_dest' && c.nome.toLowerCase()===(dados.dest_nome||'').toLowerCase().trim());
+                          if (!contatoExistente || !dados.dest_nome) return null;
+                          const enderecoAtualizado = contatoExistente.descricao !== (dados.dest_endereco||'');
+                          if (!enderecoAtualizado) return null;
+                          return (
+                            <button className="btn btn-secondary btn-sm" style={{ flexShrink: 0, fontSize: 11, marginTop: 2 }}
+                              onClick={() => editOficioContato(contatoExistente.id, { ...contatoExistente, descricao: dados.dest_endereco||'' })}>
+                              💾 Salvar endereço
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
