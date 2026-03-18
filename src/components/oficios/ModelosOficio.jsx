@@ -250,6 +250,18 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: 'Arial', size: 22, color: '555555' })] }),
   ];
 
+  // Rodapé com indent para ofícios do Fórum
+  const pIndent = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false })] });
+  const rodapeForum = [
+    pEmpty(),
+    pIndent('Valemo-nos da oportunidade para reiterar à Vossa Senhoria, protestos de estima e apreço.', { after: 200 }),
+    pEmpty(),
+    pIndent('Atenciosamente,', { after: 400 }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: '333333', space: 6 } }, children: [new TextRun({ text: nomeAssin, font: 'Arial', size: 24, bold: true })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: funcaoAssin, font: 'Arial', size: 22, color: '555555' })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: 'Arial', size: 22, color: '555555' })] }),
+  ];
+
   const buildRC = () => {
     const tipoLabel  = (dados.tipo_rc || 'casamento').toLowerCase();
     const destinat   = dados.destinatario || oficio.destinatario || '___________________________';
@@ -322,10 +334,10 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
     // Tabela de partes (mesma lógica do RC)
     const linhasPartes = [];
-    if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerida: ', bold: true }, { text: parte1 }], 9026)] }));
-    if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerente: ', bold: true }, { text: parte2 }], 9026)] }));
+    if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerida: ', bold: true }, { text: parte1 }], 9071)] }));
+    if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerente: ', bold: true }, { text: parte2 }], 9071)] }));
     const tabelaPartes = linhasPartes.length > 0
-      ? new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasPartes })
+      ? new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [9071], rows: linhasPartes })
       : null;
 
     return [
@@ -356,7 +368,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         indent: { firstLine: 1701 },
         children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
       })),
-      ...rodape,
+      ...rodapeForum,
     ];
   };
 
@@ -386,7 +398,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
 // ── Componente Principal ─────────────────────────────────────
 export default function ModelosOficio() {
-  const { oficios, processos, cartorio, usuarios, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato, oficioModelosHistorico, addOficioModeloHistorico } = useApp();
+  const { oficios, processos, cartorio, usuarios, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato, oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico } = useApp();
   const [aba,           setAba]           = useState('emitir');
   const [oficioSel,     setOficioSel]     = useState('');
   const [modeloSel,     setModeloSel]     = useState('');
@@ -482,7 +494,12 @@ export default function ModelosOficio() {
                           <td style={{ fontSize: 12, color: 'var(--color-text-muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{of?.assunto||'—'}</td>
                           <td style={{ fontSize: 12 }}>{h.assinante_nome||'—'}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{fmtData(h.gerado_em?.split('T')[0])}</td>
-                          <td><button className="btn btn-secondary btn-sm" onClick={() => recarregarHistorico(h)}>↩ Reabrir</button></td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-secondary btn-sm" onClick={() => recarregarHistorico(h)}>↩ Reabrir</button>
+                              <button className="btn-icon btn-sm" onClick={() => { if (window.confirm('Remover do histórico?')) deleteOficioModeloHistorico(h.id); }} style={{ color: 'var(--color-danger)' }} title="Remover">✕</button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -645,7 +662,7 @@ export default function ModelosOficio() {
                     value={dados.corpo||''}
                     onChange={e => { setD('corpo', e.target.value); setD('corpo_editado', true); }}
                     placeholder="Texto do ofício..."
-                    style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6 }}
+                    style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6, minHeight: 280 }}
                   />
                   <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
                     Texto editável — use [COLCHETES] para marcar campos a preencher
