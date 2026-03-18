@@ -407,7 +407,13 @@ export default function ModelosOficio() {
   }, [assinantes, cartorio]);
 
   useEffect(() => {
-    if (oficio) setDados(p => ({ ...p, destinatario: p.destinatario || oficio.destinatario || '' }));
+    if (oficio) {
+      setDados(p => ({
+        ...p,
+        destinatario: p.destinatario || oficio.destinatario || '',
+        referente:    p.referente    || oficio.assunto       || '',
+      }));
+    }
   }, [oficio]);
 
   const setD = (k,v) => setDados(p => ({...p,[k]:v}));
