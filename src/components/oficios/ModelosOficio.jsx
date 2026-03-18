@@ -461,7 +461,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })] })
       ) : []),
       pEmpty(),
-      p('Prezados Senhores,', { after: 200, align: AlignmentType.CENTER }),
+      pIndent('Prezados Senhores,', { after: 200 }),
       pEmpty(),
       // Corpo com indent 3cm
       ...corpo.split('\n').map(l => new Paragraph({
