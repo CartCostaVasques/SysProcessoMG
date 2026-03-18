@@ -386,9 +386,17 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ...(referente ? [
         pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
       ] : []),
-      // Destinatário
-      pMixed([{ text: 'Excelentíssimo(a) Senhor(a) ' }, { text: juiz ? juiz + ',' : ',' }], { after: 80 }),
-      pMixed([{ text: vara, bold: true }], { after: 240 }),
+      // Destinatário — tratamento conforme Dr./Dra.
+      ...((() => {
+        const feminino = juiz.trimStart().toLowerCase().startsWith('dra.');
+        const tratamento = juiz
+          ? (feminino ? 'Excelentíssima Senhora ' : 'Excelentíssimo Senhor ')
+          : 'Excelentíssimo(a) Senhor(a) ';
+        return [
+          pMixed([{ text: tratamento }, { text: juiz || '' }], { after: 80 }),
+          pMixed([{ text: vara, bold: true }], { after: 240 }),
+        ];
+      })()),
       pEmpty(),
       // Nº processo judicial
       ...(procJud ? [
