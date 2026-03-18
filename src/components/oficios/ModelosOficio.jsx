@@ -104,7 +104,7 @@ function GerenciarContatos({ contatos, onAdd, onEdit, onDelete, onClose }) {
 
 // ── Geração docx ─────────────────────────────────────────────
 async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante }) {
-  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType, ImageRun } = await import('docx');
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, WidthType, Table, TableRow, TableCell, ShadingType, ImageRun, Header } = await import('docx');
   const nomeCartorio   = cartorio?.nome || 'Serviço Notarial e Registral';
   const cidade         = cartorio?.cidade || 'Paranatinga - MT';
   const endereco       = cartorio?.endereco || '';
@@ -114,6 +114,12 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
   const numOficio      = oficio.numero || '';
   const nomeAssin      = assinante?.nome_completo || assinante?.nome_simples || '';
   const funcaoAssin    = assinante?.cargo || assinante?.perfil || 'Tabelião(ã)';
+
+  // 1 cm = 567 DXA | 0.4 cm ≈ 227 DXA
+  // Margens da página: header edge = 227 (~0.4cm), top body = altura do header + pequeno gap
+  const MARGIN_H   = 227;   // distância da borda ao cabeçalho (0.4 cm)
+  const MARGIN_LR  = 1134;  // esquerda/direita 2 cm
+  const MARGIN_BOT = 1134;  // inferior 2 cm
 
   const p = (text, opts={}) => new Paragraph({ alignment: opts.align||AlignmentType.JUSTIFIED, spacing: { after: opts.after??160, before: opts.before??0, line: 276 }, children: [new TextRun({ text: text||'', font: 'Arial', size: opts.size||24, bold: opts.bold||false, color: opts.color||undefined })] });
   const pEmpty = () => new Paragraph({ children: [new TextRun({ text: '', font: 'Arial', size: 24 })], spacing: { after: 80 } });
@@ -133,47 +139,73 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     })]
   });
 
-  // ── Cabeçalho: imagem ou texto ─────────────────────────────
-  let cabecalhoParagraphs = [];
+  // ── Header do Word (cabeçalho de página) ──────────────────
+  // Largura útil A4 com margens LR de 2cm cada = 11906 - 2*1134 = 9638 px em DXA
+  // Em EMUs: 1 DXA = 635 EMU | largura útil em EMU ≈ 9638 * 635 ≈ 6.120.130
+  // Imagem: 940px × 130px original → proporcional na largura útil
+  // Usamos 580pt de largura (~8.1cm no doc, ~580 * 635 / 914400 ≈ 0.4 polegadas? não)
+  // Melhor: largura total útil em pontos = (11906 - 2*1134) / 20 * 1.333 ≈ 512pt
+  // Vamos usar width em pixels diretamente como docx aceita (pt equivalente)
+  let headerParagraphs = [];
+  let headerHeightDXA  = 1800; // altura reservada para o header (≈3.2cm) quando texto
+
   if (cabecalhoImg) {
     try {
-      // Converte data URL para ArrayBuffer
-      const base64 = cabecalhoImg.split(',')[1];
-      const binary  = atob(base64);
-      const bytes   = new Uint8Array(binary.length);
+      const base64    = cabecalhoImg.split(',')[1];
+      const binary    = atob(base64);
+      const bytes     = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const mimeMatch = cabecalhoImg.match(/data:([^;]+);/);
-      const mime = mimeMatch?.[1] || 'image/jpeg';
-      const imgType = mime.includes('png') ? 'png' : 'jpg';
-      cabecalhoParagraphs = [
+      const mime      = mimeMatch?.[1] || 'image/jpeg';
+      const imgType   = mime.includes('png') ? 'png' : 'jpg';
+
+      // Detecta dimensões reais via Image para calcular altura proporcional
+      const imgDims = await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => resolve({ w: 940, h: 130 });
+        img.src = cabecalhoImg;
+      });
+
+      // Largura alvo em pontos docx (largura útil da página)
+      const targetW = 512; // pontos ≈ largura útil A4 com margens 2cm
+      const targetH = Math.round((imgDims.h / imgDims.w) * targetW);
+      headerHeightDXA = Math.round(targetH * 20) + 300; // altura em DXA + folga
+
+      headerParagraphs = [
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { after: 200 },
-          children: [new ImageRun({ data: bytes.buffer, transformation: { width: 580, height: 90 }, type: imgType })],
+          spacing: { after: 0, before: 0 },
+          children: [new ImageRun({
+            data: bytes.buffer,
+            transformation: { width: targetW, height: targetH },
+            type: imgType,
+          })],
         }),
-        new Paragraph({ spacing: { after: 80 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 4 } }, children: [new TextRun({ text: '', font: 'Arial', size: 4 })] }),
-        pEmpty(),
       ];
-    } catch(e) {
+    } catch (e) {
       console.warn('Erro ao carregar imagem do cabeçalho:', e);
-      cabecalhoParagraphs = [
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 28, bold: true })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 6 } }, children: [new TextRun({ text: `${endereco} — ${cidade}${telefone ? ' · Tel.: ' + telefone : ''}`, font: 'Arial', size: 20, color: '555555' })] }),
-        pEmpty(),
+      // fallback texto
+      headerParagraphs = [
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 20 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 20 }, children: [new TextRun({ text: `${endereco} — ${cidade}${telefone ? ' · Tel.: '+telefone : ''}`, font: 'Arial', size: 18, color: '555555' })] }),
+        new Paragraph({ spacing: { after: 0 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 4 } }, children: [new TextRun({ text: '', size: 4 })] }),
       ];
     }
   } else {
-    cabecalhoParagraphs = [
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 28, bold: true })] }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: `${endereco} — ${cidade}`, font: 'Arial', size: 20, color: '555555' })] }),
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 240 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 6 } }, children: [new TextRun({ text: telefone ? `Tel.: ${telefone}` : '', font: 'Arial', size: 20, color: '555555' })] }),
-      pEmpty(),
+    // Sem imagem: cabeçalho texto no header
+    headerParagraphs = [
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 20 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 20 }, children: [new TextRun({ text: `${endereco} — ${cidade}`, font: 'Arial', size: 18, color: '555555' })] }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1E3A5F', space: 4 } }, children: [new TextRun({ text: telefone ? `Tel.: ${telefone}` : '', font: 'Arial', size: 18, color: '555555' })] }),
     ];
   }
 
-  // Cidade/data e número do ofício à ESQUERDA (conforme imagem)
+  const wordHeader = new Header({ children: headerParagraphs });
+
+  // ── Corpo: cidade/data e nº ofício à esquerda ──────────────
   const cabecalho = [
-    ...cabecalhoParagraphs,
+    pEmpty(),
     new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40 }, children: [new TextRun({ text: `${cidade}, ${dtOficio}.`, font: 'Arial', size: 24 })] }),
     new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 320 }, children: [new TextRun({ text: `Ofício nº ${numOficio}`, font: 'Arial', size: 24, bold: true })] }),
   ];
@@ -201,7 +233,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const matricula  = dados.matricula || '';
     const dadosCompl = dados.dados_complementares || '';
 
-    // ── Tabela Assento (Livro/Folhas/Termo/Data) ──────────────
     const tabelaAssento = new Table({
       width: { size: 9026, type: WidthType.DXA }, columnWidths: [1505, 1505, 1505, 4511],
       rows: [
@@ -210,34 +241,21 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ]
     });
 
-    // ── Tabela Dados das Partes ───────────────────────────────
     const linhasPartes = [];
-
     if (tipoLabel === 'casamento') {
-      if (parte1) {
-        linhasPartes.push(new TableRow({ children: [
-          cell([{ text: 'Noiva (nome de solteira): ', bold: true }, { text: parte1 }], 9026),
-        ]}));
-        if (parte1Novo) linhasPartes.push(new TableRow({ children: [
-          cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], 9026),
-        ]}));
-      }
-      if (parte2) linhasPartes.push(new TableRow({ children: [
-        cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], 9026),
-      ]}));
+      if (parte1)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Noiva (nome de solteira): ', bold: true }, { text: parte1 }], 9026)] }));
+      if (parte1Novo) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], 9026)] }));
+      if (parte2)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], 9026)] }));
     } else {
       if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 1: ', bold: true }, { text: parte1 }], 9026)] }));
       if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], 9026)] }));
     }
-    if (matricula) linhasPartes.push(new TableRow({ children: [
-      cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026),
-    ]}));
+    if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
 
     const tabelaPartes = linhasPartes.length > 0
       ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
       : null;
 
-    // ── Tabela Dados do Ato (averbação) ───────────────────────
     const linhasAto = dadosCompl
       ? dadosCompl.split('\n').filter(l => l.trim()).map(l => new TableRow({ children: [cell(l, 9026)] }))
       : [new TableRow({ children: [cell('', 9026)] }), new TableRow({ children: [cell('', 9026)] })];
@@ -255,11 +273,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       p(`Dados do assento de ${tipoLabel}:`, { bold: true, after: 120 }),
       tabelaAssento,
       pEmpty(),
-      ...(tabelaPartes ? [
-        p('Dados das partes:', { bold: true, after: 120 }),
-        tabelaPartes,
-        pEmpty(),
-      ] : []),
+      ...(tabelaPartes ? [p('Dados das partes:', { bold: true, after: 120 }), tabelaPartes, pEmpty()] : []),
       p('Dados do assento pertinente à comunicação:', { bold: true, after: 120 }),
       tabelaAto,
       ...rodape,
@@ -267,8 +281,8 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
   };
 
   const buildForum = () => {
-    const juiz = dados.juiz || '___________________________';
-    const vara = dados.vara || '___________________________';
+    const juiz  = dados.juiz || '___________________________';
+    const vara  = dados.vara || '___________________________';
     const corpo = dados.corpo || 'Vimos, por meio do presente, encaminhar os documentos solicitados, colocando-nos à disposição para quaisquer esclarecimentos.';
     return [
       ...cabecalho,
@@ -285,7 +299,26 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
   };
 
   const children = modelo.id === 'comunicacao_rc' ? buildRC() : buildForum();
-  const doc = new Document({ styles: { default: { document: { run: { font: 'Arial', size: 24 } } } }, sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1134, bottom: 1134, left: 1701 } } }, children }] });
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: 'Arial', size: 24 } } } },
+    sections: [{
+      headers: { default: wordHeader },
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 }, // A4
+          margin: {
+            header: MARGIN_H,          // 0.4 cm da borda ao header
+            top:    headerHeightDXA,   // distância da borda ao corpo (= altura do header + folga)
+            right:  MARGIN_LR,
+            bottom: MARGIN_BOT,
+            left:   MARGIN_LR,
+          },
+        },
+      },
+      children,
+    }],
+  });
   return await Packer.toBlob(doc);
 }
 
