@@ -40,14 +40,14 @@ Permanecemos à inteira disposição de Vossa Excelência para o que mais se fiz
   {
     id: 'sustacao_protesto',
     label: 'Sustação de Protesto',
-    corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA], esta Serventia procedeu a suspensão dos protestos em que figura como devedor a parte acima indicada, sob CNPJ de nº [CNPJ MATRIZ], sendo a empresa matriz, e também no CNPJ de sua filial sob nº [CNPJ FILIAL], conforme certidões de protestos anexas ao presente.
+    corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA_HOJE], esta Serventia procedeu a suspensão dos protestos em que figura como devedor a parte acima indicada, sob CNPJ de nº [CNPJ MATRIZ], sendo a empresa matriz, e também no CNPJ de sua filial sob nº [CNPJ FILIAL], conforme certidões de protestos anexas ao presente.
 
 Informo ainda, que nos demais CNPJ das filiais não constam protestos em nossa Serventia.`,
   },
   {
     id: 'baixa_protesto',
     label: 'Baixa de Protesto',
-    corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA], esta Serventia procedeu as baixas dos protestos em que figura como devedor a parte acima indicado, conforme certidão negativa de protesto anexa ao presente.`,
+    corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA_HOJE], esta Serventia procedeu as baixas dos protestos em que figura como devedor a parte acima indicado, conforme certidão negativa de protesto anexa ao presente.`,
   },
   {
     id: 'livre',
@@ -621,10 +621,12 @@ function AbaTextos({ situacoes, textosSalvos, onSalvar, onReset }) {
 
 export default function ModelosOficio() {
   const { oficios, processos, cartorio, usuarios, oficioContatos, addOficioContato, editOficioContato, deleteOficioContato, oficioModelosHistorico, addOficioModeloHistorico, deleteOficioModeloHistorico, oficioModelosTextos, salvarOficioModeloTexto, resetOficioModeloTexto } = useApp();
-  // Retorna texto personalizado salvo ou o padrão do código
+  // Retorna texto personalizado salvo ou o padrão do código, substituindo [DATA_HOJE]
+  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const getCorpo = (modeloId, situacaoId, corpoPadrao) => {
     const salvo = (oficioModelosTextos||[]).find(t => t.modelo_id === modeloId && t.situacao_id === situacaoId);
-    return salvo ? salvo.corpo : corpoPadrao;
+    const texto = salvo ? salvo.corpo : corpoPadrao;
+    return texto.replace(/\[DATA_HOJE\]/g, dataHoje);
   };
 
   const [aba,           setAba]           = useState('emitir');
