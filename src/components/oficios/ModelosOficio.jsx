@@ -12,11 +12,11 @@ const SITUACOES_FORUM = [
   {
     id: 'cumprimento_mandado',
     label: 'Cumprimento de Mandado',
-    corpo: `Venho por meio do presente, em atendimento ao Mandado acima mencionado, no qual figura com parte requerida, [NOME DA PARTE], informar o cumprimento do mesmo, procedendo com a [DESCREVER O ATO].
+    corpo: `Venho por meio do presente, em atendimento ao referido Mandado Judicial, no qual figura a parte acima requerida, informar a Vossa Excelência o devido cumprimento do mesmo, procedendo com a [ATO PRATICADO].
 
 Desta feita, segue certidão do registro sob nº [Nº REGISTRO] do Livro [LIVRO] desta Serventia para a comprovação do ato.
 
-Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Senhoria protestos de elevada estima e consideração.`,
+Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.`,
   },
   {
     id: 'envio_documentos',
@@ -49,9 +49,11 @@ const fmtData = (iso) => { if (!iso) return ''; const [y,m,d] = iso.split('-'); 
 const fmtDataExtenso = (iso) => { if (!iso) return ''; return new Date(iso+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}); };
 
 // ── Autocomplete ─────────────────────────────────────────────
-function AutocompleteContato({ value, onChange, tipoContato, placeholder, contatos, onSalvar }) {
+function AutocompleteContato({ value, onChange, tipoContato, placeholder, contatos, onSalvar, onEditar, onDeletar }) {
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+  const [editNome, setEditNome] = useState('');
   const ref = useRef(null);
   const sugestoes = useMemo(() => {
     const base = (contatos||[]).filter(c => c.tipo === tipoContato);
@@ -60,7 +62,7 @@ function AutocompleteContato({ value, onChange, tipoContato, placeholder, contat
   }, [contatos, tipoContato, value]);
   const jaExiste = (contatos||[]).some(c => c.tipo === tipoContato && c.nome.toLowerCase() === (value||'').toLowerCase());
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setAberto(false); };
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) { setAberto(false); setEditandoId(null); } };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
@@ -72,11 +74,43 @@ function AutocompleteContato({ value, onChange, tipoContato, placeholder, contat
         {value && jaExiste && <span style={{ alignSelf: 'center', fontSize: 11, color: '#16a34a', flexShrink: 0 }}>✓ salvo</span>}
       </div>
       {aberto && sugestoes.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', boxShadow: '0 4px 12px rgba(0,0,0,.15)', maxHeight: 200, overflowY: 'auto', marginTop: 2 }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', boxShadow: '0 4px 12px rgba(0,0,0,.15)', maxHeight: 240, overflowY: 'auto', marginTop: 2 }}>
           {sugestoes.map(c => (
-            <div key={c.id} onMouseDown={() => { onChange(c.nome); setAberto(false); }} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }} onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-2)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
-              {c.descricao && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{c.descricao}</div>}
+            <div key={c.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+              {editandoId === c.id ? (
+                // Modo edição inline
+                <div style={{ display: 'flex', gap: 6, padding: '6px 10px', alignItems: 'center' }}>
+                  <input
+                    className="form-input"
+                    value={editNome}
+                    onChange={e => setEditNome(e.target.value)}
+                    style={{ flex: 1, fontSize: 12, height: 28 }}
+                    autoFocus
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { onEditar(c.id, { ...c, nome: editNome.trim() }); setEditandoId(null); }
+                      if (e.key === 'Escape') setEditandoId(null);
+                    }}
+                  />
+                  <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onMouseDown={e => { e.preventDefault(); onEditar(c.id, { ...c, nome: editNome.trim() }); setEditandoId(null); }}>✓</button>
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }} onMouseDown={e => { e.preventDefault(); setEditandoId(null); }}>✕</button>
+                </div>
+              ) : (
+                // Modo normal
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 6px 0 0' }}>
+                  <div onMouseDown={() => { onChange(c.nome); setAberto(false); }} style={{ flex: 1, padding: '8px 12px', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-2)'}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
+                    {c.descricao && <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{c.descricao}</div>}
+                  </div>
+                  <button className="btn-icon" style={{ fontSize: 12, padding: '2px 4px', flexShrink: 0 }}
+                    onMouseDown={e => { e.preventDefault(); setEditandoId(c.id); setEditNome(c.nome); }}
+                    title="Editar">✎</button>
+                  <button className="btn-icon" style={{ fontSize: 12, padding: '2px 4px', flexShrink: 0, color: 'var(--color-danger)' }}
+                    onMouseDown={e => { e.preventDefault(); if (window.confirm(`Remover "${c.nome}"?`)) { onDeletar(c.id); if (value === c.nome) onChange(''); } }}
+                    title="Remover">✕</button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -361,8 +395,14 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         tabelaPartes,
         pEmpty(),
       ] : []),
+      // Substitui singular/plural conforme nº de partes (cumprimento de mandado)
+      const numPartes = [parte1, parte2].filter(Boolean).length;
+      const corpoFinal = numPartes >= 2
+        ? corpo.replace('no qual figura a parte acima requerida', 'no qual figuram as partes acima requeridas')
+        : corpo;
+
       // Corpo editável com indent de 3cm (1701 DXA)
-      ...corpo.split('\n').map(l => new Paragraph({
+      ...corpoFinal.split('\n').map(l => new Paragraph({
         alignment: AlignmentType.JUSTIFIED,
         spacing: { after: 160, line: 276 },
         indent: { firstLine: 1701 },
@@ -562,7 +602,7 @@ export default function ModelosOficio() {
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Cartório de Registro Civil (Destinatário)</label>
-                    <AutocompleteContato value={dados.destinatario||''} onChange={v => setD('destinatario',v)} tipoContato="cartorio_rc" placeholder="Nome do Cartório RC" contatos={oficioContatos||[]} onSalvar={dados => addOficioContato(dados)} />
+                    <AutocompleteContato value={dados.destinatario||''} onChange={v => setD('destinatario',v)} tipoContato="cartorio_rc" placeholder="Nome do Cartório RC" contatos={oficioContatos||[]} onSalvar={dados => addOficioContato(dados)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                   </div>
                 </div>
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
@@ -615,11 +655,11 @@ export default function ModelosOficio() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Vara / Comarca (Destinatário)</label>
-                      <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="cartorio_rc" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'cartorio_rc'})} />
+                      <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="cartorio_rc" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'cartorio_rc'})} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Meritíssimo(a) Juiz(a)</label>
-                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} />
+                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                   </div>
                 </div>
