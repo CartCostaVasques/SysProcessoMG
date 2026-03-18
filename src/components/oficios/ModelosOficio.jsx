@@ -241,8 +241,8 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       if (parte1Novo) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], 9026)] }));
       if (parte2)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], 9026)] }));
     } else {
-      if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 1: ', bold: true }, { text: parte1 }], 9026)] }));
-      if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], 9026)] }));
+      if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: tipoLabel==='óbito'?'Falecido(a): ':'Parte 1: ', bold: true }, { text: parte1 }], 9026)] }));
+      if (parte2 && tipoLabel !== 'óbito') linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], 9026)] }));
     }
     if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
 
@@ -486,9 +486,9 @@ export default function ModelosOficio() {
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Partes</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">{(dados.tipo_rc||'Casamento')==='Casamento'?'Noiva (nome de solteira)':'Parte 1'}</label><input className="form-input" value={dados.parte1||''} onChange={e => setD('parte1',e.target.value)} placeholder="Nome" /></div>
+                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">{(dados.tipo_rc||'Casamento')==='Casamento'?'Noiva (nome de solteira)':(dados.tipo_rc||'Casamento')==='Óbito'?'Falecido(a)':'Parte 1'}</label><input className="form-input" value={dados.parte1||''} onChange={e => setD('parte1',e.target.value)} placeholder="Nome" /></div>
                     {(dados.tipo_rc||'Casamento')==='Casamento' && <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Novo nome após casamento</label><input className="form-input" value={dados.parte1_novo_nome||''} onChange={e => setD('parte1_novo_nome',e.target.value)} placeholder="Nome após casamento" /></div>}
-                    <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">{(dados.tipo_rc||'Casamento')==='Casamento'?'Noivo':'Parte 2'}</label><input className="form-input" value={dados.parte2||''} onChange={e => setD('parte2',e.target.value)} placeholder="Nome" /></div>
+                    {(dados.tipo_rc||'Casamento')!=='Óbito' && <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">{(dados.tipo_rc||'Casamento')==='Casamento'?'Noivo':'Parte 2'}</label><input className="form-input" value={dados.parte2||''} onChange={e => setD('parte2',e.target.value)} placeholder="Nome" /></div>}
                     <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Matrícula</label><input className="form-input" value={dados.matricula||processo?.numero_interno||''} onChange={e => setD('matricula',e.target.value)} placeholder="Matrícula" /></div>
                   </div>
                 </div>
