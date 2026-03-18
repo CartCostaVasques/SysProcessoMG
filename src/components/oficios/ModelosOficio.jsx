@@ -159,12 +159,12 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       const mime      = mimeMatch?.[1] || 'image/jpeg';
       const imgType   = mime.includes('png') ? 'png' : 'jpg';
 
-      // A4 útil com margens 2cm cada lado: 11906 - 2*1134 = 9638 DXA
-      // 1 DXA = 1/20 pt | largura útil em pt = 9638/20 = 481.9pt
-      // Altura 3.5cm = 3.5/2.54 * 72 ≈ 99pt
-      const targetW = 482; // pt ≈ largura útil com margens 2cm
-      const targetH = 99;  // pt = 3.5 cm
-      headerHeightDXA = Math.round(targetH * 20) + 400; // DXA + folga para o corpo
+      // docx lib usa pixels (96dpi) no transformation
+      // 1 cm = 37.795 px a 96dpi
+      // Largura: 17cm = 642px | Altura: 3.5cm = 132px
+      const targetW = Math.round(17 * 37.795);   // 642px
+      const targetH = Math.round(3.5 * 37.795);  // 132px
+      headerHeightDXA = Math.round((3.5 / 2.54) * 1440) + 400; // ~1980 DXA + folga
 
       headerParagraphs = [
         new Paragraph({
