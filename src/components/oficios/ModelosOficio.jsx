@@ -323,8 +323,8 @@ async function gerarDocx({ modelo, oficio, processo, interessados, cartorio, ext
     }],
   });
 
-  const buffer = await Packer.toBuffer(doc);
-  return buffer;
+  const blob = await Packer.toBlob(doc);
+  return blob;
 }
 
 // ── Componente principal ─────────────────────────────────────
@@ -358,8 +358,7 @@ export default function ModelosOficio() {
     setErro('');
     setGerando(true);
     try {
-      const buffer = await gerarDocx({ modelo, oficio, processo, interessados, cartorio, extras });
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const blob = await gerarDocx({ modelo, oficio, processo, interessados, cartorio, extras });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
