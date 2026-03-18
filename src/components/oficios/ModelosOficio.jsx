@@ -276,9 +276,9 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
   const rodape = [
     pEmpty(),
-    p('Valemo-nos da oportunidade para reiterar à Vossa Senhoria, protestos de estima e apreço.', { after: 200 }),
+    pIndent('Valemo-nos da oportunidade para reiterar à Vossa Senhoria, protestos de estima e apreço.', { after: 200 }),
     pEmpty(),
-    p('Atenciosamente,', { after: 400 }),
+    pIndent('Atenciosamente,', { after: 400 }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: '333333', space: 6 } }, children: [new TextRun({ text: nomeAssin, font: 'Arial', size: 24, bold: true })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: funcaoAssin, font: 'Arial', size: 22, color: '555555' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: 'Arial', size: 22, color: '555555' })] }),
@@ -344,7 +344,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       pMixed([{ text: 'Prezado(a) Senhor(a) Oficial,' }], { after: 80 }),
       pMixed([{ text: 'Cartório de Registro Civil — ' }, { text: destinat, bold: true }], { after: 240 }),
       pEmpty(),
-      p(`Vimos pelo presente comunicar a essa Serventia, o registro de ${tipoLabel} realizado nesta Serventia, o qual possui assento nessa Serventia.`, { after: 200 }),
+      pIndent(`Vimos pelo presente comunicar a essa Serventia, o registro de ${tipoLabel} realizado nesta Serventia, o qual possui assento nessa Serventia.`, { after: 200 }),
       pEmpty(),
       p(`Dados do assento de ${tipoLabel}:`, { bold: true, after: 120 }),
       tabelaAssento,
@@ -390,8 +390,8 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ...((() => {
         const feminino = juiz.trimStart().toLowerCase().startsWith('dra.');
         const tratamento = juiz
-          ? (feminino ? 'Excelentíssima Senhora ' : 'Excelentíssimo Senhor ')
-          : 'Excelentíssimo(a) Senhor(a) ';
+          ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ')
+          : 'Excelentíssimo(a) ';
         return [
           pMixed([{ text: tratamento }, { text: juiz || '' }], { after: 80 }),
           pMixed([{ text: vara, bold: true }], { after: 240 }),
