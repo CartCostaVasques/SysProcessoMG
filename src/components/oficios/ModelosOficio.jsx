@@ -264,7 +264,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const dadosCompl = dados.dados_complementares || '';
 
     const tabelaAssento = new Table({
-      width: { size: 9026, type: WidthType.DXA }, columnWidths: [1505, 1505, 1505, 4511],
+      width: { size: 9071, type: WidthType.DXA }, columnWidths: [1505, 1505, 1505, 4556],
       rows: [
         new TableRow({ children: [cell('Livro', 1505, 'E8EFF6'), cell('Folhas', 1505, 'E8EFF6'), cell('Termo', 1505, 'E8EFF6'), cell('Data do Assento', 4511, 'E8EFF6')] }),
         new TableRow({ children: [cell(livro, 1505), cell(folhas, 1505), cell(termo, 1505), cell(dtAssento, 4511)] }),
@@ -283,14 +283,14 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
 
     const tabelaPartes = linhasPartes.length > 0
-      ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
+      ? new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasPartes })
       : null;
 
     const linhasAto = dadosCompl
       ? dadosCompl.split('\n').filter(l => l.trim()).map(l => new TableRow({ children: [cell(l, 9026)] }))
       : [new TableRow({ children: [cell('', 9026)] }), new TableRow({ children: [cell('', 9026)] })];
 
-    const tabelaAto = new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasAto });
+    const tabelaAto = new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasAto });
 
     return [
       ...cabecalho,
@@ -325,7 +325,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerida: ', bold: true }, { text: parte1 }], 9026)] }));
     if (parte2) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte Requerente: ', bold: true }, { text: parte2 }], 9026)] }));
     const tabelaPartes = linhasPartes.length > 0
-      ? new Table({ width: { size: 9026, type: WidthType.DXA }, columnWidths: [9026], rows: linhasPartes })
+      ? new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasPartes })
       : null;
 
     return [
@@ -333,7 +333,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       pEmpty(),
       // Referente (negrito, antes da saudação — conforme imagem)
       ...(referente ? [
-        pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.RIGHT }),
+        pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
       ] : []),
       // Destinatário
       pMixed([{ text: 'Excelentíssimo(a) Senhor(a) ' }, { text: juiz ? juiz + ',' : ',' }], { after: 80 }),
@@ -349,8 +349,13 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         tabelaPartes,
         pEmpty(),
       ] : []),
-      // Corpo editável
-      ...corpo.split('\n').map(l => p(l || '', { after: 160 })),
+      // Corpo editável com indent de 3cm (1701 DXA)
+      ...corpo.split('\n').map(l => new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 160, line: 276 },
+        indent: { firstLine: 1701 },
+        children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
+      })),
       ...rodape,
     ];
   };
@@ -636,7 +641,7 @@ export default function ModelosOficio() {
                   </div>
                   <textarea
                     className="form-input"
-                    rows={10}
+                    rows={15}
                     value={dados.corpo||''}
                     onChange={e => { setD('corpo', e.target.value); setD('corpo_editado', true); }}
                     placeholder="Texto do ofício..."
