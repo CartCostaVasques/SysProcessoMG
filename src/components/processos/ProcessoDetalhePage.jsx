@@ -53,7 +53,7 @@ const COLS = [
 
 function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecionar }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 12 }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
       <colgroup>{COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}</colgroup>
       <thead>
         <tr style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
@@ -96,8 +96,7 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
                   ? <div className="avatar avatar-sm" title={resp.nome_simples}>{resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0,2)}</div>
                   : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
               </td>
-              <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', textAlign: 'right',
-                whiteSpace: 'nowrap',
+              <td className="td-valor" style={{
                 color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
                 fontWeight: p.valor_ato > 0 ? 600 : 400 }}>
                 {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
