@@ -455,12 +455,12 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ...cabecalho,
       pEmpty(),
       // Destinatário — nome e endereço à esquerda
-      pMixed([{ text: 'À ' }, { text: destNome, bold: true }], { after: 40, align: AlignmentType.LEFT }),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: 'À ', font: 'Arial', size: 24 }), new TextRun({ text: destNome, font: 'Arial', size: 24, bold: true })] }),
       ...(destEndereco ? destEndereco.split('\n').map(l =>
-        new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: l, font: 'Arial', size: 24 })] })
+        new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })] })
       ) : []),
       pEmpty(),
-      p('Prezados Senhores,', { after: 200 }),
+      p('Prezados Senhores,', { after: 200, align: AlignmentType.CENTER }),
       pEmpty(),
       // Corpo com indent 3cm
       ...corpo.split('\n').map(l => new Paragraph({
