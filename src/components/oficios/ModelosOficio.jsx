@@ -5,6 +5,7 @@ const TIPOS_RC = ['Casamento', 'Divórcio', 'Óbito', 'Nascimento', 'Outros'];
 const MODELOS = [
   { id: 'comunicacao_rc',    label: 'Comunicação ao Registro Civil', descricao: 'Comunicação de ato notarial ao Registro Civil (casamento, divórcio, óbito...)' },
   { id: 'forum_cumprimento', label: 'Ofício ao Fórum / Juízo',       descricao: 'Cumprimento de mandado, envio de documentos, resposta a solicitação...' },
+  { id: 'protesto',          label: 'Ofício de Protesto',             descricao: 'Retirada de apontamento, comunicação de protesto, texto livre...' },
 ];
 
 // Situações pré-definidas para o Fórum
@@ -42,14 +43,40 @@ Permanecemos à inteira disposição de Vossa Excelência para o que mais se fiz
     corpo: '',
   },
 ];
-const TIPO_LABEL = { juiz: 'Juiz(a)', cartorio_rc: 'Cartório RC', outro: 'Outro' };
+
+// Situações pré-definidas para Protesto
+const SITUACOES_PROTESTO = [
+  {
+    id: 'retirada_apontamento',
+    label: 'Retirada de Apontamento',
+    corpo: `Venho através da presente informar aos senhores, que recebemos de forma manual o pedido de retirada do apontamento devido um problema interno entre a empresa sacadora e o banco apresentante, o qual por diversas tentativas não conseguiram solicitar a mesma, entrando assim em contato conosco para fazer de forma manual e não havendo prejuízo para a parte devedora.
+
+Sendo apenas para o momento, aproveito a oportunidade da reiterar a Vossa Senhoria, protestos de estima e elevada consideração.`,
+  },
+  {
+    id: 'comunicacao_protesto',
+    label: 'Comunicação de Protesto',
+    corpo: `Vimos pelo presente comunicar a Vossa Senhoria que foram lavrados os protestos dos títulos abaixo discriminados, conforme determinação legal.
+
+[RELACIONAR OS TÍTULOS PROTESTADOS]
+
+Permanecemos à disposição para quaisquer esclarecimentos.`,
+  },
+  {
+    id: 'livre',
+    label: 'Texto Livre',
+    corpo: '',
+  },
+];
+
+const TIPO_LABEL = { juiz: 'Juiz(a)', cartorio_rc: 'Cartório RC / Vara', protesto_dest: 'Destinatário Protesto', outro: 'Outro' };
 const TABELIA_ID = '__tabelia_cartorio__';
 
 const fmtData = (iso) => { if (!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
 const fmtDataExtenso = (iso) => { if (!iso) return ''; return new Date(iso+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}); };
 
 // ── Autocomplete ─────────────────────────────────────────────
-function AutocompleteContato({ value, onChange, tipoContato, placeholder, contatos, onSalvar, onEditar, onDeletar }) {
+function AutocompleteContato({ value, onChange, tipoContato, placeholder, contatos, onSalvar, onEditar, onDeletar, onSelect }) {
   const [aberto, setAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -97,7 +124,7 @@ function AutocompleteContato({ value, onChange, tipoContato, placeholder, contat
               ) : (
                 // Modo normal
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 6px 0 0' }}>
-                  <div onMouseDown={() => { onChange(c.nome); setAberto(false); }} style={{ flex: 1, padding: '8px 12px', cursor: 'pointer' }}
+                  <div onMouseDown={() => { onChange(c.nome); if(onSelect) onSelect(c); setAberto(false); }} style={{ flex: 1, padding: '8px 12px', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background='var(--color-surface-2)'}
                     onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{c.nome}</div>
@@ -419,7 +446,36 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     ];
   };
 
-  const children = modelo.id === 'comunicacao_rc' ? buildRC() : buildForum();
+  const buildProtesto = () => {
+    const destNome     = dados.dest_nome    || oficio.destinatario || '___________________________';
+    const destEndereco = dados.dest_endereco || '';
+    const corpo        = dados.corpo        || '';
+
+    return [
+      ...cabecalho,
+      pEmpty(),
+      // Destinatário — nome e endereço à esquerda
+      pMixed([{ text: 'À ' }, { text: destNome, bold: true }], { after: 40, align: AlignmentType.LEFT }),
+      ...(destEndereco ? destEndereco.split('\n').map(l =>
+        new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: l, font: 'Arial', size: 24 })] })
+      ) : []),
+      pEmpty(),
+      p('Prezados Senhores,', { after: 200 }),
+      pEmpty(),
+      // Corpo com indent 3cm
+      ...corpo.split('\n').map(l => new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 160, line: 276 },
+        indent: { firstLine: 1701 },
+        children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
+      })),
+      ...rodapeForum,
+    ];
+  };
+
+  const children = modelo.id === 'comunicacao_rc' ? buildRC()
+    : modelo.id === 'protesto'        ? buildProtesto()
+    : buildForum();
 
   const doc = new Document({
     styles: { default: { document: { run: { font: 'Arial', size: 24 } } } },
@@ -714,6 +770,52 @@ export default function ModelosOficio() {
                   <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
                     Texto editável — use [COLCHETES] para marcar campos a preencher
                   </div>
+                </div>
+              </>)}
+
+              {/* ── Protesto ── */}
+              {modelo.id === 'protesto' && (<>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Situação / Tipo do Ofício</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {SITUACOES_PROTESTO.map(s => (
+                      <div key={s.id}
+                        onClick={() => {
+                          setD('situacao_prot', s.id);
+                          if (s.corpo && !dados.corpo_editado) setD('corpo', s.corpo);
+                          else if (s.corpo) { if (window.confirm('Substituir o corpo pelo texto padrão?')) { setD('corpo', s.corpo); setD('corpo_editado', false); } }
+                          else setD('corpo', '');
+                        }}
+                        style={{ padding: '8px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.situacao_prot===s.id?'var(--color-accent)':'var(--color-border)'}`, background: dados.situacao_prot===s.id?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 13, fontWeight: dados.situacao_prot===s.id?700:400, color: dados.situacao_prot===s.id?'var(--color-accent)':'var(--color-text)' }}>
+                        {dados.situacao_prot===s.id?'● ':'○ '}{s.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Destinatário</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Nome / Razão Social</label>
+                      <AutocompleteContato value={dados.dest_nome||oficio?.destinatario||''} onChange={v => setD('dest_nome',v)} tipoContato="protesto_dest" placeholder="Ex: CRA - Central de Remessa de Arquivos" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'protesto_dest', descricao: dados.dest_endereco||''})} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} onSelect={c => { if(c.descricao) setD('dest_endereco', c.descricao); }} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Endereço Completo</label>
+                      <textarea className="form-input" rows={2} value={dados.dest_endereco||''} onChange={e => setD('dest_endereco',e.target.value)} placeholder="Ex: Rua General Amilcar Magalhães, 38 - Duque de Caxias - Cuiabá - MT" style={{ resize: 'vertical', fontSize: 12 }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Corpo do Ofício</div>
+                    {dados.situacao_prot && dados.situacao_prot !== 'livre' && (
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => { const s = SITUACOES_PROTESTO.find(x => x.id===dados.situacao_prot); if(s) { setD('corpo', s.corpo); setD('corpo_editado', false); } }}>↺ Restaurar texto padrão</button>
+                    )}
+                  </div>
+                  <textarea className="form-input" rows={15} value={dados.corpo||''} onChange={e => { setD('corpo', e.target.value); setD('corpo_editado', true); }} placeholder="Texto do ofício..." style={{ resize: 'vertical', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6, minHeight: 280 }} />
+                  <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>Texto editável — use [COLCHETES] para marcar campos a preencher</div>
                 </div>
               </>)}
             </div>
