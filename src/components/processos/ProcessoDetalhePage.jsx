@@ -41,13 +41,13 @@ function NomesPartes({ partes, interessados }) {
 
 const COLS = [
   { key: 'num',     label: 'Nº',           w: '60px'  },
-  { key: 'dt',      label: 'Dt. Cadastro', w: '96px'  },
-  { key: 'cat',     label: 'Categoria',    w: '120px' },
-  { key: 'servico', label: 'Serviço',      w: '300px' },
-  { key: 'partes',  label: 'Interessados', w: '180px' },
-  { key: 'resp',    label: 'Resp.',        w: '60px'  },
-  { key: 'valor',   label: 'Valor',        w: '135px' },
-  { key: 'and',     label: 'Andamentos',   w: '90px'  },
+  { key: 'dt',      label: 'Dt. Cadastro', w: '90px'  },
+  { key: 'cat',     label: 'Categoria',    w: '110px' },
+  { key: 'servico', label: 'Serviço',      w: '260px' },
+  { key: 'partes',  label: 'Interessados', w: '160px' },
+  { key: 'resp',    label: 'Resp.',        w: '55px'  },
+  { key: 'valor',   label: 'Valor',        w: '140px' },
+  { key: 'and',     label: 'Andamentos',   w: '85px'  },
   { key: 'status',  label: 'Status',       w: '70px'  },
 ];
 
@@ -97,6 +97,7 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
                   : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
               </td>
               <td style={{ padding: '6px 10px', fontFamily: 'var(--font-mono)', textAlign: 'right',
+                whiteSpace: 'nowrap',
                 color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
                 fontWeight: p.valor_ato > 0 ? 600 : 400 }}>
                 {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
