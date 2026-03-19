@@ -39,6 +39,7 @@ import Panoramico   from './components/panoramico/Panoramico.jsx';
 import ImportacaoCSV from './components/importacao/ImportacaoCSV.jsx';
 import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
 import RelatorioServicos from './components/relatorios/RelatorioServicos.jsx';
+import RelatorioConfig   from './components/relatorios/RelatorioConfig.jsx';
 import { Configuracoes, LogsAcesso } from './components/configuracoes/Config.jsx';
 
 function AppShell() {
@@ -68,6 +69,7 @@ function AppShell() {
       case 'servicos':      return <Servicos />;
       case 'setores':       return <Setores />;
       case 'relservicos':   return <RelatorioServicos />;
+      case 'relconfig':     return <RelatorioConfig />;
       case 'configuracoes': return <Configuracoes />;
       case 'logs':          return <LogsAcesso />;
       default:              return <Dashboard setPage={setPage} />;
