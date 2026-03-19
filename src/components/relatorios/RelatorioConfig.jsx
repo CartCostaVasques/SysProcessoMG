@@ -30,8 +30,15 @@ export default function RelatorioConfig() {
   const [enviando,   setEnviando]   = useState(null); // id da config enviando
   const [carregando, setCarregando] = useState(true);
 
-  // Categorias únicas dos processos
+  // Categorias e anos únicos dos processos
   const categorias = useMemo(() => [...new Set(processos.map(p => p.categoria).filter(Boolean))].sort(), [processos]);
+  const anosDisponiveis = useMemo(() => {
+    const anos = new Set(processos.map(p => {
+      const d = p.dt_conclusao || p.dt_abertura;
+      return d ? d.substring(0, 4) : null;
+    }).filter(Boolean));
+    return [...anos].sort((a, b) => b - a);
+  }, [processos]);
 
   const fetchConfigs = async () => {
     const { data } = await sb.from('relatorio_config').select('*').order('criado_em', { ascending: false });
@@ -333,7 +340,7 @@ export default function RelatorioConfig() {
                     <div>
                       <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
                       <select className="form-select" value={form.periodo_mes||''} onChange={e => setF('periodo_mes', e.target.value)}>
-                        <option value="">Selecione</option>
+                        <option value="">Todos os meses</option>
                         {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m,i) => (
                           <option key={i+1} value={String(i+1).padStart(2,'0')}>{m}</option>
                         ))}
@@ -342,8 +349,8 @@ export default function RelatorioConfig() {
                     <div>
                       <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
                       <select className="form-select" value={form.periodo_ano||''} onChange={e => setF('periodo_ano', e.target.value)}>
-                        <option value="">Selecione</option>
-                        {[2024,2025,2026,2027].map(a => <option key={a} value={a}>{a}</option>)}
+                        <option value="">Todos os anos</option>
+                        {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                   </div>
