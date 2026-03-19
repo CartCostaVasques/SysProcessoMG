@@ -13,7 +13,7 @@ const COLS = [
   { key: 'data',      label: 'Data',           w: '100px', align: 'left'  },
   { key: 'especie',   label: 'Espécie',        w: '240px', align: 'left'  },
   { key: 'partes',    label: 'Interessados',   w: 'auto',  align: 'left'  },
-  { key: 'valor',     label: 'Valor',          w: '110px', align: 'right' },
+  { key: 'valor',     label: 'Valor',          w: '140px', align: 'right' },
 ];
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -301,7 +301,7 @@ export default function RelatorioServicos() {
               </div>
 
               {/* Tabela com larguras fixas */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <colgroup>
                   {COLS.map(c => <col key={c.key} style={{ width: c.w }} />)}
                 </colgroup>
@@ -327,6 +327,7 @@ export default function RelatorioServicos() {
                       <td style={{ padding: '6px 12px', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.especie || '—'}</td>
                       <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p._partes || '—'}</td>
                       <td style={{ padding: '6px 12px', fontSize: 12, fontFamily: 'var(--font-mono)', textAlign: 'right',
+                        whiteSpace: 'nowrap',
                         fontWeight: p.valor_ato > 0 ? 600 : 400,
                         color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)' }}>
                         {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
