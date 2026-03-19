@@ -4,21 +4,22 @@ import { useApp } from '../../context/AppContext.jsx';
 import { getInitials, formatDate, PERFIS } from '../../data/mockData.js';
 
 const MODULOS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'processos', label: 'Processos' },
-  { id: 'andamentos', label: 'Andamentos' },
-  { id: 'tarefas', label: 'Tarefas' },
-  { id: 'oficios', label: 'Ofícios' },
-  { id: 'recibos', label: 'Recibos' },
-  { id: 'regcivil', label: 'Registro Civil — Atos' },
+  { id: 'dashboard',    label: 'Dashboard' },
+  { id: 'processos',   label: 'Processos' },
+  { id: 'andamentos',  label: 'Andamentos' },
+  { id: 'tarefas',     label: 'Tarefas' },
+  { id: 'oficios',     label: 'Ofícios' },
+  { id: 'recibos',     label: 'Recibos' },
+  { id: 'regcivil',    label: 'Registro Civil — Atos' },
   { id: 'interessados', label: 'Interessados' },
   { id: 'relservicos', label: 'Serviços por Setor' },
-  { id: 'panoramico', label: 'Panorâmico' },
-  { id: 'servicos', label: 'Tipo de Serviços' },
-  { id: 'setores', label: 'Setores' },
-  { id: 'usuarios', label: 'Usuários' },
+  { id: 'relconfig',   label: 'Relatórios E-mail' },
+  { id: 'panoramico',  label: 'Panorâmico' },
+  { id: 'servicos',    label: 'Tipo de Serviços' },
+  { id: 'setores',     label: 'Setores' },
+  { id: 'usuarios',    label: 'Usuários' },
   { id: 'configuracoes', label: 'Configurações' },
-  { id: 'logs', label: 'Logs de Acesso' },
+  { id: 'logs',        label: 'Logs de Acesso' },
 ];
 
 const TODOS_MODULOS = MODULOS.map(m => m.id);
@@ -48,8 +49,8 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
   const handlePerfil = (p) => {
     set('perfil', p);
     if (p === 'Administrador') set('permissoes', TODOS_MODULOS);
-    else if (p === 'Tabelião')   set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','recibos','regcivil','interessados','relservicos','panoramico','servicos','setores','configuracoes']);
-    else if (p === 'Substituto') set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','recibos','regcivil','interessados','relservicos','panoramico','servicos','setores','configuracoes']);
+    else if (p === 'Tabelião')   set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes']);
+    else if (p === 'Substituto') set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes']);
     else if (p === 'Escrevente') set('permissoes', ['dashboard','processos','andamentos','tarefas','oficios','recibos','regcivil','interessados','relservicos','servicos','setores']);
     else if (p === 'Auxiliar')   set('permissoes', ['dashboard','processos','tarefas','recibos']);
     else if (p === 'Consultor')  set('permissoes', ['dashboard','panoramico','relservicos']);
