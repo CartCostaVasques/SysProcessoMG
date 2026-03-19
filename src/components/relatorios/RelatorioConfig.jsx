@@ -4,9 +4,10 @@ import Portal from '../layout/Portal.jsx';
 
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const TIPOS = [
-  { id: 'ambos',    label: 'Ambos (Em Andamento + Concluídos)' },
-  { id: 'andamento', label: 'Apenas Em Andamento' },
-  { id: 'concluido', label: 'Apenas Concluídos' },
+  { id: 'ambos',      label: 'Todos (Andamento + Concluídos + Encerrados)' },
+  { id: 'andamento',  label: 'Apenas Em Andamento' },
+  { id: 'concluido',  label: 'Apenas Concluídos' },
+  { id: 'encerrado',  label: 'Apenas Encerrados' },
 ];
 
 const EMPTY = {
@@ -170,7 +171,7 @@ export default function RelatorioConfig() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{c.nome}</span>
                       <span className={`badge ${c.ativo ? 'badge-success' : 'badge-neutral'}`}>{c.ativo ? 'Ativo' : 'Inativo'}</span>
-                      <span className="badge badge-info">{c.tipo === 'ambos' ? 'Todos' : c.tipo === 'andamento' ? 'Andamento' : 'Concluído'}</span>
+                      <span className="badge badge-info">{c.tipo === 'ambos' ? 'Todos' : c.tipo === 'andamento' ? 'Andamento' : c.tipo === 'encerrado' ? 'Encerrado' : 'Concluído'}</span>
                       {c.incluir_detalhado && c.incluir_categoria && <span className="badge badge-info">Detalhado + Categoria</span>}
                       {c.incluir_detalhado && !c.incluir_categoria && <span className="badge badge-info">Detalhado</span>}
                       {!c.incluir_detalhado && c.incluir_categoria && <span className="badge badge-info">Só Categoria</span>}
