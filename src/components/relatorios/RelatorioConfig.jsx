@@ -12,7 +12,8 @@ const TIPOS = [
 const EMPTY = {
   nome: '', ativo: true, destinatarios: '', tipo: 'ambos',
   filtro_setores: [], filtro_servicos: [], filtro_responsaveis: [],
-  periodo_dias: 1, periodo_tipo: 'dias', periodo_ini: '', periodo_fim: '',
+  periodo_dias: 1, periodo_tipo: 'mes_atual', periodo_ini: '', periodo_fim: '',
+  periodo_mes: '', periodo_ano: '',
   agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
   incluir_detalhado: true, incluir_categoria: false,
 };
@@ -53,6 +54,8 @@ export default function RelatorioConfig() {
         destinatarios: (config.destinatarios || []).join(', '),
         incluir_detalhado: config.incluir_detalhado !== false,
         incluir_categoria: config.incluir_categoria === true,
+        periodo_mes: config.periodo_mes || '',
+        periodo_ano: config.periodo_ano || '',
       });
     } else {
       setForm(EMPTY);
@@ -74,10 +77,12 @@ export default function RelatorioConfig() {
         filtro_setores:      form.filtro_setores?.length ? form.filtro_setores : null,
         filtro_servicos:     form.filtro_servicos?.length ? form.filtro_servicos : null,
         filtro_responsaveis: form.filtro_responsaveis?.length ? form.filtro_responsaveis : null,
-        periodo_dias:        form.periodo_tipo === 'datas' ? 0 : Number(form.periodo_dias),
-        periodo_tipo:        form.periodo_tipo || 'dias',
+        periodo_dias:        form.periodo_tipo === 'dias' ? Number(form.periodo_dias) : 0,
+        periodo_tipo:        form.periodo_tipo || 'mes_atual',
         periodo_ini:         form.periodo_tipo === 'datas' ? form.periodo_ini : null,
         periodo_fim:         form.periodo_tipo === 'datas' ? form.periodo_fim : null,
+        periodo_mes:         form.periodo_tipo === 'mes_ano' ? form.periodo_mes : null,
+        periodo_ano:         form.periodo_tipo === 'mes_ano' ? form.periodo_ano : null,
         agendamento:         form.agendamento,
         hora_envio:          form.hora_envio,
         dia_semana:          Number(form.dia_semana),
@@ -300,18 +305,49 @@ export default function RelatorioConfig() {
               {/* Período */}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Período de busca</label>
-                <select className="form-select" value={form.periodo_tipo||'dias'} onChange={e => { setF('periodo_tipo', e.target.value); if(e.target.value==='dias') { setF('periodo_ini',''); setF('periodo_fim',''); } else { setF('periodo_dias', 0); } }}>
+                <select className="form-select" value={form.periodo_tipo||'dias'} onChange={e => {
+                  setF('periodo_tipo', e.target.value);
+                  setF('periodo_ini', ''); setF('periodo_fim', '');
+                  setF('periodo_mes', ''); setF('periodo_ano', '');
+                  setF('periodo_dias', 1);
+                }}>
+                  <option value="semana_atual">Semana atual</option>
+                  <option value="mes_atual">Mês atual</option>
+                  <option value="mes_ano">Mês e ano específico</option>
                   <option value="dias">Relativo (dias atrás)</option>
                   <option value="datas">Por datas específicas</option>
                 </select>
-                {(!form.periodo_tipo || form.periodo_tipo === 'dias') && (
+
+                {form.periodo_tipo === 'dias' && (
                   <select className="form-select" style={{ marginTop: 8 }} value={form.periodo_dias} onChange={e => setF('periodo_dias', e.target.value)}>
                     <option value={1}>Último dia (ontem)</option>
-                    <option value={7}>Última semana (7 dias)</option>
+                    <option value={7}>Últimos 7 dias</option>
                     <option value={15}>Últimos 15 dias</option>
-                    <option value={30}>Último mês (30 dias)</option>
+                    <option value={30}>Últimos 30 dias</option>
                   </select>
                 )}
+
+                {form.periodo_tipo === 'mes_ano' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
+                      <select className="form-select" value={form.periodo_mes||''} onChange={e => setF('periodo_mes', e.target.value)}>
+                        <option value="">Selecione</option>
+                        {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m,i) => (
+                          <option key={i+1} value={String(i+1).padStart(2,'0')}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
+                      <select className="form-select" value={form.periodo_ano||''} onChange={e => setF('periodo_ano', e.target.value)}>
+                        <option value="">Selecione</option>
+                        {[2024,2025,2026,2027].map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 {form.periodo_tipo === 'datas' && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
                     <div>
@@ -322,6 +358,12 @@ export default function RelatorioConfig() {
                       <label className="form-label" style={{ fontSize: 11 }}>Data fim</label>
                       <input className="form-input" type="date" value={form.periodo_fim||''} onChange={e => setF('periodo_fim', e.target.value)} />
                     </div>
+                  </div>
+                )}
+
+                {(form.periodo_tipo === 'semana_atual' || form.periodo_tipo === 'mes_atual') && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-muted)', background: 'var(--color-surface-2)', padding: '6px 10px', borderRadius: 'var(--radius-md)' }}>
+                    {form.periodo_tipo === 'semana_atual' ? 'Enviará os processos da semana em curso (domingo a sábado).' : 'Enviará os processos do mês em curso (do dia 1 até hoje).'}
                   </div>
                 )}
               </div>
