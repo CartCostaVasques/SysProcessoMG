@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
+import Portal from '../layout/Portal.jsx';
 
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const TIPOS = [
@@ -212,6 +213,7 @@ export default function RelatorioConfig() {
 
       {/* Modal de criação/edição */}
       {modal && (
+        <Portal>
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
           <div className="modal" style={{ maxWidth: 620 }}>
             <div className="modal-header" style={{ flexShrink: 0 }}>
@@ -330,6 +332,7 @@ export default function RelatorioConfig() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );
