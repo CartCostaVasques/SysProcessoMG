@@ -14,6 +14,7 @@ const EMPTY = {
   filtro_setores: [], filtro_servicos: [], filtro_responsaveis: [],
   periodo_dias: 1, periodo_tipo: 'dias', periodo_ini: '', periodo_fim: '',
   agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
+  incluir_detalhado: true, incluir_categoria: false,
 };
 
 export default function RelatorioConfig() {
@@ -50,6 +51,8 @@ export default function RelatorioConfig() {
       setForm({
         ...config,
         destinatarios: (config.destinatarios || []).join(', '),
+        incluir_detalhado: config.incluir_detalhado !== false,
+        incluir_categoria: config.incluir_categoria === true,
       });
     } else {
       setForm(EMPTY);
@@ -78,6 +81,8 @@ export default function RelatorioConfig() {
         agendamento:         form.agendamento,
         hora_envio:          form.hora_envio,
         dia_semana:          Number(form.dia_semana),
+        incluir_detalhado:   form.incluir_detalhado !== false,
+        incluir_categoria:   form.incluir_categoria === true,
       };
       if (modal === 'novo') {
         const { error } = await sb.from('relatorio_config').insert(payload);
@@ -161,6 +166,9 @@ export default function RelatorioConfig() {
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{c.nome}</span>
                       <span className={`badge ${c.ativo ? 'badge-success' : 'badge-neutral'}`}>{c.ativo ? 'Ativo' : 'Inativo'}</span>
                       <span className="badge badge-info">{c.tipo === 'ambos' ? 'Todos' : c.tipo === 'andamento' ? 'Andamento' : 'Concluído'}</span>
+                      {c.incluir_detalhado && c.incluir_categoria && <span className="badge badge-info">Detalhado + Categoria</span>}
+                      {c.incluir_detalhado && !c.incluir_categoria && <span className="badge badge-info">Detalhado</span>}
+                      {!c.incluir_detalhado && c.incluir_categoria && <span className="badge badge-info">Só Categoria</span>}
                       {c.agendamento !== 'manual' && (
                         <span className="badge badge-warning">{c.agendamento === 'diario' ? `Diário ${c.hora_envio}` : `Semanal ${DIAS_SEMANA[c.dia_semana]} ${c.hora_envio}`}</span>
                       )}
@@ -262,6 +270,31 @@ export default function RelatorioConfig() {
                 <select className="form-select" value={form.tipo} onChange={e => setF('tipo', e.target.value)}>
                   {TIPOS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
+              </div>
+
+              {/* Seções do e-mail */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Seções do E-mail</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                  {[
+                    { key: 'incluir_detalhado', label: 'Processos detalhados (lista completa)', sub: 'Uma linha por processo com número, data, espécie, responsável e valor' },
+                    { key: 'incluir_categoria', label: 'Resumo por Categoria', sub: 'Tabela agrupada: categoria | quantidade | valor total' },
+                  ].map(op => (
+                    <div key={op.key} onClick={() => setF(op.key, !form[op.key])}
+                      style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${form[op.key] ? 'var(--color-accent)' : 'var(--color-border)'}`, background: form[op.key] ? 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))' : 'var(--color-surface)', cursor: 'pointer' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${form[op.key] ? 'var(--color-accent)' : 'var(--color-border)'}`, background: form[op.key] ? 'var(--color-accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                        {form[op.key] && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: form[op.key] ? 700 : 400, color: form[op.key] ? 'var(--color-accent)' : 'var(--color-text)' }}>{op.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{op.sub}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {!form.incluir_detalhado && !form.incluir_categoria && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-danger)' }}>⚠ Selecione ao menos uma seção.</div>
+                )}
               </div>
 
               {/* Período */}
