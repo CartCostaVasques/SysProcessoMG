@@ -5,7 +5,7 @@ import Portal from '../layout/Portal.jsx';
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const TIPOS = [
   { id: 'ambos',      label: 'Todos (Andamento + Concluídos + Encerrados)' },
-  { id: 'andamento',  label: 'Apenas Em Andamento' },
+  { id: 'andamento',  label: 'Em Andamento (inclui Devolvido e Em Reanálise)' },
   { id: 'concluido',  label: 'Apenas Concluídos' },
   { id: 'encerrado',  label: 'Apenas Encerrados' },
 ];
