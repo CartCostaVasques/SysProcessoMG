@@ -12,7 +12,8 @@ const TIPOS = [
 const EMPTY = {
   nome: '', ativo: true, destinatarios: '', tipo: 'ambos',
   filtro_setores: [], filtro_servicos: [], filtro_responsaveis: [],
-  periodo_dias: 1, agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
+  periodo_dias: 1, periodo_tipo: 'dias', periodo_ini: '', periodo_fim: '',
+  agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
 };
 
 export default function RelatorioConfig() {
@@ -70,7 +71,10 @@ export default function RelatorioConfig() {
         filtro_setores:      form.filtro_setores?.length ? form.filtro_setores : null,
         filtro_servicos:     form.filtro_servicos?.length ? form.filtro_servicos : null,
         filtro_responsaveis: form.filtro_responsaveis?.length ? form.filtro_responsaveis : null,
-        periodo_dias:        Number(form.periodo_dias),
+        periodo_dias:        form.periodo_tipo === 'datas' ? 0 : Number(form.periodo_dias),
+        periodo_tipo:        form.periodo_tipo || 'dias',
+        periodo_ini:         form.periodo_tipo === 'datas' ? form.periodo_ini : null,
+        periodo_fim:         form.periodo_tipo === 'datas' ? form.periodo_fim : null,
         agendamento:         form.agendamento,
         hora_envio:          form.hora_envio,
         dia_semana:          Number(form.dia_semana),
@@ -187,15 +191,22 @@ export default function RelatorioConfig() {
           <div className="table-wrapper">
             <table className="data-table">
               <thead><tr>
-                <th>Configuração</th><th>Enviado em</th><th>Destinatários</th><th>Processos</th><th>Status</th>
+                <th>Configuração</th><th>Enviado em</th><th>Período</th><th>Destinatários</th><th>Processos</th><th>Status</th>
               </tr></thead>
               <tbody>
                 {envios.map(e => {
                   const conf = configs.find(c => c.id === e.config_id);
+                  const fmtD = (s) => s ? s.split('-').reverse().join('/') : '';
+                  const periodoTexto = conf
+                    ? (conf.periodo_tipo === 'datas' && conf.periodo_ini
+                        ? `${fmtD(conf.periodo_ini)} a ${fmtD(conf.periodo_fim)}`
+                        : `Últimos ${conf.periodo_dias} dia(s)`)
+                    : '—';
                   return (
                     <tr key={e.id}>
                       <td style={{ fontSize: 12 }}>{conf?.nome || '—'}</td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{fmtDt(e.enviado_em)}</td>
+                      <td style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{periodoTexto}</td>
                       <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{(e.destinatarios || []).join(', ')}</td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, textAlign: 'right' }}>{e.total_processos}</td>
                       <td>
@@ -255,13 +266,31 @@ export default function RelatorioConfig() {
 
               {/* Período */}
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Período de busca (dias atrás)</label>
-                <select className="form-select" value={form.periodo_dias} onChange={e => setF('periodo_dias', e.target.value)}>
-                  <option value={1}>Último dia (ontem)</option>
-                  <option value={7}>Última semana (7 dias)</option>
-                  <option value={15}>Últimos 15 dias</option>
-                  <option value={30}>Último mês (30 dias)</option>
+                <label className="form-label">Período de busca</label>
+                <select className="form-select" value={form.periodo_tipo||'dias'} onChange={e => { setF('periodo_tipo', e.target.value); if(e.target.value==='dias') { setF('periodo_ini',''); setF('periodo_fim',''); } else { setF('periodo_dias', 0); } }}>
+                  <option value="dias">Relativo (dias atrás)</option>
+                  <option value="datas">Por datas específicas</option>
                 </select>
+                {(!form.periodo_tipo || form.periodo_tipo === 'dias') && (
+                  <select className="form-select" style={{ marginTop: 8 }} value={form.periodo_dias} onChange={e => setF('periodo_dias', e.target.value)}>
+                    <option value={1}>Último dia (ontem)</option>
+                    <option value={7}>Última semana (7 dias)</option>
+                    <option value={15}>Últimos 15 dias</option>
+                    <option value={30}>Último mês (30 dias)</option>
+                  </select>
+                )}
+                {form.periodo_tipo === 'datas' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: 11 }}>Data início</label>
+                      <input className="form-input" type="date" value={form.periodo_ini||''} onChange={e => setF('periodo_ini', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: 11 }}>Data fim</label>
+                      <input className="form-input" type="date" value={form.periodo_fim||''} onChange={e => setF('periodo_fim', e.target.value)} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Filtro de categorias */}
