@@ -100,23 +100,16 @@ export default function RelatorioConfig() {
   const handleEnviarAgora = async (config) => {
     setEnviando(config.id);
     try {
-      const { data: { session } } = await sb.auth.getSession();
-      const url = `${sb.supabaseUrl}/functions/v1/enviar-relatorio`;
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ config_id: config.id }),
+      const { data, error } = await sb.functions.invoke('enviar-relatorio', {
+        body: { config_id: config.id },
       });
-      const json = await resp.json();
-      if (json.ok) {
-        addToast(`Relatório enviado! ${json.resultados?.[0]?.total ?? 0} processo(s)`, 'success');
+      if (error) throw error;
+      if (data?.ok) {
+        addToast(`Relatório enviado! ${data.resultados?.[0]?.total ?? 0} processo(s)`, 'success');
         fetchEnvios();
         fetchConfigs();
       } else {
-        addToast('Erro ao enviar: ' + (json.erro || 'desconhecido'), 'error');
+        addToast('Erro ao enviar: ' + (data?.erro || 'desconhecido'), 'error');
       }
     } catch(e) { addToast(e.message, 'error'); }
     finally { setEnviando(null); }
