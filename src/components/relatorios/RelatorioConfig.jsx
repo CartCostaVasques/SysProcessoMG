@@ -213,12 +213,12 @@ export default function RelatorioConfig() {
       {/* Modal de criação/edição */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(null)}>
-          <div className="modal" style={{ maxWidth: 620, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div className="modal-header">
+          <div className="modal" style={{ maxWidth: 620, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ flexShrink: 0 }}>
               <span className="modal-title">{modal === 'novo' ? 'Nova Configuração' : 'Editar Configuração'}</span>
               <button className="btn-icon" onClick={() => setModal(null)}>✕</button>
             </div>
-            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', flex: 1 }}>
 
               {/* Nome e ativo */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
@@ -322,7 +322,7 @@ export default function RelatorioConfig() {
                 )}
               </div>
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer" style={{ flexShrink: 0 }}>
               <button className="btn btn-secondary" onClick={() => setModal(null)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando}>
                 {salvando ? 'Salvando...' : 'Salvar'}
