@@ -65,13 +65,35 @@ function detectarSubtipoDivorcio(corpo) {
 }
 
 function parseLote(html) {
-  const blocks = html.split('<hr>').filter(b => b.includes('Comunicação') || b.includes('Comunicacao'));
+  // Normaliza quebras de linha
+  const htmlNorm = html.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // REJEITADO está dentro do mesmo bloco da comunicação (antes do </center> final)
+  // Detecta por código: cada bloco tem seu próprio código
+  const rejeicoesPorCodigo = {};
+  const blocosHtml = htmlNorm.split(/<hr\s*\/?>/i);
+  for (const bloco of blocosHtml) {
+    const codM = bloco.match(/Código da comunicação:\s*(\d+)/);
+    if (!codM) continue;
+    const blocoSemTags = bloco.replace(/<[^>]+>/g, '');
+    if (/R\s*E\s*J\s*E\s*I\s*T\s*A\s*D\s*O/i.test(blocoSemTags)) {
+      const motivoM = blocoSemTags.match(/Motivo da rejeição[^:]*:\s*(.+)/i);
+      rejeicoesPorCodigo[codM[1]] = {
+        rejeitado: true,
+        motivoRejeicao: motivoM ? motivoM[1].trim() : '',
+      };
+    }
+  }
+
+  const blocks = htmlNorm.split(/<hr\s*\/?>/i).filter(b => b.includes('Comunicação') || b.includes('Comunicacao'));
+
   return blocks.map(b => {
     const tipo = detectarTipo(b);
     const cod = (b.match(/Código da comunicação:\s*(\d+)/) || [])[1] || '?';
     const dataCom = (b.match(/,\s*(\d{2}\/\d{2}\/\d{4})\s*<br>/) || [])[1] || '?';
-    const origemMatch = b.match(/Comunicação de [^<]+<br><br>[\s\S]*?\n\s*([^\n<]+)/);
-    const origemRaw = corrigirAcentos((origemMatch ? origemMatch[1] : '?').trim().replace(/<br>/g, '').trim());
+    const origemMatch = b.match(/Comunicação[^<]*(?:<\/[^>]+>)?<br><br>\s*([^\n<]+)/i)
+      || b.match(/<br><br>\s*([^\n<]+?(?:Ofício|Oficio|Comarca|-\s*[A-Z]{2})[^\n<]*)/i);
+    const origemRaw = corrigirAcentos((origemMatch ? origemMatch[1] : '?').trim().replace(/<[^>]+>/g, '').replace(/<br>/g, '').trim());
     const origem = garantirUF(origemRaw);
     const divMatch = b.match(/<div align="JUSTIFY">([\s\S]+?)<\/div>/i);
     const corpo = divMatch ? stripTags(divMatch[1]) : '';
@@ -85,7 +107,12 @@ function parseLote(html) {
         ? gerarDivorcioMandado(corpo, origem, dataCom)
         : gerarDivorcioEscritura(corpo, origem, dataCom);
     }
-    return { tipo, codigo: cod, origem, dataComunicado: dataCom, averbacao };
+    // Rejeição: apenas pelo mapa (evita falsos positivos)
+    const rejInfo = rejeicoesPorCodigo[cod] || {};
+    const rejeitado = rejInfo.rejeitado || false;
+    const motivoRejeicao = rejInfo.motivoRejeicao || '';
+
+    return { tipo, codigo: cod, origem, dataComunicado: dataCom, averbacao, rejeitado, motivoRejeicao };
   });
 }
 
@@ -402,6 +429,15 @@ export default function RegistroCivilAtos() {
             }}>
               {c.tipo === 'casamento' ? '💍 Casamento' : c.tipo === 'divorcio' ? '⚖ Divórcio' : c.tipo === 'conversao' ? '🔄 Conversão Sep.' : '✝ Óbito'}
             </span>
+            {c.rejeitado && (
+              <span title={c.motivoRejeicao || 'Comunicação rejeitada'} style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
+                padding: '3px 8px', borderRadius: 4, cursor: c.motivoRejeicao ? 'help' : 'default',
+                background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5',
+              }}>
+                ⚠ Com Rejeição
+              </span>
+            )}
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-faint)' }}>
               #{c.codigo}
             </span>
@@ -419,6 +455,11 @@ export default function RegistroCivilAtos() {
           {/* Body */}
           {abertos[i] && (
             <div style={{ padding: '18px 22px' }}>
+              {c.rejeitado && c.motivoRejeicao && (
+                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 'var(--radius-md)', fontSize: 12, color: '#dc2626' }}>
+                  <strong>Motivo da Rejeição:</strong> {c.motivoRejeicao}
+                </div>
+              )}
               <div style={{
                 fontFamily: 'Georgia, serif',
                 fontSize: 13.5,
