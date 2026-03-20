@@ -22,43 +22,69 @@ function corrigirAcentos(str) {
   return s;
 }
 
+// Garante que a origem tenha UF — se não tiver, adiciona "– MT"
+function garantirUF(origem) {
+  // Verifica se já tem UF (dois caracteres maiúsculos no final após hífen)
+  if (/–\s*[A-Z]{2}\s*$/.test(origem) || /-\s*[A-Z]{2}\s*$/.test(origem)) return origem;
+  return origem + ' – MT';
+}
+
 // ── Detecção de gênero ────────────────────────────────────────
-// Terminações femininas comuns em nomes brasileiros
-const SUFIXOS_FEM = ['a','ane','ane','ina','ine','ice','ize','ilde','ilda','ilda','anda','anda','ela','elia','elia','enia','esia','esia','ete','ete','ette','ette','ia','iana','iane','icia','icia','ile','ille','ina','ine','ione','ione','ires','ires','isa','ise','ite','iva','ive','ize','ize','nde','one','ore','ude','une','ure','ute'];
 const NOMES_FEM = new Set([
-  'MARIA','ANA','JOANA','LUCIA','LUZIA','ROSA','RITA','LENA','LINA','NINA','NAIR','VERA','IRIS','INES','RUTH','RAQUEL','ESTER','REBECA','DIANA','SORAIA','SONIA','TANIA','VANIA','SILVIA','LIVIA','OLIVIA','FLAVIA','CLAUDIA','CLAUDIA','PATRICIA','LETICIA','BEATRIZ','CAMILA','LARISSA','JULIANA','FABIANA','TATIANA','ADRIANA','VIVIANE','SIMONE','LILIANE','CRISTIANE','ROSILANE','MARLENE','IRENE','LUCIENE','APARECIDA','CONCEICAO','CONCEIÇÃO','FRANCISCA','JOSEFA','ANTONIA','RAIMUNDA','EDILENE','EDNA','ELAINE','ELIANA','ELISA','ELIZABETE','ELIZANGELA','ERICA','ERICKA','ERIKA','EUNICE','EVA','EVELINE','EVELYN','FATIMA','FERNANDA','GABRIELA','GISELE','GISELLE','GLEICE','GRACIELA','HELOISA','IARA','IRACEMA','ISABEL','IZABEL','JAQUELINE','JESSICA','JOELMA','JORGELINA','JOSIANE','JOVITA','JULIA','KATIA','KEILA','LAILA','LARICE','LEDA','LEONORA','LORENA','LUANA','LUCIANA','LUCIMARA','LUISA','LUIZA','MAGDA','MAISA','MARCELA','MARCIA','MARGARETE','MARGARIDA','MARIANA','MARILENE','MARINA','MARISA','MARLEI','MARTA','MIRELA','MIRIAM','MIRIANE','MIRIAN','MONICA','NADIR','NATALIA','NATHALIA','NATHALIE','NOEMIA','NORMA','ODETE','OLGA','PATRICIA','PAULA','PRISCILA','PRISCILLA','RAFAELA','REJANE','RENATA','ROSANA','ROSANE','ROSANGELA','ROSARIA','ROSEMEIRE','ROSENI','ROSIANE','ROSILDA','ROSINEI','ROSINEIDE','ROSINEIRE','ROSSANA','SAMARA','SANDRA','SARA','SELMA','SILVANA','SOLANGE','SUELI','SUELY','SUZANA','SUZANE','TAMARA','TAMIRES','TEREZA','THERESA','THAINÁ','THAIS','THAISE','THAISSA','VALDIRENE','VALERIA','VALQUIRIA','VANDERLEIA','VANIA','VANUSA','VIVIAN','WANESSA','YONE','ZELIA','ZILMA']);
+  'MARIA','ANA','JOANA','LUCIA','LUZIA','ROSA','RITA','LENA','LINA','NINA','NAIR','VERA','IRIS','INES','RUTH','RAQUEL','ESTER','REBECA','DIANA','SORAIA','SONIA','TANIA','VANIA','SILVIA','LIVIA','OLIVIA','FLAVIA','CLAUDIA','PATRICIA','LETICIA','BEATRIZ','CAMILA','LARISSA','JULIANA','FABIANA','TATIANA','ADRIANA','VIVIANE','SIMONE','LILIANE','CRISTIANE','ROSILANE','MARLENE','IRENE','LUCIENE','APARECIDA','CONCEICAO','CONCEIÇÃO','FRANCISCA','JOSEFA','ANTONIA','RAIMUNDA','EDILENE','EDNA','ELAINE','ELIANA','ELISA','ELIZABETE','ELIZANGELA','ERICA','ERICKA','ERIKA','EUNICE','EVA','EVELINE','EVELYN','FATIMA','FERNANDA','GABRIELA','GISELE','GISELLE','GLEICE','GRACIELA','HELOISA','IARA','IRACEMA','ISABEL','IZABEL','JAQUELINE','JESSICA','JOELMA','JOSIANE','JOVITA','JULIA','KATIA','KEILA','LAILA','LARICE','LEDA','LEONORA','LORENA','LUANA','LUCIANA','LUCIMARA','LUISA','LUIZA','MAGDA','MAISA','MARCELA','MARCIA','MARGARETE','MARGARIDA','MARIANA','MARILENE','MARINA','MARISA','MARLEI','MARTA','MIRELA','MIRIAM','MIRIANE','MIRIAN','MONICA','NADIR','NATALIA','NATHALIA','NATHALIE','NOEMIA','NORMA','ODETE','OLGA','PATRICIA','PAULA','PRISCILA','PRISCILLA','RAFAELA','REJANE','RENATA','ROSANA','ROSANE','ROSANGELA','ROSARIA','ROSEMEIRE','ROSENI','ROSIANE','ROSILDA','ROSINEI','ROSINEIDE','ROSINEIRE','ROSSANA','SAMARA','SANDRA','SARA','SELMA','SILVANA','SOLANGE','SUELI','SUELY','SUZANA','SUZANE','TAMARA','TAMIRES','TEREZA','THERESA','THAINÁ','THAIS','THAISE','THAISSA','VALDIRENE','VALERIA','VALQUIRIA','VANDERLEIA','VANIA','VANUSA','VIVIAN','WANESSA','YONE','ZELIA','ZILMA',
+  'ROSINDA','AUXILIADORA','CLEIDE','CLEIDIANE','CILEIDE','ROSEMEIRE','NELI','NELY','NELI','GENI','GENY','MAIRI','NAIR','DAIR',
+]);
 
 function detectarGenero(nomeCompleto) {
   if (!nomeCompleto) return 'M';
   const partes = nomeCompleto.trim().toUpperCase().split(/\s+/);
   const primeiro = partes[0];
-  // Verificação direta na lista
   if (NOMES_FEM.has(primeiro)) return 'F';
-  // Sufixos femininos no primeiro nome
   const nomeLower = primeiro.toLowerCase();
-  for (const suf of ['iane','iene','iele','uela','uele','ana','ina','ela','ila','ina','ena','ona','uda','ada','ida','eda','oda','anda','ilda','inda','anda']) {
+  for (const suf of ['iane','iene','iele','uela','uele','ana','ina','ela','ila','ena','ona','uda','ada','ida','eda','oda','anda','ilda','inda']) {
     if (nomeLower.endsWith(suf)) return 'F';
   }
-  if (nomeLower.endsWith('a') && !['luca','nicola','joaquina','gabriel','ezequiel','daniel','michael','rafael','miguel','israel','pascal','rial'].some(ex => nomeLower === ex)) return 'F';
+  if (nomeLower.endsWith('a') && !['luca','nicola','gabriel','ezequiel','daniel','michael','rafael','miguel','israel','pascal'].some(ex => nomeLower === ex)) return 'F';
   return 'M';
 }
 
 // ── Parser HTML ───────────────────────────────────────────────
 function stripTags(s) { return s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); }
 
+function detectarTipo(b) {
+  if (b.includes('Óbito') || b.includes('Obito')) return 'obito';
+  if (/convers[ãa]o de separa[çc][ãa]o/i.test(b)) return 'conversao';
+  if (b.includes('Alterações de Estado Civil') || b.includes('Alteracoes de Estado Civil') || b.includes('divórcio') || b.includes('divorcio') || b.includes('Divórcio') || b.includes('Escritura Pública') || b.includes('Mandado')) return 'divorcio';
+  return 'casamento';
+}
+
+function detectarSubtipoDivorcio(corpo) {
+  if (/escritura p[úu]blica/i.test(corpo) || /escritura\s+p[úu]blica/i.test(corpo)) return 'escritura';
+  if (/mandado/i.test(corpo)) return 'mandado';
+  return 'escritura'; // default
+}
+
 function parseLote(html) {
-  const blocks = html.split('<hr>').filter(b => b.includes('Comunicação'));
+  const blocks = html.split('<hr>').filter(b => b.includes('Comunicação') || b.includes('Comunicacao'));
   return blocks.map(b => {
-    const tipo = b.includes('Óbito') ? 'obito' : 'casamento';
+    const tipo = detectarTipo(b);
     const cod = (b.match(/Código da comunicação:\s*(\d+)/) || [])[1] || '?';
     const dataCom = (b.match(/,\s*(\d{2}\/\d{2}\/\d{4})\s*<br>/) || [])[1] || '?';
-    const origemMatch = b.match(/Comunicação de (?:Casamento Civil|Óbito)<br><br>[\s\S]*?\n\s*([^\n<]+)/);
-    const origem = corrigirAcentos((origemMatch ? origemMatch[1] : '?').trim().replace(/<br>/g, '').trim());
+    const origemMatch = b.match(/Comunicação de [^<]+<br><br>[\s\S]*?\n\s*([^\n<]+)/);
+    const origemRaw = corrigirAcentos((origemMatch ? origemMatch[1] : '?').trim().replace(/<br>/g, '').trim());
+    const origem = garantirUF(origemRaw);
     const divMatch = b.match(/<div align="JUSTIFY">([\s\S]+?)<\/div>/i);
     const corpo = divMatch ? stripTags(divMatch[1]) : '';
-    const averbacao = tipo === 'casamento'
-      ? gerarCasamento(corpo, origem, dataCom)
-      : gerarObito(corpo, origem, dataCom);
+    let averbacao;
+    if (tipo === 'casamento') averbacao = gerarCasamento(corpo, origem, dataCom);
+    else if (tipo === 'obito') averbacao = gerarObito(corpo, origem, dataCom);
+    else if (tipo === 'conversao') averbacao = gerarConversaoSeparacao(corpo, origem, dataCom);
+    else {
+      const subtipo = detectarSubtipoDivorcio(corpo);
+      averbacao = subtipo === 'mandado'
+        ? gerarDivorcioMandado(corpo, origem, dataCom)
+        : gerarDivorcioEscritura(corpo, origem, dataCom);
+    }
     return { tipo, codigo: cod, origem, dataComunicado: dataCom, averbacao };
   });
 }
@@ -75,7 +101,6 @@ function gerarCasamento(corpo, origem, dataCom) {
   const nome1 = c1m ? c1m[1].trim() : '?';
   const gen1  = c1m ? c1m[2].toLowerCase() : 'o qual';
 
-  // Bloco de ação do cônjuge 1
   const blocoC1 = corpo.match(/casamento civil de:.+?(?:,\s*(?:o qual|a qual))([\s\S]+?)(?:,\s*e\s+[A-Z])/i);
   let frase1;
   if (blocoC1 && /continuou com o mesmo nome/i.test(blocoC1[1])) {
@@ -87,7 +112,6 @@ function gerarCasamento(corpo, origem, dataCom) {
     frase1 = `${nome1}, ${gen1} continuou com o mesmo nome`;
   }
 
-  // Cônjuge 2
   const c2m = corpo.match(/,\s*e\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^,]+?),\s*(a qual|o qual)([\s\S]+?)(?:\.\s*(?:Ela|Ele|[A-Z][a-z]|OBSERV)|$)/i);
   let frase2 = '?';
   if (c2m) {
@@ -102,13 +126,14 @@ function gerarCasamento(corpo, origem, dataCom) {
     }
   }
 
-  const cidade = corrigirAcentos(origem.replace(/\s*-\s*\d+[°º]\s*[Oo]f[íi]cio.*/i, '').trim());
+  const cidade = corrigirAcentos(origem.replace(/\s*[-–]\s*\d+[°º]\s*[Oo]f[íi]cio.*/i, '').trim());
   return `De acordo com o COMUNICADO datado em ${dataCom}, enviado pelo Cartório de Registro Civil do Município de ${cidade}, conforme ato do Livro ${livro}, folhas ${folhas}, termo nº ${termo}, em data de ${dataAto}, foi realizado o ASSENTO DE CASAMENTO de ${frase1}, e ${frase2}.`;
 }
 
 // ── Gerador Óbito ─────────────────────────────────────────────
 function gerarObito(corpo, origem, dataCom) {
-  const ato = corpo.match(/Aos\s+(\d{2}\/\d{2}\/\d{4})\s+no\s+livro\s+(\w+)\s+n[úu]mero\s+(\d+),\s*folhas\s+(\d+),\s*termo\s+(\d+)/i);
+  // folhas aceita alfanumérico (ex: 157V, 140, 23A)
+  const ato = corpo.match(/Aos\s+(\d{2}\/\d{2}\/\d{4})\s+no\s+livro\s+(\w+)\s+n[úu]mero\s+(\d+),\s*folhas\s+(\w+),\s*termo\s+(\d+)/i);
   const dataAto  = ato ? ato[1] : '?';
   const livroNum = ato ? ato[3] : '?';
   const folhas   = ato ? ato[4] : '?';
@@ -119,7 +144,6 @@ function gerarObito(corpo, origem, dataCom) {
   const dataObM = corpo.match(/ocorrido em\s+(\d{2}\/\d{2}\/\d{4})/i);
   const dataOb  = dataObM ? dataObM[1] : '?';
 
-  // Detecta gênero pelo nome — mas se o próprio comunicado usa "Ela" ou "Ele" como referência, respeita
   const usaEla = /\bEla\b/.test(corpo);
   const usaEle = /\bEle\b/.test(corpo);
   let genero;
@@ -128,9 +152,136 @@ function gerarObito(corpo, origem, dataCom) {
   else genero = detectarGenero(nome);
 
   const falecidoStr = genero === 'F' ? 'falecida' : 'falecido';
-
-  const cidade = corrigirAcentos(origem.replace(/\s*-\s*\d+[°º]\s*[Oo]f[íi]cio.*/i, '').trim());
+  const cidade = corrigirAcentos(origem.replace(/\s*[-–]\s*\d+[°º]\s*[Oo]f[íi]cio.*/i, '').trim());
   return `De acordo com o COMUNICADO datado em ${dataCom}, enviado pelo Cartório de Registro Civil do Município e Comarca de ${cidade}, conforme termo nº ${termo}, folha n° ${folhas}, do livro C-${livroNum}, em data de ${dataAto}, foi lavrado o ASSENTO DE ÓBITO de ${nome}, ${falecidoStr} em ${dataOb}.`;
+}
+
+// ── Gerador Conversão de Separação em Divórcio ───────────────
+function gerarConversaoSeparacao(corpo, origem, dataCom) {
+  // Cônjuges — "do casal NOME1 e NOME2, conforme"
+  // O "e" pode ser precedido por nome composto, então captura tudo entre "do casal" e ", conforme"
+  const trecho = corpo.match(/(?:do\s+)?casal\s+([\s\S]+?),\s*conforme/i);
+  let conj1 = '[CÔNJUGE 1]', conj2 = '[CÔNJUGE 2]';
+  if (trecho) {
+    // Divide pelo " e " mais provável — antes de nome maiúsculo
+    const partes = trecho[1].split(/ e (?=[A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ])/);
+    if (partes.length >= 2) {
+      conj1 = partes[0].trim();
+      conj2 = partes[1].trim();
+    }
+  }
+
+  // Vara e Juíza — aceita "Juiz" ou "Juíz" (com ou sem acento)
+  const varaJuizaM = corpo.match(/Ju[íi]z\s*de Direito\s+da\s+(.+?),\s*(.+?),\s*datada de/i);
+  const vara  = varaJuizaM ? varaJuizaM[1].trim() : '[VARA]';
+  const juiza = varaJuizaM ? varaJuizaM[2].trim() : '[JUÍZA]';
+
+  // Datas
+  const dataSentM  = corpo.match(/datada de\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const dataTransM = corpo.match(/transitou em julgado\s+(?:aos|em)\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const dataSent   = dataSentM  ? dataSentM[1]  : '[DATA SENTENÇA]';
+  const dataTrans  = dataTransM ? dataTransM[1] : '[DATA TRÂNSITO]';
+
+  // Autos
+  const autosM = corpo.match(/autos\s+([\d\/\.\-]+)/i);
+  const autos  = autosM ? autosM[1].trim() : '[AUTOS]';
+
+  // Quem continuou com o mesmo nome — usa indexOf
+  const corpoLow = corpo.toLowerCase();
+  const posCont1 = corpo.toLowerCase().indexOf(conj1.toLowerCase().substring(0, 10));
+  const posCont2 = corpo.toLowerCase().indexOf(conj2.toLowerCase().substring(0, 10), posCont1 + 10);
+  const posContNome = corpo.toLowerCase().indexOf('continuou com o mesmo nome');
+  const cont1 = posCont1 >= 0 && posContNome > posCont1;
+  const cont2 = posCont2 >= 0 && corpo.toLowerCase().lastIndexOf('continuou com o mesmo nome') > posCont2;
+
+  // Nome de solteira — nas observações
+  const soltM = corpo.match(/(?:Vontando|Voltando|vontando|voltando).+?(?:solteira|seja)[,;:\s]+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^.]+)/i);
+  const nomeSolteiraRaw = soltM ? soltM[1].trim().replace(/[.;]$/, '').replace(/^(?:ou seja:|qual seja:)\s*/i, '') : '';
+  const nomeSolteira = nomeSolteiraRaw;
+
+  const cartorioOrigem = corrigirAcentos(origem.trim());
+
+  let texto = `De acordo com o COMUNICADO datado em ${dataCom}, enviado a esta Serventia pelo ${cartorioOrigem}, foi realizada a CONVERSÃO DE SEPARAÇÃO em DIVÓRCIO CONSENSUAL de ${conj1} e ${conj2}, nos termos da sentença proferida pelo MM. Juiz de Direito da ${vara}, ${juiza}, datada de ${dataSent}, que transitou em julgado aos ${dataTrans}, autos ${autos}.`;
+  if (cont1) texto += ` ${conj1}, continuou com o mesmo nome.`;
+  if (cont2) texto += ` ${conj2}, continuou com o mesmo nome.`;
+  if (nomeSolteira) texto += ` Voltando a cônjuge virago a usar o nome de solteira, qual seja: ${nomeSolteira}.`;
+  return texto;
+}
+
+// ── Gerador Divórcio por Escritura Pública ───────────────────
+function gerarDivorcioEscritura(corpo, origem, dataCom) {
+  // Cônjuges — vêm depois de "de" antes de "CONFORME ESCRITURA"
+  // Padrão: "de NOME1 e NOME2, CONFORME ESCRITURA"
+  const conjM = corpo.match(/de\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^,]+?)\s+e\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^,]+?)[,\s]+(?:CONFORME|nos termos)/i);
+  const conj1 = conjM ? conjM[1].trim() : '[CÔNJUGE 1]';
+  const conj2 = conjM ? conjM[2].trim() : '[CÔNJUGE 2]';
+
+  // Dados da escritura — "PELO 2° OFICIO DE X, NO LIVRO Y, À PÁGINA Z"
+  // ou "lavrada no livro nº X, às folhas nº Y, em data de Z"
+  const livroM  = corpo.match(/(?:NO LIVRO|livro\s+n[°º]?)\s*(\d+)/i);
+  const paginaM = corpo.match(/(?:À PÁGINA|folhas?\s+n[°º]?|página)\s*(\d+(?:-\d+)?)/i);
+  const dataEscM = corpo.match(/(?:LAVRADA EM|em data de)\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const tabelM  = corpo.match(/PELO\s+(.+?(?:OFICIO|OFÍCIO|TABELIONATO|Tabelionato)[^,\n.]+)/i)
+    || corpo.match(/pelo\s+(.+?(?:Tabelionato|Ofício|Oficio)[^,\n.]+)/i);
+
+  const livro      = livroM   ? livroM[1]   : '[LIVRO]';
+  const pagina     = paginaM  ? paginaM[1]  : '[FOLHAS/PÁGINA]';
+  const dataEsc    = dataEscM ? dataEscM[1] : '[DATA]';
+  const tabelionato = tabelM  ? tabelM[1].trim().replace(/[,.]$/, '') : '[TABELIONATO]';
+
+  // Nome de solteira
+  const soltM = corpo.match(/voltando.+?usar.+?nome.+?solteira[,:]?\s*(?:qual seja:?)?\s*([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^.]+)/i);
+  const nomeSolteira = soltM ? soltM[1].trim().replace(/\.$/, '') : '';
+
+  // Quem continuou com o mesmo nome / quem voltou ao nome de solteira
+  const cont1 = /continuou com o mesmo nome/i.test(corpo.split(conj2)[0] || '') ? `${conj1} continuou com o mesmo nome.` : '';
+  const cont2 = /continuou com o mesmo nome/i.test(corpo.split(conj1)[1] || '') ? `${conj2} continuou com o mesmo nome.` : '';
+
+  const cartorioOrigem = corrigirAcentos(origem.trim());
+
+  let texto = `De acordo com o COMUNICADO datado em ${dataCom}, enviado a esta Serventia pelo ${cartorioOrigem}, foi realizado o DIVÓRCIO CONSENSUAL de ${conj1} e ${conj2}, nos termos da Escritura Pública, lavrada no livro nº ${livro}, à página nº ${pagina}, em data de ${dataEsc}, pelo ${tabelionato}.`;
+  if (cont1) texto += ` ${cont1}`;
+  if (cont2) texto += ` ${cont2}`;
+  if (nomeSolteira) texto += ` A cônjuge virago voltará a usar o nome de solteira, qual seja: ${nomeSolteira}.`;
+  return texto;
+}
+
+// ── Gerador Divórcio por Mandado Judicial ────────────────────
+function gerarDivorcioMandado(corpo, origem, dataCom) {
+  // Cônjuges
+  const conjM = corpo.match(/div[óo]rcio\s+(?:consensual\s+)?d[oa]\s+Sr\.?\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^c]+?)\s+com\s+a\s+Sra\.?\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^,]+)/i)
+    || corpo.match(/div[óo]rcio.+?de[:\s]+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^e]+?)\s+e\s+([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^,]+)/i);
+  const conj1 = conjM ? conjM[1].trim() : '[CÔNJUGE 1]';
+  const conj2 = conjM ? conjM[2].trim() : '[CÔNJUGE 2]';
+
+  // Dados do mandado
+  const dataMandM   = corpo.match(/datado de\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const juizaM      = corpo.match(/assinado pela?\s+(.+?),\s*MM[ªa]/i);
+  const varaM       = corpo.match(/MM[ªa]\.?\s*Juíz[ao]?\s*de Direito da\s+(.+?),\s*extraído/i);
+  const processoM   = corpo.match(/processo\s+n[°º]?\s*([\d\-\.]+)/i);
+  const dataSentM   = corpo.match(/(?:decretado|sentença).+?em\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const dataTransM  = corpo.match(/transitou em julgado em\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const dataCumprM  = corpo.match(/Cumpra-se expedido em\s+(\d{2}\/\d{2}\/\d{4})/i);
+  const dirComarcaM = corpo.match(/Dra?\.\s+([^,]+),\s*MM[ªa].+?Diretora?\s+desta Comarca\s+de\s+([^.]+)/i);
+
+  const dataMandado  = dataMandM   ? dataMandM[1]   : '[DATA MANDADO]';
+  const juiza        = juizaM      ? juizaM[1].trim() : '[JUÍZA]';
+  const vara         = varaM       ? varaM[1].trim() : '[VARA]';
+  const processo     = processoM   ? processoM[1]   : '[PROCESSO]';
+  const dataSent     = dataSentM   ? dataSentM[1]   : '[DATA SENTENÇA]';
+  const dataTrans    = dataTransM  ? dataTransM[1]  : '[DATA TRÂNSITO]';
+  const dataCumpr    = dataCumprM  ? dataCumprM[1]  : '[DATA CUMPRIMENTO]';
+  const dirComarca   = dirComarcaM ? `Dra. ${dirComarcaM[1].trim()}, MMª. Juíza de Direito e Diretora desta Comarca de ${dirComarcaM[2].trim()}` : '';
+
+  // Nome de solteira
+  const soltM = corpo.match(/(?:voltando|retornando|usar).+?nome.+?(?:solteira|seja)[,:]?\s*["""]?([A-ZÁÉÍÓÚÀÂÊÔÃÕÜÇÑ][^".]+)["""]?/i);
+  const nomeSolteira = soltM ? soltM[1].trim().replace(/[""".]$/, '') : '';
+
+  let texto = `COMUNICO o DIVÓRCIO CONSENSUAL do Sr. ${conj1} com a Sra. ${conj2}, nos termos do Mandado de Averbação, datado de ${dataMandado}, assinado pela ${juiza}, MMª. Juíza de Direito da ${vara}, extraído do processo nº ${processo}, requerido pelo casal, averbo o DIVÓRCIO JUDICIAL CONSENSUAL dos mesmos, decretado por sentença proferida pela já referida Juíza, em ${dataSent}, à qual transitou em julgado em ${dataTrans}.`;
+  if (nomeSolteira) texto += ` A contraente voltará a usar o nome de solteira: "${nomeSolteira}".`;
+  if (dataCumpr) texto += ` Cumpra-se expedido em ${dataCumpr}`;
+  if (dirComarca) texto += `, pela ${dirComarca}.`;
+  return texto;
 }
 
 // ── Componente Principal ──────────────────────────────────────
@@ -246,10 +397,10 @@ export default function RegistroCivilAtos() {
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
               padding: '3px 8px', borderRadius: 4,
-              background: c.tipo === 'casamento' ? '#fef3e2' : '#e8eaf6',
-              color: c.tipo === 'casamento' ? '#b45309' : '#3949ab',
+              background: c.tipo === 'casamento' ? '#fef3e2' : c.tipo === 'divorcio' ? '#fce7f3' : c.tipo === 'conversao' ? '#e0f2fe' : '#e8eaf6',
+              color: c.tipo === 'casamento' ? '#b45309' : c.tipo === 'divorcio' ? '#9d174d' : c.tipo === 'conversao' ? '#0369a1' : '#3949ab',
             }}>
-              {c.tipo === 'casamento' ? '💍 Casamento' : '✝ Óbito'}
+              {c.tipo === 'casamento' ? '💍 Casamento' : c.tipo === 'divorcio' ? '⚖ Divórcio' : c.tipo === 'conversao' ? '🔄 Conversão Sep.' : '✝ Óbito'}
             </span>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-text-faint)' }}>
               #{c.codigo}
