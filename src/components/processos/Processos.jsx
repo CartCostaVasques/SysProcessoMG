@@ -339,6 +339,7 @@ export default function Processos() {
   const [filtroResp, setFiltroResp]     = useState('');
   const [filtroCateg, setFiltroCateg]   = useState('');
   const [limite, setLimite]             = useState(30);
+  const [numDuplicado, setNumDuplicado] = useState(false); // alerta de nº duplicado
   const numRef = useRef(null);
   const focadoRef = useRef(false);
 
@@ -393,15 +394,26 @@ export default function Processos() {
     return `${base}-${i}`;
   };
 
-  const saveNewRow = async () => {
+  const saveNewRow = async (confirmarDuplicado = false) => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
     if (salvandoNovo) return;
+
+    const base = newRow.numero_interno.trim();
+    const existe = processos.some(p => p.numero_interno.trim() === base);
+
+    // Se existe e usuário ainda não confirmou → mostra alerta
+    if (existe && !confirmarDuplicado) {
+      setNumDuplicado(true);
+      return;
+    }
+
     setSalvandoNovo(true);
-    const numeroFinal = gerarNumeroUnico(newRow.numero_interno.trim());
+    setNumDuplicado(false);
+    const numeroFinal = existe ? gerarNumeroUnico(base) : base;
     const { _sel, ...rest } = newRow;
     await addProcesso({ ...rest, numero_interno: numeroFinal, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
-    if (numeroFinal !== newRow.numero_interno.trim()) {
-      addToast(`Nº duplicado — salvo como "${numeroFinal}"`, 'info');
+    if (numeroFinal !== base) {
+      addToast(`Salvo como "${numeroFinal}" para evitar duplicidade.`, 'info');
     }
     setSalvandoNovo(false);
     setNewRow(null);
@@ -539,7 +551,18 @@ export default function Processos() {
             {/* Nova linha */}
             {newRow && (
               <tr className="row-editing">
-                <td><input ref={numRef} className="td-input" value={newRow.numero_interno} onChange={e => setNR('numero_interno', e.target.value)} placeholder="Nº *" style={{ width: 70 }} /></td>
+                <td>
+                  <input ref={numRef} className="td-input" value={newRow.numero_interno}
+                    onChange={e => { setNR('numero_interno', e.target.value); setNumDuplicado(false); }}
+                    onBlur={() => {
+                      const base = newRow.numero_interno.trim();
+                      if (base && processos.some(p => p.numero_interno.trim() === base)) setNumDuplicado(true);
+                    }}
+                    placeholder="Nº *" style={{ width: 70, borderColor: numDuplicado ? 'var(--color-danger)' : undefined }} />
+                  {numDuplicado && (
+                    <div style={{ fontSize: 10, color: 'var(--color-danger)', fontWeight: 600, marginTop: 2, whiteSpace: 'nowrap' }}>⚠ Nº já existe</div>
+                  )}
+                </td>
                 <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
                 <td><select className="td-select" value={newRow.categoria} onChange={e => { setNR('categoria', e.target.value); setNR('especie', ''); }} style={{ width: 105 }}>
                   <option value="">Categoria</option>{categorias.map(c => <option key={c}>{c}</option>)}
@@ -648,6 +671,23 @@ export default function Processos() {
 
       {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
+
+      {/* Modal confirmação de nº duplicado */}
+      {numDuplicado && newRow && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, maxWidth: 400, width: '100%' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>⚠️ Número já existe</div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>
+              O número <strong>{newRow.numero_interno}</strong> já está cadastrado. Deseja registrar mesmo assim?
+              O processo será salvo como <strong>{gerarNumeroUnico(newRow.numero_interno.trim())}</strong>.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setNumDuplicado(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={() => saveNewRow(true)}>Sim, registrar assim</button>
+            </div>
+          </div>
+        </div>
+      )}
       {processoDetalhe && (
         <ProcessoDetalhe
           processo={processoDetalhe}
