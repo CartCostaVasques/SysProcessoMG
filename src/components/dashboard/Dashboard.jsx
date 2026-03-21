@@ -546,7 +546,14 @@ export default function Dashboard({ setPage }) {
                 <div key={item.id} style={{ padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: `1px solid ${critico ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                     <div style={{ fontSize: 12, fontWeight: 600 }}>{item.nome}</div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 800, color: cor }}>{item.quantidade_atual}</span>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 800, color: cor }}>{item.quantidade_atual} {item.unidade}</span>
+                      {item.unidade === 'pct' && item.fls_por_pct > 0 && (
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                          {(item.quantidade_atual * item.fls_por_pct).toLocaleString('pt-BR')} fls
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div style={{ height: 5, background: 'var(--color-surface-3)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: cor, borderRadius: 3 }} />
