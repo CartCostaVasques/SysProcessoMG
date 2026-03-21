@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { id: 'importacaocsv',  label: 'Importação CSV',     icon: '📄', section: 'Configurações' },
   { id: 'interessados',   label: 'Interessados',     icon: '👤', section: 'Operacional' },
   { id: 'tarefas',        label: 'Tarefas',          icon: '✓',  section: 'Operacional' },
+  { id: 'estoque',        label: 'Estoque',           icon: '📦', section: 'Operacional' },
   { id: 'oficios',        label: 'Ofícios',          icon: '✉',  section: 'Operacional' },
   { id: 'recibos',        label: 'Recibos',          icon: '🧾', section: 'Operacional' },
   { id: 'regcivil',       label: 'Registro Civil — Atos', icon: '⚖', section: 'Operacional' },
