@@ -523,15 +523,15 @@ export default function Processos() {
           <thead>
             <tr>
               <th style={{ width: 55 }}>Nº</th>
-              <th style={{ width: 82 }}>Dt. Cadastro</th>
+              <th style={{ width: 100 }}>Dt. Cadastro</th>
               <th style={{ width: 95 }}>Categoria</th>
               <th style={{ minWidth: 150 }}>Serviço</th>
               <th style={{ minWidth: 220 }}>Interessados</th>
               <th style={{ width: 60 }}>Resp.</th>
               <th style={{ width: 110 }}>Valor</th>
-              <th style={{ width: 45 }}>Qtd</th>
+              <th style={{ width: 70 }}>Qtd</th>
               <th style={{ width: 100 }}>Status</th>
-              <th style={{ width: 75 }}>Conclusão</th>
+              <th style={{ width: 100 }}>Conclusão</th>
               <th style={{ width: 75 }}></th>
             </tr>
           </thead>
@@ -540,7 +540,7 @@ export default function Processos() {
             {newRow && (
               <tr className="row-editing">
                 <td><input ref={numRef} className="td-input" value={newRow.numero_interno} onChange={e => setNR('numero_interno', e.target.value)} placeholder="Nº *" style={{ width: 70 }} /></td>
-                <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
+                <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
                 <td><select className="td-select" value={newRow.categoria} onChange={e => { setNR('categoria', e.target.value); setNR('especie', ''); }} style={{ width: 105 }}>
                   <option value="">Categoria</option>{categorias.map(c => <option key={c}>{c}</option>)}
                 </select></td>
@@ -554,11 +554,11 @@ export default function Processos() {
                 </td>
                 <td>{selResp(newRow.responsavel_id, v => setNR('responsavel_id', v))}</td>
                 <td><InputValor value={newRow.valor_ato} onChange={v => setNR('valor_ato', v)} style={{ width: 80 }} /></td>
-                <td><input className="td-input" type="number" min="1" value={newRow.quantidade || 1} onChange={e => setNR('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
+                <td><input className="td-input" type="number" min="1" value={newRow.quantidade || 1} onChange={e => setNR('quantidade', parseInt(e.target.value)||1)} style={{ width: 62, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={newRow.status} onChange={e => { setNR('status', e.target.value); if (e.target.value === 'Concluído') setNR('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
+                <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 118 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveNewRow} disabled={salvandoNovo} title="Salvar processo">
                     {salvandoNovo ? '⏳' : '✓'}
@@ -575,7 +575,7 @@ export default function Processos() {
             {listaLimitada.map(p => editingId === p.id ? (
               <tr key={p.id} className="row-editing">
                 <td><input className="td-input" value={editRow.numero_interno} onChange={e => setEd('numero_interno', e.target.value)} style={{ width: 70 }} /></td>
-                <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
+                <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
                 <td><select className="td-select" value={editRow.categoria} onChange={e => { setEd('categoria', e.target.value); setEd('especie', ''); }} style={{ width: 105 }}>
                   <option value="">—</option>
                   {categorias.map(c => <option key={c}>{c}</option>)}
@@ -593,11 +593,11 @@ export default function Processos() {
                 </td>
                 <td>{selResp(editRow.responsavel_id, v => setEd('responsavel_id', v))}</td>
                 <td><InputValor value={editRow.valor_ato} onChange={v => setEd('valor_ato', v)} style={{ width: 80 }} /></td>
-                <td><input className="td-input" type="number" min="1" value={editRow.quantidade || 1} onChange={e => setEd('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
+                <td><input className="td-input" type="number" min="1" value={editRow.quantidade || 1} onChange={e => setEd('quantidade', parseInt(e.target.value)||1)} style={{ width: 62, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={editRow.status} onChange={e => { setEd('status', e.target.value); if (e.target.value === 'Concluído' && !editRow.dt_conclusao) setEd('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td><input className="td-input" type="date" value={editRow.dt_conclusao || ''} onChange={e => setEd('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
+                <td><input className="td-input" type="date" value={editRow.dt_conclusao || ''} onChange={e => setEd('dt_conclusao', e.target.value)} style={{ width: 118 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit}>✓</button>
                   <button className="btn btn-ghost btn-sm" onClick={cancelEdit}>✕</button>
