@@ -5,8 +5,12 @@ const UNIDADES = ['unid', 'pct', 'cx', 'resma', 'rolo', 'fls'];
 
 const EMPTY_ITEM = {
   nome: '', unidade: 'unid', quantidade_atual: 0, quantidade_minima: 0,
-  fornecedor: '', contato: '', observacoes: '',
+  fornecedor: '', contato: '', observacoes: '', fls_por_pct: 0,
 };
+
+// Retorna total de folhas se pct, senão null
+const totalFls = (item) => item.unidade === 'pct' && item.fls_por_pct > 0
+  ? item.quantidade_atual * item.fls_por_pct : null;
 
 function BarraEstoque({ atual, minimo }) {
   const pct = minimo > 0 ? Math.min((atual / (minimo * 3)) * 100, 100) : 100;
@@ -68,7 +72,7 @@ export default function Estoque() {
   const salvarItem = async () => {
     if (!formItem.nome.trim()) return addToast('Nome obrigatório', 'error');
     setSalvando(true);
-    const payload = { ...formItem, quantidade_atual: Number(formItem.quantidade_atual), quantidade_minima: Number(formItem.quantidade_minima) };
+    const payload = { ...formItem, quantidade_atual: Number(formItem.quantidade_atual), quantidade_minima: Number(formItem.quantidade_minima), fls_por_pct: Number(formItem.fls_por_pct || 0) };
     if (editItem) {
       await sb.from('estoque_itens').update(payload).eq('id', editItem.id);
       addToast('Item atualizado', 'success');
@@ -165,7 +169,7 @@ export default function Estoque() {
   };
   const abrirEditar = (item) => {
     setEditItem(item);
-    setFormItem({ nome: item.nome, unidade: item.unidade, quantidade_atual: item.quantidade_atual, quantidade_minima: item.quantidade_minima, fornecedor: item.fornecedor || '', contato: item.contato || '', observacoes: item.observacoes || '' });
+    setFormItem({ nome: item.nome, unidade: item.unidade, quantidade_atual: item.quantidade_atual, quantidade_minima: item.quantidade_minima, fornecedor: item.fornecedor || '', contato: item.contato || '', observacoes: item.observacoes || '', fls_por_pct: item.fls_por_pct || 0 });
     setModalItem(true);
   };
   const abrirNovo = () => { setEditItem(null); setFormItem(EMPTY_ITEM); setModalItem(true); };
@@ -232,7 +236,12 @@ export default function Estoque() {
                         <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{item.unidade}</div>
                       </td>
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 15 }}>
-                        {item.quantidade_atual}
+                        <div>{item.quantidade_atual}</div>
+                        {totalFls(item) !== null && (
+                          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                            {totalFls(item).toLocaleString('pt-BR')} fls
+                          </div>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)' }}>
                         {item.quantidade_minima}
@@ -343,7 +352,7 @@ export default function Estoque() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div className="form-group">
                   <label className="form-label">Unidade</label>
-                  <select className="form-select" value={formItem.unidade} onChange={e => setFormItem(f => ({ ...f, unidade: e.target.value }))}>
+                  <select className="form-select" value={formItem.unidade} onChange={e => setFormItem(f => ({ ...f, unidade: e.target.value, fls_por_pct: e.target.value !== 'pct' ? 0 : f.fls_por_pct }))}>
                     {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
@@ -356,6 +365,19 @@ export default function Estoque() {
                   <input className="form-input" type="number" min="0" value={formItem.quantidade_minima} onChange={e => setFormItem(f => ({ ...f, quantidade_minima: e.target.value }))} />
                 </div>
               </div>
+              {formItem.unidade === 'pct' && (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                  <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+                    <label className="form-label">Fls por pct</label>
+                    <input className="form-input" type="number" min="0" value={formItem.fls_por_pct} onChange={e => setFormItem(f => ({ ...f, fls_por_pct: e.target.value }))} placeholder="Ex: 500" />
+                  </div>
+                  {formItem.fls_por_pct > 0 && formItem.quantidade_atual > 0 && (
+                    <div style={{ paddingBottom: 4, fontSize: 13, color: 'var(--color-accent)', fontWeight: 700 }}>
+                      = {(Number(formItem.quantidade_atual) * Number(formItem.fls_por_pct)).toLocaleString('pt-BR')} fls total
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Fornecedor</label>
                 <input className="form-input" value={formItem.fornecedor} onChange={e => setFormItem(f => ({ ...f, fornecedor: e.target.value }))} placeholder="Nome da empresa ou pessoa" />
