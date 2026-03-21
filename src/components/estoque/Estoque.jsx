@@ -110,9 +110,9 @@ export default function Estoque() {
     if (movTipo === 'entrada') updatePayload.alerta_enviado = false;
     await sb.from('estoque_itens').update(updatePayload).eq('id', movItem);
 
-    // Verifica se precisa disparar alerta
-    if (movTipo === 'saida' && novaQtd <= item.quantidade_minima && !item.alerta_enviado) {
-      await dispararAlerta();
+    // Verifica se precisa disparar alerta (ignora cache local do alerta_enviado)
+    if (movTipo === 'saida' && novaQtd <= item.quantidade_minima) {
+      dispararAlerta(); // fire and forget — não bloqueia o fluxo
     }
 
     addToast(`${movTipo === 'entrada' ? 'Entrada' : 'Saída'} registrada`, 'success');
