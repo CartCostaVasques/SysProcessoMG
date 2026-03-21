@@ -112,8 +112,7 @@ export default function Estoque() {
 
     // Verifica se precisa disparar alerta
     if (movTipo === 'saida' && novaQtd <= item.quantidade_minima && !item.alerta_enviado) {
-      await dispararAlerta(item, novaQtd);
-      await sb.from('estoque_itens').update({ alerta_enviado: true }).eq('id', movItem);
+      await dispararAlerta();
     }
 
     addToast(`${movTipo === 'entrada' ? 'Entrada' : 'Saída'} registrada`, 'success');
@@ -124,16 +123,15 @@ export default function Estoque() {
     carregar();
   };
 
-  // ── Disparar alerta por email ──
-  const dispararAlerta = async (item, qtdAtual) => {
-    if (!destinatarios.filter(d => d.ativo).length) return;
+  // ── Disparar alerta via enviar-relatorio (acao: alerta_estoque) ──
+  const dispararAlerta = async () => {
     const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
     try {
-      await fetch(`${supabaseUrl}/functions/v1/alerta-estoque`, {
+      await fetch(`${supabaseUrl}/functions/v1/enviar-relatorio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
-        body: JSON.stringify({ item, qtdAtual, destinatarios: destinatarios.filter(d => d.ativo).map(d => d.email) }),
+        body: JSON.stringify({ acao: 'alerta_estoque' }),
       });
     } catch (e) { console.error('Alerta estoque:', e); }
   };
