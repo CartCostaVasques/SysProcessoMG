@@ -446,8 +446,45 @@ export default function Dashboard({ setPage }) {
         </div>
       </div>
 
-      {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+      {/* Estoque — linha completa, 3 colunas */}
+      {estoqueItens.length > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="card-header">
+            <div className="card-title">📦 Estoque de Materiais</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setPage('estoque')}>Ver tudo →</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            {estoqueItens.map(item => {
+              const critico  = item.quantidade_atual <= item.quantidade_minima;
+              const esgotado = item.quantidade_atual <= 0;
+              const cor = esgotado ? '#dc2626' : critico ? '#f59e0b' : '#16a34a';
+              const pct = item.quantidade_minima > 0 ? Math.min((item.quantidade_atual / (item.quantidade_minima * 3)) * 100, 100) : 100;
+              return (
+                <div key={item.id} style={{ padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: `1px solid ${critico ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, flex: 1, marginRight: 8 }}>{item.nome}</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 800, color: cor }}>{item.quantidade_atual} {item.unidade}</span>
+                      {item.unidade === 'pct' && item.fls_por_pct > 0 && (
+                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                          {(item.quantidade_atual * item.fls_por_pct).toLocaleString('pt-BR')} fls
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ height: 5, background: 'var(--color-surface-3)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: cor, borderRadius: 3 }} />
+                  </div>
+                  {critico && <div style={{ fontSize: 10, color: cor, marginTop: 4, fontWeight: 600 }}>{esgotado ? 'Esgotado' : `Mínimo: ${item.quantidade_minima} ${item.unidade}`}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Processos em andamento + Tarefas */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
         {/* Processos em andamento */}
         <div className="card">
           <div className="card-header">
@@ -521,44 +558,6 @@ export default function Dashboard({ setPage }) {
                     <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>até {formatDate(t.dt_fim)}</span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 3 }}>{t.responsavel} · {t.setor}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Estoque */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">📦 Estoque</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setPage('estoque')}>Ver tudo →</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {estoqueItens.length === 0 && (
-              <div style={{ color: 'var(--color-text-faint)', fontSize: 12, textAlign: 'center', padding: 16 }}>Nenhum item cadastrado.</div>
-            )}
-            {estoqueItens.map(item => {
-              const critico  = item.quantidade_atual <= item.quantidade_minima;
-              const esgotado = item.quantidade_atual <= 0;
-              const cor = esgotado ? '#dc2626' : critico ? '#f59e0b' : '#16a34a';
-              const pct = item.quantidade_minima > 0 ? Math.min((item.quantidade_atual / (item.quantidade_minima * 3)) * 100, 100) : 100;
-              return (
-                <div key={item.id} style={{ padding: '8px 10px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: `1px solid ${critico ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600 }}>{item.nome}</div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 800, color: cor }}>{item.quantidade_atual} {item.unidade}</span>
-                      {item.unidade === 'pct' && item.fls_por_pct > 0 && (
-                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                          {(item.quantidade_atual * item.fls_por_pct).toLocaleString('pt-BR')} fls
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ height: 5, background: 'var(--color-surface-3)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: cor, borderRadius: 3 }} />
-                  </div>
-                  {critico && <div style={{ fontSize: 10, color: cor, marginTop: 3, fontWeight: 600 }}>{esgotado ? 'Esgotado' : `Mínimo: ${item.quantidade_minima}`}</div>}
                 </div>
               );
             })}
