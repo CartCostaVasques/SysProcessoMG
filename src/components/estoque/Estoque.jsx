@@ -87,15 +87,15 @@ export default function Estoque() {
 
   // ── Registrar movimento ──
   const registrarMovimento = async () => {
-    if (!movQtd || movQtd <= 0) return addToast('Quantidade inválida', 'error');
+    if (!movQtd || Number(movQtd) <= 0) return addToast('Quantidade inválida', 'error');
     setSalvando(true);
     const item = itens.find(i => i.id === movItem);
     const novaQtd = movTipo === 'entrada'
       ? item.quantidade_atual + Number(movQtd)
       : item.quantidade_atual - Number(movQtd);
 
-    if (movTipo === 'saida' && novaQtd < 0) {
-      addToast('Quantidade insuficiente em estoque', 'error');
+    if (movTipo === 'saida' && Number(movQtd) > item.quantidade_atual) {
+      addToast(`Estoque insuficiente! Disponível: ${item.quantidade_atual} ${item.unidade}`, 'error');
       setSalvando(false);
       return;
     }
@@ -138,9 +138,25 @@ export default function Estoque() {
 
   // ── Excluir item ──
   const excluirItem = async (id) => {
-    if (!confirm('Excluir este item? Os movimentos serão mantidos.')) return;
+    if (!confirm('Excluir este item e todo o seu histórico de movimentos?')) return;
+    await sb.from('estoque_movimentos').delete().eq('item_id', id);
     await sb.from('estoque_itens').delete().eq('id', id);
     addToast('Item excluído', 'success');
+    carregar();
+  };
+
+  // ── Excluir movimento (repõe estoque) ──
+  const excluirMovimento = async (mov) => {
+    const item = itens.find(i => i.id === mov.item_id);
+    if (!item) return;
+    if (!confirm(`Excluir este movimento? A quantidade de ${mov.quantidade} ${item.unidade} será ${mov.tipo === 'saida' ? 'reposta' : 'descontada'} do estoque.`)) return;
+    // Repõe: saída excluída → soma de volta; entrada excluída → subtrai
+    const novaQtd = mov.tipo === 'saida'
+      ? item.quantidade_atual + mov.quantidade
+      : item.quantidade_atual - mov.quantidade;
+    await sb.from('estoque_movimentos').delete().eq('id', mov.id);
+    await sb.from('estoque_itens').update({ quantidade_atual: Math.max(0, novaQtd) }).eq('id', item.id);
+    addToast('Movimento excluído e estoque ajustado', 'success');
     carregar();
   };
 
@@ -282,11 +298,12 @@ export default function Estoque() {
                   <th style={{ textAlign: 'center' }}>Qtd</th>
                   <th>Responsável</th>
                   <th>Observação</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {movimentos.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-faint)' }}>Nenhum movimento registrado.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-faint)' }}>Nenhum movimento registrado.</td></tr>
                 )}
                 {movimentos.map(m => {
                   const item = itens.find(i => i.id === m.item_id);
@@ -302,6 +319,10 @@ export default function Estoque() {
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{m.quantidade}</td>
                       <td style={{ fontSize: 12 }}>{m.usuarios?.nome_simples || '—'}</td>
                       <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{m.observacao || '—'}</td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}
+                          title="Excluir e repor estoque" onClick={() => excluirMovimento(m)}>✕</button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -424,8 +445,22 @@ export default function Estoque() {
                       </div>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Quantidade *</label>
-                      <input className="form-input" type="number" min="1" value={movQtd} onChange={e => setMovQtd(e.target.value)} autoFocus />
+                      <label className="form-label">
+                        Quantidade *
+                        {movTipo === 'saida' && (
+                          <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 6 }}>
+                            (máx: {item?.quantidade_atual} {item?.unidade})
+                          </span>
+                        )}
+                      </label>
+                      <input className="form-input" type="number" min="1"
+                        max={movTipo === 'saida' ? item?.quantidade_atual : undefined}
+                        value={movQtd} onChange={e => setMovQtd(e.target.value)} autoFocus />
+                      {movTipo === 'saida' && Number(movQtd) > (item?.quantidade_atual || 0) && (
+                        <div style={{ fontSize: 11, color: 'var(--color-danger)', marginTop: 4, fontWeight: 600 }}>
+                          ⚠ Quantidade maior que o estoque disponível ({item?.quantidade_atual} {item?.unidade})
+                        </div>
+                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Observação</label>
