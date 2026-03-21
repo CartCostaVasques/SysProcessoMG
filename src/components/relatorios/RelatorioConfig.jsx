@@ -17,6 +17,8 @@ const EMPTY = {
   periodo_mes: '', periodo_ano: '',
   agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
   incluir_detalhado: true, incluir_categoria: false,
+  incluir_comparativo: false,
+  comp_ano_a: '', comp_mes_a: '', comp_ano_b: '', comp_mes_b: '',
 };
 
 export default function RelatorioConfig() {
@@ -62,6 +64,9 @@ export default function RelatorioConfig() {
         destinatarios: (config.destinatarios || []).join(', '),
         incluir_detalhado: config.incluir_detalhado !== false,
         incluir_categoria: config.incluir_categoria === true,
+        incluir_comparativo: config.incluir_comparativo === true,
+        comp_ano_a: config.comp_ano_a || '', comp_mes_a: config.comp_mes_a || '',
+        comp_ano_b: config.comp_ano_b || '', comp_mes_b: config.comp_mes_b || '',
         periodo_mes: config.periodo_mes || '',
         periodo_ano: config.periodo_ano || '',
       });
@@ -96,6 +101,11 @@ export default function RelatorioConfig() {
         dia_semana:          Number(form.dia_semana),
         incluir_detalhado:   form.incluir_detalhado !== false,
         incluir_categoria:   form.incluir_categoria === true,
+        incluir_comparativo: form.incluir_comparativo === true,
+        comp_ano_a: form.incluir_comparativo ? (form.comp_ano_a || null) : null,
+        comp_mes_a: form.incluir_comparativo ? (form.comp_mes_a || null) : null,
+        comp_ano_b: form.incluir_comparativo ? (form.comp_ano_b || null) : null,
+        comp_mes_b: form.incluir_comparativo ? (form.comp_mes_b || null) : null,
       };
       if (modal === 'novo') {
         const { error } = await sb.from('relatorio_config').insert(payload);
@@ -292,6 +302,7 @@ export default function RelatorioConfig() {
                   {[
                     { key: 'incluir_detalhado', label: 'Processos detalhados (lista completa)', sub: 'Uma linha por processo com número, data, espécie, responsável e valor' },
                     { key: 'incluir_categoria', label: 'Resumo por Categoria', sub: 'Tabela agrupada: categoria | quantidade | valor total' },
+                    { key: 'incluir_comparativo', label: 'Comparativo por Categoria', sub: 'Tabela comparando dois períodos: QTD, Valor e Δ por categoria (concluídos)' },
                   ].map(op => (
                     <div key={op.key} onClick={() => setF(op.key, !form[op.key])}
                       style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${form[op.key] ? 'var(--color-accent)' : 'var(--color-border)'}`, background: form[op.key] ? 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))' : 'var(--color-surface)', cursor: 'pointer' }}>
@@ -305,9 +316,70 @@ export default function RelatorioConfig() {
                     </div>
                   ))}
                 </div>
-                {!form.incluir_detalhado && !form.incluir_categoria && (
+                {!form.incluir_detalhado && !form.incluir_categoria && !form.incluir_comparativo && (
                   <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-danger)' }}>⚠ Selecione ao menos uma seção.</div>
                 )}
+
+                {/* Seletores de período do comparativo */}
+                {form.incluir_comparativo && (() => {
+                  const hoje = new Date();
+                  const anoAtual = String(hoje.getFullYear());
+                  const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+                  const mesAntNum = hoje.getMonth() === 0 ? 12 : hoje.getMonth();
+                  const anoAnt = hoje.getMonth() === 0 ? String(hoje.getFullYear() - 1) : anoAtual;
+                  const mesAnt = String(mesAntNum).padStart(2, '0');
+                  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+                  const anos = Array.from({ length: 5 }, (_, i) => String(hoje.getFullYear() - i));
+                  const compAnoA = form.comp_ano_a || anoAtual;
+                  const compMesA = form.comp_mes_a || mesAtual;
+                  const compAnoB = form.comp_ano_b || anoAnt;
+                  const compMesB = form.comp_mes_b || mesAnt;
+                  return (
+                    <div style={{ marginTop: 10, padding: '12px 14px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10 }}>Períodos do Comparativo</div>
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div style={{ padding: '8px 12px', background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', marginBottom: 6 }}>Período A (atual)</div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
+                              <select className="form-select" style={{ fontSize: 12, height: 32 }} value={compMesA} onChange={e => setF('comp_mes_a', e.target.value)}>
+                                {MESES.map((m, i) => { const v = String(i+1).padStart(2,'0'); return <option key={v} value={v}>{m}</option>; })}
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
+                              <select className="form-select" style={{ fontSize: 12, height: 32 }} value={compAnoA} onChange={e => setF('comp_ano_a', e.target.value)}>
+                                {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 16, color: 'var(--color-text-faint)', alignSelf: 'center' }}>vs</div>
+                        <div style={{ padding: '8px 12px', background: 'rgba(148,163,184,0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(148,163,184,0.3)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Período B (comparação)</div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ fontSize: 11 }}>Mês</label>
+                              <select className="form-select" style={{ fontSize: 12, height: 32 }} value={compMesB} onChange={e => setF('comp_mes_b', e.target.value)}>
+                                {MESES.map((m, i) => { const v = String(i+1).padStart(2,'0'); return <option key={v} value={v}>{m}</option>; })}
+                              </select>
+                            </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label" style={{ fontSize: 11 }}>Ano</label>
+                              <select className="form-select" style={{ fontSize: 12, height: 32 }} value={compAnoB} onChange={e => setF('comp_ano_b', e.target.value)}>
+                                {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-faint)', alignSelf: 'flex-end', paddingBottom: 4 }}>
+                          Vazio = mês/ano atual vs anterior automaticamente
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Período */}
