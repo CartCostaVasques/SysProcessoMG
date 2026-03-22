@@ -35,6 +35,7 @@ export default function Estoque() {
   const [movimentos, setMovimentos] = useState([]);
   const [destinatarios, setDestinatarios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mostrarInativos, setMostrarInativos] = useState(false);
 
   // Modal item
   const [modalItem, setModalItem] = useState(false);
@@ -145,6 +146,14 @@ export default function Estoque() {
     carregar();
   };
 
+  // ── Ativar/Inativar item ──
+  const toggleAtivo = async (item) => {
+    const novoStatus = !item.ativo;
+    await sb.from('estoque_itens').update({ ativo: novoStatus }).eq('id', item.id);
+    addToast(novoStatus ? 'Item reativado' : 'Item inativado — alertas suspensos', 'success');
+    carregar();
+  };
+
   // ── Excluir movimento (repõe estoque) ──
   const excluirMovimento = async (mov) => {
     const item = itens.find(i => i.id === mov.item_id);
@@ -225,6 +234,18 @@ export default function Estoque() {
       {/* ── ABA ITENS ── */}
       {aba === 'itens' && (
         <div className="card" style={{ padding: 0 }}>
+          {/* Toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+              {itens.filter(i => !i.ativo).length > 0 && `${itens.filter(i => !i.ativo).length} item(ns) inativo(s)`}
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={mostrarInativos} onChange={e => setMostrarInativos(e.target.checked)} />
+                Mostrar inativos
+              </label>
+            </div>
+          </div>
           {loading ? <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>Carregando...</div> : (
             <div className="table-wrapper">
               <table className="data-table">
@@ -240,13 +261,18 @@ export default function Estoque() {
                   </tr>
                 </thead>
                 <tbody>
-                  {itens.length === 0 && (
+                  {itens.filter(i => mostrarInativos || i.ativo !== false).length === 0 && (
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-faint)' }}>Nenhum item cadastrado.</td></tr>
                   )}
-                  {itens.map(item => (
-                    <tr key={item.id} style={{ background: item.quantidade_atual <= item.quantidade_minima ? 'color-mix(in srgb, #f59e0b 5%, transparent)' : undefined }}>
+                  {itens.filter(i => mostrarInativos || i.ativo !== false).map(item => {
+                    const inativo = item.ativo === false;
+                    return (
+                    <tr key={item.id} style={{ background: inativo ? 'color-mix(in srgb, #94a3b8 8%, transparent)' : item.quantidade_atual <= item.quantidade_minima ? 'color-mix(in srgb, #f59e0b 5%, transparent)' : undefined, opacity: inativo ? 0.6 : 1 }}>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{item.nome}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ fontWeight: 600 }}>{item.nome}</div>
+                          {inativo && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: '#f1f5f9', color: '#94a3b8', fontWeight: 600 }}>Inativo</span>}
+                        </div>
                         <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{item.unidade}</div>
                       </td>
                       <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 15 }}>
@@ -270,14 +296,22 @@ export default function Estoque() {
                       <td style={{ fontSize: 12 }}>{item.contato || '—'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button className="btn btn-success btn-sm" title="Registrar entrada" onClick={() => abrirMov(item.id, 'entrada')}>+ Entrada</button>
-                          <button className="btn btn-warning btn-sm" title="Registrar saída" onClick={() => abrirMov(item.id, 'saida')}>− Saída</button>
+                          {!inativo && <>
+                            <button className="btn btn-success btn-sm" title="Registrar entrada" onClick={() => abrirMov(item.id, 'entrada')}>+ Entrada</button>
+                            <button className="btn btn-warning btn-sm" title="Registrar saída" onClick={() => abrirMov(item.id, 'saida')}>− Saída</button>
+                          </>}
                           <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(item)}>✏</button>
+                          <button className="btn btn-ghost btn-sm" title={inativo ? 'Reativar' : 'Inativar (suspende alertas)'}
+                            style={{ color: inativo ? '#16a34a' : '#f59e0b' }}
+                            onClick={() => toggleAtivo(item)}>
+                            {inativo ? '▶' : '⏸'}
+                          </button>
                           <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => excluirItem(item.id)}>✕</button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
