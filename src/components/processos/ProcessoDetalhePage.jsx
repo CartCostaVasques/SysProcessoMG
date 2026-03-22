@@ -97,6 +97,7 @@ function TabelaProcessos({ lista, usuarios, andamentos, interessados, onSelecion
                   : <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
               </td>
               <td className="td-valor" style={{
+                padding: '6px 10px', textAlign: 'right',
                 color: p.valor_ato > 0 ? 'var(--color-text)' : 'var(--color-text-faint)',
                 fontWeight: p.valor_ato > 0 ? 600 : 400 }}>
                 {p.valor_ato > 0 ? `R$ ${formatBRL(p.valor_ato)}` : '—'}
