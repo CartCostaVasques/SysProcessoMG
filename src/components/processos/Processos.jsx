@@ -56,25 +56,35 @@ const SERVICOS_RAPIDOS = [
 // ─── Modal Cadastro Rápido ───────────────────────────────────
 const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 
-function ModalServicRapido({ usuarios, onSalvar, onClose }) {
+function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
   const { servicos, usuario } = useApp();
   const [selecionado, setSelecionado] = useState(null);
   const [respId, setRespId]           = useState(usuario?.id || '');
   const [data, setData]               = useState(HOJE());
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const [salvando, setSalvando]       = useState(false);
+  const [duplicados, setDuplicados]   = useState({}); // { idx: true }
   const primeiroRef = useRef(null);
 
   useEffect(() => { primeiroRef.current?.focus(); }, []);
 
-  const setLinha = (idx, k, v) => setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
+  const setLinha = (idx, k, v) => {
+    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
+    if (k === 'numero') setDuplicados(prev => ({ ...prev, [idx]: false }));
+  };
   const addLinha = () => setLinhas(prev => [...prev, LINHA_VAZIA()]);
-  const remLinha = (idx) => setLinhas(prev => prev.filter((_, i) => i !== idx));
+  const remLinha = (idx) => { setLinhas(prev => prev.filter((_, i) => i !== idx)); setDuplicados(prev => { const n = { ...prev }; delete n[idx]; return n; }); };
+
+  const checkDuplicado = (idx, valor) => {
+    const base = valor.trim();
+    if (!base) return;
+    const existe = (processos || []).some(p => p.numero_interno.trim() === base);
+    setDuplicados(prev => ({ ...prev, [idx]: existe }));
+  };
 
   const handleKeyDown = (e, idx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      // avança para próximo campo ou adiciona linha
       const inputs = document.querySelectorAll('.rapido-input');
       const curIdx = Array.from(inputs).indexOf(e.target);
       if (curIdx < inputs.length - 1) inputs[curIdx + 1].focus();
@@ -86,6 +96,9 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
     if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
     const validas = linhas.filter(l => l.numero.trim());
     if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
+    // Bloqueia se houver duplicados não confirmados
+    const temDuplicado = validas.some((l, idx) => duplicados[linhas.indexOf(l)]);
+    if (temDuplicado) { alert('Corrija ou confirme os números duplicados antes de salvar.'); return; }
     setSalvando(true);
     const dt = data || HOJE();
     await onSalvar(validas.map(l => ({
@@ -182,16 +195,29 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {linhas.map((l, idx) => (
-                <div key={l._id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, alignItems: 'center' }}>
-                  <input
-                    ref={idx === 0 ? primeiroRef : null}
-                    className="form-input rapido-input"
-                    value={l.numero}
-                    onChange={e => setLinha(idx, 'numero', e.target.value)}
-                    onKeyDown={e => handleKeyDown(e, idx)}
-                    placeholder={`Nº ${idx + 1}`}
-                    style={{ fontSize: 13 }}
-                  />
+                <div key={l._id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, alignItems: 'start' }}>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      ref={idx === 0 ? primeiroRef : null}
+                      className="form-input rapido-input"
+                      value={l.numero}
+                      onChange={e => setLinha(idx, 'numero', e.target.value)}
+                      onBlur={e => checkDuplicado(idx, e.target.value)}
+                      onKeyDown={e => handleKeyDown(e, idx)}
+                      placeholder={`Nº ${idx + 1}`}
+                      style={{ fontSize: 13, borderColor: duplicados[idx] ? 'var(--color-danger)' : undefined }}
+                    />
+                    {duplicados[idx] && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 10px', boxShadow: 'var(--shadow-lg)', minWidth: 200, marginTop: 2 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-danger)', marginBottom: 4 }}>⚠ Nº já existe!</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 6 }}>Deseja registrar mesmo assim?</div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setLinha(idx, 'numero', '')}>Limpar</button>
+                          <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => setDuplicados(prev => ({ ...prev, [idx]: false }))}>Sim, manter</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <input
                     className="form-input rapido-input"
                     value={l.valor}
@@ -201,7 +227,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
                     style={{ fontSize: 13, textAlign: 'right' }}
                     placeholder="0,00"
                   />
-                  <button onClick={() => remLinha(idx)} style={{ background: 'none', border: 'none', color: linhas.length > 1 ? 'var(--color-danger)' : 'var(--color-text-faint)', cursor: linhas.length > 1 ? 'pointer' : 'default', fontSize: 16, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  <button onClick={() => remLinha(idx)} style={{ background: 'none', border: 'none', color: linhas.length > 1 ? 'var(--color-danger)' : 'var(--color-text-faint)', cursor: linhas.length > 1 ? 'pointer' : 'default', fontSize: 16, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}
                     disabled={linhas.length <= 1}>✕</button>
                 </div>
               ))}
@@ -551,7 +577,7 @@ export default function Processos() {
             {/* Nova linha */}
             {newRow && (
               <tr className="row-editing">
-                <td>
+                <td style={{ position: 'relative' }}>
                   <input ref={numRef} className="td-input" value={newRow.numero_interno}
                     onChange={e => { setNR('numero_interno', e.target.value); setNumDuplicado(false); }}
                     onBlur={() => {
@@ -560,7 +586,16 @@ export default function Processos() {
                     }}
                     placeholder="Nº *" style={{ width: 70, borderColor: numDuplicado ? 'var(--color-danger)' : undefined }} />
                   {numDuplicado && (
-                    <div style={{ fontSize: 10, color: 'var(--color-danger)', fontWeight: 600, marginTop: 2, whiteSpace: 'nowrap' }}>⚠ Nº já existe</div>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 10px', boxShadow: 'var(--shadow-lg)', minWidth: 220, marginTop: 2 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-danger)', marginBottom: 6 }}>⚠ Nº já existe!</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 8 }}>
+                        Será salvo como <strong>{gerarNumeroUnico(newRow.numero_interno.trim())}</strong>. Confirma?
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setNumDuplicado(false)}>Cancelar</button>
+                        <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => saveNewRow(true)}>Sim, registrar</button>
+                      </div>
+                    </div>
                   )}
                 </td>
                 <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
@@ -669,25 +704,8 @@ export default function Processos() {
         </table>
       </div>
 
-      {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
+      {modalRapido && <ModalServicRapido usuarios={usuarios} processos={processos} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
-
-      {/* Modal confirmação de nº duplicado */}
-      {numDuplicado && newRow && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, maxWidth: 400, width: '100%' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>⚠️ Número já existe</div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>
-              O número <strong>{newRow.numero_interno}</strong> já está cadastrado. Deseja registrar mesmo assim?
-              O processo será salvo como <strong>{gerarNumeroUnico(newRow.numero_interno.trim())}</strong>.
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => setNumDuplicado(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={() => saveNewRow(true)}>Sim, registrar assim</button>
-            </div>
-          </div>
-        </div>
-      )}
       {processoDetalhe && (
         <ProcessoDetalhe
           processo={processoDetalhe}
