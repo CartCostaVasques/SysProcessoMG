@@ -53,17 +53,24 @@ export default function Estoque() {
   // Modal destinatário
   const [modalDest, setModalDest] = useState(false);
   const [novoEmail, setNovoEmail] = useState('');
+  const [estoqueConfig, setEstoqueConfig] = useState(null);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [testando, setTestando] = useState(false);
+
+  const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [{ data: its }, { data: movs }, { data: dests }] = await Promise.all([
+    const [{ data: its }, { data: movs }, { data: dests }, { data: cfg }] = await Promise.all([
       sb.from('estoque_itens').select('*').order('nome'),
       sb.from('estoque_movimentos').select('*, usuarios(nome_simples)').order('criado_em', { ascending: false }).limit(100),
       sb.from('estoque_alerta_destinatarios').select('*').order('email'),
+      sb.from('estoque_config').select('*').limit(1).single(),
     ]);
     setItens(its || []);
     setMovimentos(movs || []);
     setDestinatarios(dests || []);
+    setEstoqueConfig(cfg || { hora_envio: '07:00', dias_semana: [1,2,3,4,5], ativo: true });
     setLoading(false);
   }, [sb]);
 
@@ -167,6 +174,48 @@ export default function Estoque() {
     await sb.from('estoque_itens').update({ quantidade_atual: Math.max(0, novaQtd) }).eq('id', item.id);
     addToast('Movimento excluído e estoque ajustado', 'success');
     carregar();
+  };
+
+  // ── Salvar config de alerta ──
+  const salvarConfig = async () => {
+    if (!estoqueConfig) return;
+    setSalvandoConfig(true);
+    if (estoqueConfig.id) {
+      await sb.from('estoque_config').update({
+        hora_envio: estoqueConfig.hora_envio,
+        dias_semana: estoqueConfig.dias_semana,
+        ativo: estoqueConfig.ativo,
+      }).eq('id', estoqueConfig.id);
+    } else {
+      await sb.from('estoque_config').insert({
+        hora_envio: estoqueConfig.hora_envio,
+        dias_semana: estoqueConfig.dias_semana,
+        ativo: estoqueConfig.ativo,
+      });
+    }
+    addToast('Configuração salva', 'success');
+    setSalvandoConfig(false);
+    carregar();
+  };
+
+  // ── Testar alerta agora ──
+  const testarAlerta = async () => {
+    setTestando(true);
+    const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    try {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/enviar-relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+        body: JSON.stringify({ acao: 'alerta_estoque' }),
+      });
+      const data = await resp.json();
+      if (data.ok) addToast('Alerta enviado com sucesso!', 'success');
+      else addToast('Erro ao enviar: ' + (data.erro || 'desconhecido'), 'error');
+    } catch (e) {
+      addToast('Erro ao conectar com a função', 'error');
+    }
+    setTestando(false);
   };
 
   // ── Destinatários ──
@@ -366,28 +415,127 @@ export default function Estoque() {
         </div>
       )}
 
-      {/* ── ABA DESTINATÁRIOS ── */}
+      {/* ── ABA ALERTAS ── */}
       {aba === 'destinatarios' && (
-        <div className="card" style={{ maxWidth: 520 }}>
-          <div className="card-title" style={{ marginBottom: 4 }}>Destinatários de Alerta</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 16 }}>
-            Receberão e-mail quando um item atingir a quantidade mínima.
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <input className="form-input" placeholder="email@exemplo.com" value={novoEmail} onChange={e => setNovoEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && adicionarDest()} style={{ flex: 1 }} />
-            <button className="btn btn-primary" onClick={adicionarDest}>Adicionar</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {destinatarios.length === 0 && <div style={{ color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhum destinatário cadastrado.</div>}
-            {destinatarios.map(d => (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                <span style={{ flex: 1, fontSize: 13 }}>{d.email}</span>
-                <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 8, fontWeight: 700, background: d.ativo ? '#dcfce7' : '#f1f5f9', color: d.ativo ? '#15803d' : '#94a3b8' }}>{d.ativo ? 'Ativo' : 'Inativo'}</span>
-                <button className="btn btn-ghost btn-sm" onClick={() => toggleDest(d)}>{d.ativo ? 'Desativar' : 'Ativar'}</button>
-                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => excluirDest(d.id)}>✕</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600 }}>
+
+          {/* Configuração de envio */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div className="card-title">⚙️ Configuração do Alerta</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                  O sistema verifica itens críticos e envia e-mail automaticamente via pg_cron.
+                </div>
               </div>
-            ))}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Alertas ativos</span>
+                <div onClick={() => setEstoqueConfig(c => ({ ...c, ativo: !c.ativo }))}
+                  style={{ width: 40, height: 22, borderRadius: 11, background: estoqueConfig?.ativo ? 'var(--color-accent)' : 'var(--color-surface-3)', position: 'relative', cursor: 'pointer', transition: 'background .2s' }}>
+                  <div style={{ position: 'absolute', top: 3, left: estoqueConfig?.ativo ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                </div>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Horário */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Horário de envio</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input className="form-input" type="time" value={estoqueConfig?.hora_envio || '07:00'}
+                    onChange={e => setEstoqueConfig(c => ({ ...c, hora_envio: e.target.value }))}
+                    style={{ width: 130 }} />
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    Horário de Brasília — o pg_cron usa UTC (−3h ou −4h conforme horário de verão)
+                  </span>
+                </div>
+              </div>
+
+              {/* Dias da semana */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Dias da semana</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {DIAS_SEMANA.map((d, i) => {
+                    const ativo = (estoqueConfig?.dias_semana || []).includes(i);
+                    return (
+                      <button key={i} onClick={() => {
+                        const dias = estoqueConfig?.dias_semana || [];
+                        setEstoqueConfig(c => ({ ...c, dias_semana: ativo ? dias.filter(x => x !== i) : [...dias, i].sort() }));
+                      }} style={{ padding: '5px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: ativo ? 700 : 400, border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'var(--color-surface)', color: ativo ? '#fff' : 'var(--color-text-muted)', cursor: 'pointer' }}>
+                        {d}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 6 }}>
+                  Configuração visual — atualize o pg_cron no Supabase para refletir os dias escolhidos.
+                </div>
+              </div>
+
+              {/* Itens críticos agora */}
+              {(() => {
+                const criticos = itens.filter(i => i.ativo !== false && i.quantidade_atual <= i.quantidade_minima);
+                return criticos.length > 0 ? (
+                  <div style={{ padding: '10px 14px', background: 'color-mix(in srgb, #f59e0b 10%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(245,158,11,0.3)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#b45309', marginBottom: 4 }}>⚠ {criticos.length} item(ns) crítico(s) agora</div>
+                    <div style={{ fontSize: 11, color: '#b45309' }}>{criticos.map(i => i.nome).join(', ')}</div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '10px 14px', background: 'color-mix(in srgb, #16a34a 10%, transparent)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(22,163,74,0.3)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>✓ Nenhum item crítico no momento</div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
+                <button className="btn btn-secondary" onClick={testarAlerta} disabled={testando}>
+                  {testando ? '⏳ Enviando...' : '▶ Testar agora'}
+                </button>
+                <button className="btn btn-primary" onClick={salvarConfig} disabled={salvandoConfig}>
+                  {salvandoConfig ? 'Salvando...' : 'Salvar configuração'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Destinatários */}
+          <div className="card">
+            <div className="card-title" style={{ marginBottom: 4 }}>📧 Destinatários</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 16 }}>
+              Receberão o e-mail de alerta quando itens estiverem críticos.
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <input className="form-input" placeholder="email@exemplo.com" value={novoEmail} onChange={e => setNovoEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && adicionarDest()} style={{ flex: 1 }} />
+              <button className="btn btn-primary" onClick={adicionarDest}>Adicionar</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {destinatarios.length === 0 && <div style={{ color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhum destinatário cadastrado.</div>}
+              {destinatarios.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                  <span style={{ flex: 1, fontSize: 13 }}>{d.email}</span>
+                  <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 8, fontWeight: 700, background: d.ativo ? '#dcfce7' : '#f1f5f9', color: d.ativo ? '#15803d' : '#94a3b8' }}>{d.ativo ? 'Ativo' : 'Inativo'}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => toggleDest(d)}>{d.ativo ? 'Desativar' : 'Ativar'}</button>
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => excluirDest(d.id)}>✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Instrução pg_cron */}
+          <div className="card" style={{ background: 'var(--color-surface-2)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 8 }}>📋 Como atualizar o agendamento no Supabase</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-faint)', lineHeight: 1.6 }}>
+              Para alterar o horário do pg_cron, acesse <strong>Supabase → Database → Extensions → pg_cron</strong> e rode:
+            </div>
+            <pre style={{ fontSize: 11, background: 'var(--color-surface-3)', padding: '10px 12px', borderRadius: 'var(--radius-md)', marginTop: 8, overflowX: 'auto', color: 'var(--color-text-muted)' }}>
+{`SELECT cron.unschedule('alerta-estoque-diario');
+SELECT cron.schedule(
+  'alerta-estoque-diario',
+  '0 ${estoqueConfig ? String(parseInt(estoqueConfig.hora_envio) + 3).padStart(2,'0') : '10'} * * ${(estoqueConfig?.dias_semana || [1,2,3,4,5]).join(',')}',
+  $$ ... $$
+);`}
+            </pre>
           </div>
         </div>
       )}
