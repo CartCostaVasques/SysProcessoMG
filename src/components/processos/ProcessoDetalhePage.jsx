@@ -229,6 +229,7 @@ export default function ProcessoDetalhePage() {
   const [filtroResp,   setFiltroResp]   = useState('');
   const [modoVis,      setModoVis]      = useState('lista');
   const [limite,       setLimite]       = useState(50);
+  const [limiteResp,   setLimiteResp]   = useState(15);
   const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
   const [modoData,     setModoData]     = useState('mes');
@@ -470,27 +471,53 @@ export default function ProcessoDetalhePage() {
               <TabelaProcessos lista={[]} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
             </div>
           : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {grupos.map(g => (
-                <div key={g.nome} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '9px 16px', background: 'var(--color-surface-2)',
-                    borderBottom: '1px solid var(--color-border)' }}>
-                    <div className="avatar avatar-sm">{g.avatar}</div>
-                    <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{g.nome}</span>
-                    <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.processos.length} processo{g.processos.length !== 1 ? 's' : ''}</span>
-                    {g.total > 0 && (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-success)', marginLeft: 8 }}>
-                        R$ {formatBRL(g.total)}
+              {/* Controle de limite global por grupo */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 2px' }}>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Linhas por responsável:</span>
+                {[15, 25, 50, 'todos'].map(v => (
+                  <button key={v} className={`btn btn-sm ${limiteResp === v ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => setLimiteResp(v)} style={{ minWidth: 36, fontSize: 11 }}>
+                    {v === 'todos' ? 'Todos' : v}
+                  </button>
+                ))}
+              </div>
+              {grupos.map(g => {
+                const listaGrupo = limiteResp === 'todos' ? g.processos : g.processos.slice(0, limiteResp);
+                const temMais = limiteResp !== 'todos' && g.processos.length > limiteResp;
+                return (
+                  <div key={g.nome} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '9px 16px', background: 'var(--color-surface-2)',
+                      borderBottom: '1px solid var(--color-border)' }}>
+                      <div className="avatar avatar-sm">{g.avatar}</div>
+                      <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{g.nome}</span>
+                      <span className="badge badge-neutral" style={{ fontSize: 11 }}>
+                        {temMais ? `${limiteResp} de ${g.processos.length}` : `${g.processos.length}`} processo{g.processos.length !== 1 ? 's' : ''}
                       </span>
+                      {g.total > 0 && (
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700, color: 'var(--color-success)', marginLeft: 8 }}>
+                          R$ {formatBRL(g.total)}
+                        </span>
+                      )}
+                      <button className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontSize: 11 }}
+                        onClick={e => { e.stopPropagation(); imprimirPorResponsavel(g); }}>
+                        🖨 Imprimir
+                      </button>
+                    </div>
+                    <TabelaProcessos lista={listaGrupo} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
+                    {temMais && (
+                      <div style={{ padding: '8px 16px', borderTop: '1px solid var(--color-border)', background: 'var(--color-surface-2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                          Exibindo {limiteResp} de {g.processos.length} — {g.processos.length - limiteResp} oculto(s)
+                        </span>
+                        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setLimiteResp('todos')}>
+                          Ver todos
+                        </button>
+                      </div>
                     )}
-                    <button className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontSize: 11 }}
-                      onClick={e => { e.stopPropagation(); imprimirPorResponsavel(g); }}>
-                      🖨 Imprimir
-                    </button>
                   </div>
-                  <TabelaProcessos lista={g.processos} usuarios={usuarios} andamentos={andamentos} interessados={interessados} onSelecionar={setSelecionado} />
-                </div>
-              ))}
+                );
+              })}
             </div>
       )}
     </div>
