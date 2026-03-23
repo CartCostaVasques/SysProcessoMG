@@ -36,6 +36,10 @@ export default function Estoque() {
   const [destinatarios, setDestinatarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mostrarInativos, setMostrarInativos] = useState(false);
+  const [pedidos, setPedidos] = useState([]);
+  const [modalPedido, setModalPedido] = useState(false);
+  const [formPedido, setFormPedido] = useState({ item_id: '', quantidade: 1, dt_pedido: new Date().toISOString().split('T')[0], dt_previsao: '', observacao: '' });
+  const [salvandoPedido, setSalvandoPedido] = useState(false);
 
   // Modal item
   const [modalItem, setModalItem] = useState(false);
@@ -61,16 +65,18 @@ export default function Estoque() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [{ data: its }, { data: movs }, { data: dests }, { data: cfg }] = await Promise.all([
+    const [{ data: its }, { data: movs }, { data: dests }, { data: cfg }, { data: peds }] = await Promise.all([
       sb.from('estoque_itens').select('*').order('nome'),
       sb.from('estoque_movimentos').select('*, usuarios(nome_simples)').order('criado_em', { ascending: false }).limit(100),
       sb.from('estoque_alerta_destinatarios').select('*').order('email'),
       sb.from('estoque_config').select('*').limit(1).single(),
+      sb.from('estoque_pedidos').select('*, usuarios(nome_simples)').order('criado_em', { ascending: false }),
     ]);
     setItens(its || []);
     setMovimentos(movs || []);
     setDestinatarios(dests || []);
     setEstoqueConfig(cfg || { hora_envio: '07:00', dias_semana: [1,2,3,4,5], ativo: true });
+    setPedidos(peds || []);
     setLoading(false);
   }, [sb]);
 
@@ -158,6 +164,51 @@ export default function Estoque() {
     const novoStatus = !item.ativo;
     await sb.from('estoque_itens').update({ ativo: novoStatus }).eq('id', item.id);
     addToast(novoStatus ? 'Item reativado' : 'Item inativado — alertas suspensos', 'success');
+    carregar();
+  };
+
+  // ── Pedidos ──
+  const salvarPedido = async () => {
+    if (!formPedido.item_id) return addToast('Selecione o material', 'error');
+    if (!formPedido.quantidade || Number(formPedido.quantidade) <= 0) return addToast('Quantidade inválida', 'error');
+    setSalvandoPedido(true);
+    await sb.from('estoque_pedidos').insert({
+      item_id: formPedido.item_id,
+      quantidade: Number(formPedido.quantidade),
+      dt_pedido: formPedido.dt_pedido,
+      dt_previsao: formPedido.dt_previsao || null,
+      observacao: formPedido.observacao || null,
+      responsavel_id: usuario.id,
+      status: 'aguardando',
+    });
+    addToast('Pedido registrado — alertas suspensos para este item', 'success');
+    setSalvandoPedido(false);
+    setModalPedido(false);
+    setFormPedido({ item_id: '', quantidade: 1, dt_pedido: new Date().toISOString().split('T')[0], dt_previsao: '', observacao: '' });
+    carregar();
+  };
+
+  const receberPedido = async (pedido) => {
+    const item = itens.find(i => i.id === pedido.item_id);
+    if (!item) return;
+    if (!confirm(`Confirmar recebimento de ${pedido.quantidade} ${item.unidade} de "${item.nome}"?\nO estoque será atualizado automaticamente.`)) return;
+    // Marca pedido como recebido
+    await sb.from('estoque_pedidos').update({ status: 'recebido' }).eq('id', pedido.id);
+    // Registra entrada no estoque
+    const novaQtd = item.quantidade_atual + pedido.quantidade;
+    await sb.from('estoque_movimentos').insert({
+      item_id: item.id, tipo: 'entrada', quantidade: pedido.quantidade,
+      responsavel_id: usuario.id, observacao: `Recebimento de pedido #${pedido.id.slice(0,8)}`,
+    });
+    await sb.from('estoque_itens').update({ quantidade_atual: novaQtd }).eq('id', item.id);
+    addToast(`Recebimento confirmado! +${pedido.quantidade} ${item.unidade} no estoque`, 'success');
+    carregar();
+  };
+
+  const cancelarPedido = async (pedido) => {
+    if (!confirm('Cancelar este pedido? Os alertas voltarão a ser enviados se o item ainda estiver crítico.')) return;
+    await sb.from('estoque_pedidos').update({ status: 'cancelado' }).eq('id', pedido.id);
+    addToast('Pedido cancelado', 'success');
     carregar();
   };
 
@@ -275,7 +326,7 @@ export default function Estoque() {
 
       {/* Abas */}
       <div className="tabs" style={{ marginBottom: 16 }}>
-        {[['itens','📦 Itens'],['historico','📋 Histórico'],['destinatarios','📧 Alertas']].map(([id, label]) => (
+        {[['itens','📦 Itens'],['pedidos','🛒 Pedidos'],['historico','📋 Histórico'],['destinatarios','📧 Alertas']].map(([id, label]) => (
           <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
         ))}
       </div>
@@ -365,6 +416,124 @@ export default function Estoque() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── ABA PEDIDOS ── */}
+      {aba === 'pedidos' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-primary" onClick={() => setModalPedido(true)}>+ Registrar Pedido</button>
+          </div>
+
+          {/* Aguardando */}
+          {(() => {
+            const aguardando = pedidos.filter(p => p.status === 'aguardando');
+            return (
+              <div className="card" style={{ padding: 0 }}>
+                <div style={{ padding: '10px 16px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>⏳ Aguardando Recebimento</span>
+                  <span className="badge badge-warning">{aguardando.length}</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 4 }}>Alertas suspensos para estes itens</span>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Material</th>
+                        <th style={{ textAlign: 'center' }}>Qtd Pedida</th>
+                        <th>Dt. Pedido</th>
+                        <th>Previsão</th>
+                        <th>Solicitante</th>
+                        <th>Observação</th>
+                        <th style={{ textAlign: 'center' }}>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aguardando.length === 0 && (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-faint)' }}>Nenhum pedido aguardando.</td></tr>
+                      )}
+                      {aguardando.map(p => {
+                        const item = itens.find(i => i.id === p.item_id);
+                        const vencido = p.dt_previsao && p.dt_previsao < new Date().toISOString().split('T')[0];
+                        return (
+                          <tr key={p.id} style={{ background: vencido ? 'color-mix(in srgb, #dc2626 5%, transparent)' : undefined }}>
+                            <td style={{ fontWeight: 600 }}>{item?.nome || '—'}</td>
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{p.quantidade} {item?.unidade}</td>
+                            <td style={{ fontSize: 12 }}>{p.dt_pedido ? new Date(p.dt_pedido + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                            <td style={{ fontSize: 12 }}>
+                              {p.dt_previsao
+                                ? <span style={{ color: vencido ? '#dc2626' : 'var(--color-text)', fontWeight: vencido ? 700 : 400 }}>
+                                    {new Date(p.dt_previsao + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                    {vencido && ' ⚠'}
+                                  </span>
+                                : '—'}
+                            </td>
+                            <td style={{ fontSize: 12 }}>{p.usuarios?.nome_simples || '—'}</td>
+                            <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{p.observacao || '—'}</td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                                <button className="btn btn-success btn-sm" onClick={() => receberPedido(p)}>✓ Recebido</button>
+                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => cancelarPedido(p)}>Cancelar</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Histórico de pedidos */}
+          {(() => {
+            const anteriores = pedidos.filter(p => p.status !== 'aguardando');
+            if (!anteriores.length) return null;
+            return (
+              <div className="card" style={{ padding: 0 }}>
+                <div style={{ padding: '10px 16px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>📋 Histórico de Pedidos</span>
+                </div>
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Material</th>
+                        <th style={{ textAlign: 'center' }}>Qtd</th>
+                        <th>Dt. Pedido</th>
+                        <th>Previsão</th>
+                        <th>Solicitante</th>
+                        <th>Observação</th>
+                        <th style={{ textAlign: 'center' }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {anteriores.map(p => {
+                        const item = itens.find(i => i.id === p.item_id);
+                        return (
+                          <tr key={p.id} style={{ opacity: 0.75 }}>
+                            <td style={{ fontWeight: 600 }}>{item?.nome || '—'}</td>
+                            <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{p.quantidade} {item?.unidade}</td>
+                            <td style={{ fontSize: 12 }}>{p.dt_pedido ? new Date(p.dt_pedido + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                            <td style={{ fontSize: 12 }}>{p.dt_previsao ? new Date(p.dt_previsao + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                            <td style={{ fontSize: 12 }}>{p.usuarios?.nome_simples || '—'}</td>
+                            <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{p.observacao || '—'}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              {p.status === 'recebido'
+                                ? <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✓ Recebido</span>
+                                : <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#dc2626' }}>Cancelado</span>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -536,6 +705,58 @@ SELECT cron.schedule(
   $$ ... $$
 );`}
             </pre>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL PEDIDO ── */}
+      {modalPedido && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>🛒 Registrar Pedido</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Material *</label>
+                <select className="form-select" value={formPedido.item_id} onChange={e => setFormPedido(f => ({ ...f, item_id: e.target.value }))}>
+                  <option value="">Selecione...</option>
+                  {itens.filter(i => i.ativo !== false).map(i => (
+                    <option key={i.id} value={i.id}>{i.nome} — estoque atual: {i.quantidade_atual} {i.unidade}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Quantidade pedida *</label>
+                <input className="form-input" type="number" min="1" value={formPedido.quantidade}
+                  onChange={e => setFormPedido(f => ({ ...f, quantidade: e.target.value }))} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="form-group">
+                  <label className="form-label">Data do pedido *</label>
+                  <input className="form-input" type="date" value={formPedido.dt_pedido}
+                    onChange={e => setFormPedido(f => ({ ...f, dt_pedido: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Previsão de chegada</label>
+                  <input className="form-input" type="date" value={formPedido.dt_previsao}
+                    onChange={e => setFormPedido(f => ({ ...f, dt_previsao: e.target.value }))} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Observação</label>
+                <input className="form-input" value={formPedido.observacao}
+                  onChange={e => setFormPedido(f => ({ ...f, observacao: e.target.value }))}
+                  placeholder="Fornecedor, nº do pedido, etc." />
+              </div>
+              <div style={{ padding: '8px 12px', background: 'color-mix(in srgb, #3b82f6 8%, transparent)', borderRadius: 'var(--radius-md)', fontSize: 12, color: '#1d4ed8' }}>
+                ℹ️ Após registrar o pedido, os alertas de estoque crítico serão suspensos para este item até o recebimento.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+              <button className="btn btn-ghost" onClick={() => setModalPedido(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvarPedido} disabled={salvandoPedido}>
+                {salvandoPedido ? 'Salvando...' : 'Registrar Pedido'}
+              </button>
+            </div>
           </div>
         </div>
       )}
