@@ -166,12 +166,12 @@ function gerarHtmlImpressao({ titulo, subtitulo, grupos, cartorio, usuarios, and
     return cabecalho + `
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;table-layout:fixed">
         <colgroup>
-          <col style="width:65px">
-          <col style="width:72px">
-          <col style="width:40%">
-          <col style="width:200px">
+          <col style="width:60px">
+          <col style="width:68px">
+          <col style="width:25%">
+          <col style="width:35%">
           <col style="width:28px">
-          <col style="width:75px">
+          <col style="width:80px">
         </colgroup>
         <thead><tr style="background:#e2e8f0">
           <th style="padding:4px 6px;text-align:left;white-space:nowrap">Nº</th>
