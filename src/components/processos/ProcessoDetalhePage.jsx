@@ -228,6 +228,7 @@ export default function ProcessoDetalhePage() {
   const [busca,        setBusca]        = useState('');
   const [filtroStatus, setFiltroStatus] = useState('Em andamento');
   const [filtroResp,   setFiltroResp]   = useState('');
+  const [filtroAndamento, setFiltroAndamento] = useState(''); // '' | 'com' | 'sem'
   const [modoVis,      setModoVis]      = useState('lista');
   const [limite,       setLimite]       = useState(50);
   const [limiteResp,   setLimiteResp]   = useState(15);
@@ -283,12 +284,17 @@ export default function ProcessoDetalhePage() {
     const respNome = usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '';
     const matchResp = !filtroResp || respNome === filtroResp;
 
+    const qtdAndamentos = andamentos.filter(a => a.processo_id === p.id).length;
+    const matchAndamento = !filtroAndamento ? true
+      : filtroAndamento === 'com' ? qtdAndamentos > 0
+      : qtdAndamentos === 0;
+
     return (!busca || txt.includes(busca.toLowerCase()))
         && (!filtroStatus ? true
             : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
             : p.status === filtroStatus)
-        && matchData && matchResp;
-  }), [processos, busca, filtroStatus, filtroResp, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios]);
+        && matchData && matchResp && matchAndamento;
+  }), [processos, busca, filtroStatus, filtroResp, filtroAndamento, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios, andamentos]);
 
   const totalGeral    = lista.reduce((s, p) => s + parseFloat(p.valor_ato || 0), 0);
   const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
@@ -338,11 +344,11 @@ export default function ProcessoDetalhePage() {
     cartorio, usuarios, andamentos, interessados,
   });
 
-  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp
+  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp || filtroAndamento
     || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0'));
 
   const limparFiltros = () => {
-    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp('');
+    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp(''); setFiltroAndamento('');
     setModoData('mes');
     setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
     setFiltroAno(String(new Date().getFullYear()));
@@ -412,6 +418,12 @@ export default function ProcessoDetalhePage() {
         <select className="form-select" value={filtroResp} onChange={e => setFiltroResp(e.target.value)}>
           <option value="">Todos os responsáveis</option>
           {responsaveisDisp.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+
+        <select className="form-select" value={filtroAndamento} onChange={e => setFiltroAndamento(e.target.value)}>
+          <option value="">Todos (c/ e s/ andamento)</option>
+          <option value="com">✓ Com andamento</option>
+          <option value="sem">— Sem andamento</option>
         </select>
 
         <div style={{ display: 'flex', gap: 4 }}>
