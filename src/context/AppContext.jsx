@@ -146,21 +146,14 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (email, senha) => {
     try {
-      console.log('[LOGIN] Tentando login para:', email);
-      console.log('[LOGIN] URL Supabase:', SUPABASE_URL);
-      console.log('[LOGIN] ANON Key (primeiros 20 chars):', SUPABASE_ANON?.substring(0, 20));
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-      console.log('[LOGIN] Resposta data:', data);
-      console.log('[LOGIN] Resposta error:', error);
       if (error) {
-        console.error('[LOGIN] Erro completo:', JSON.stringify(error));
-        addToast(`Erro: ${error.message} (status: ${error.status})`, 'error');
+        addToast(`Erro: ${error.message}`, 'error');
         return false;
       }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
     } catch (err) {
-      console.error('[LOGIN] Exceção:', err);
       addToast('Erro ao conectar. Tente novamente.', 'error');
       return false;
     }
@@ -211,17 +204,11 @@ export function AppProvider({ children }) {
 
   // ── FETCH ──────────────────────────────────────────────
   const salvarPrefsUsuario = async (prefs) => {
-    console.log('[PREFS] Iniciando salvar:', prefs, 'usuario.id:', usuario?.id);
-    if (!usuario?.id) { console.warn('[PREFS] Sem usuario.id, abortando'); return; }
+    if (!usuario?.id) return;
     try {
       const { data, error } = await supabase.from('usuarios').update(prefs).eq('id', usuario.id).select();
-      if (error) {
-        console.error('[PREFS] Erro Supabase:', error);
-      } else {
-        console.log('[PREFS] Salvo com sucesso:', data);
-        setUsuario(prev => ({ ...prev, ...prefs }));
-      }
-    } catch(e) { console.error('[PREFS] Exceção:', e); }
+      if (!error) setUsuario(prev => ({ ...prev, ...prefs }));
+    } catch(e) {}
   };
 
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
