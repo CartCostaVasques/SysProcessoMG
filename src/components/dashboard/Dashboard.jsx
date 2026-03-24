@@ -94,6 +94,7 @@ export default function Dashboard({ setPage }) {
   const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
   const [filtroAno, setFiltroAno] = useState(anoAtual);
+  const [filtroMesDash, setFiltroMesDash] = useState(String(hoje.getMonth() + 1).padStart(2,'0'));
   const [estoqueItens, setEstoqueItens] = useState([]);
   useEffect(() => {
     sb.from('estoque_itens').select('*').order('nome').then(({ data }) => setEstoqueItens(data || []));
@@ -119,10 +120,21 @@ export default function Dashboard({ setPage }) {
     const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
     const isRF = (p) => p.categoria === 'Reconhecimento de Firma';
     const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+
+    // Filtra por ano e mês se selecionado
+    const filtraPorPeriodo = (arr) => arr.filter(p => {
+      const dt = p.dt_conclusao;
+      if (!dt) return false;
+      if (!dt.startsWith(filtroAno)) return false;
+      if (filtroMesDash !== 'todos' && dt.substring(5,7) !== filtroMesDash) return false;
+      return true;
+    });
+
     const total            = somaQtd(processos);
     const emAndamento      = somaQtd(processos.filter(p => STATUS_PENDENTES.includes(p.status)));
-    const concluidos       = somaQtd(processos.filter(p => p.status === 'Concluído'));
-    const conclRF          = somaQtd(processos.filter(p => p.status === 'Concluído' && isRF(p)));
+    const conclFiltrados   = filtraPorPeriodo(processos.filter(p => p.status === 'Concluído'));
+    const concluidos       = somaQtd(conclFiltrados);
+    const conclRF          = somaQtd(conclFiltrados.filter(isRF));
     const conclOutros      = concluidos - conclRF;
     const tarefasPendentes = tarefas.filter(t => !t.concluida).length;
     const oficiosEnviados  = oficios.filter(o => o.status === 'Enviado' || o.status === 'Aguardando Resposta').length;
@@ -130,7 +142,7 @@ export default function Dashboard({ setPage }) {
     const recFirma         = somaQtd(processos.filter(p => isRF(p)));
     const outrosProcessos  = total - recFirma;
     return { total, emAndamento, concluidos, conclRF, conclOutros, tarefasPendentes, oficiosEnviados, tarefasVencidas, recFirma, outrosProcessos };
-  }, [processos, tarefas, oficios]);
+  }, [processos, tarefas, oficios, filtroAno, filtroMesDash]);
 
   // Valores financeiros — filtrados pelo ano selecionado
   const financeiro = useMemo(() => {
@@ -243,6 +255,14 @@ export default function Dashboard({ setPage }) {
               </button>
             ))}
           </div>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Mês:</span>
+          <select className="form-select" style={{ fontSize: 12, height: 34, padding: '0 8px' }}
+            value={filtroMesDash} onChange={e => setFiltroMesDash(e.target.value)}>
+            <option value="todos">Todos</option>
+            {MESES_FULL.map((m, i) => (
+              <option key={i} value={String(i+1).padStart(2,'0')}>{m}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -269,13 +289,15 @@ export default function Dashboard({ setPage }) {
         {/* Card especial: Concluídos + Rec. Firma */}
         <div className="stat-card">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div className="stat-card-label">Concluídos</div>
+            <div className="stat-card-label">
+              Concluídos — {filtroMesDash === 'todos' ? filtroAno : `${MESES_FULL[parseInt(filtroMesDash)-1]}/${filtroAno}`}
+            </div>
             <span style={{ fontSize: 16, opacity: 0.6 }}>✓</span>
           </div>
           <div className="stat-card-value" style={{ color: 'var(--color-success)' }}>{stats.concluidos}</div>
           <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-              <span style={{ color: 'var(--color-text-muted)' }}>Outros</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros serviços</span>
               <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{stats.conclOutros}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
