@@ -171,6 +171,8 @@ export default function Dashboard({ setPage }) {
     return {
       vlMes, vlAnt, vlAno, vlTotal,
       qtdMes: somaQtd(listaMes), qtdAnt: somaQtd(listaAnt), qtdAno: somaQtd(listaAno),
+      qtdMesRF:     somaQtd(listaMes.filter(isRF)),
+      qtdMesOutros: somaQtd(listaMes.filter(p => !isRF(p))),
       qtdAnoRF:     somaQtd(listaAno.filter(isRF)),
       qtdAnoOutros: somaQtd(listaAno.filter(p => !isRF(p))),
       qtdTotalRF:   somaQtd(listaConcl.filter(isRF)),
@@ -185,27 +187,39 @@ export default function Dashboard({ setPage }) {
 
   const porCategoria = useMemo(() => {
     const map = {};
-    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria !== 'Reconhecimento de Firma')
-      .forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + parseInt(p.quantidade||1); });
+    processos.filter(p => {
+      const dt = p.dt_conclusao;
+      if (!dt || !dt.startsWith(filtroAno)) return false;
+      if (filtroMesDash !== 'todos' && dt.substring(5,7) !== filtroMesDash) return false;
+      return p.categoria !== 'Reconhecimento de Firma';
+    }).forEach(p => { map[p.categoria] = (map[p.categoria] || 0) + parseInt(p.quantidade||1); });
     return Object.entries(map).map(([label, value]) => ({ label, value }));
-  }, [processos, filtroAno]);
+  }, [processos, filtroAno, filtroMesDash]);
 
   const recFirmaAno = useMemo(() =>
-    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria === 'Reconhecimento de Firma')
-      .reduce((s,p) => s + parseInt(p.quantidade||1), 0)
-  , [processos, filtroAno]);
+    processos.filter(p => {
+      const dt = p.dt_conclusao;
+      if (!dt || !dt.startsWith(filtroAno)) return false;
+      if (filtroMesDash !== 'todos' && dt.substring(5,7) !== filtroMesDash) return false;
+      return p.categoria === 'Reconhecimento de Firma';
+    }).reduce((s,p) => s + parseInt(p.quantidade||1), 0)
+  , [processos, filtroAno, filtroMesDash]);
 
   const porResponsavel = useMemo(() => {
     const map = {};
-    processos.filter(p => p.dt_conclusao?.startsWith(filtroAno) && p.categoria !== 'Reconhecimento de Firma')
-      .forEach(p => {
+    processos.filter(p => {
+      const dt = p.dt_conclusao;
+      if (!dt || !dt.startsWith(filtroAno)) return false;
+      if (filtroMesDash !== 'todos' && dt.substring(5,7) !== filtroMesDash) return false;
+      return p.categoria !== 'Reconhecimento de Firma';
+    }).forEach(p => {
         const u = (usuarios||[]).find(u=>u.id===p.responsavel_id);
-        if (!u) return; // ignora sem responsável
+        if (!u) return;
         const rNome = u.nome_simples;
         map[rNome] = (map[rNome] || 0) + parseInt(p.quantidade||1);
       });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [processos, usuarios, filtroAno]);
+  }, [processos, usuarios, filtroAno, filtroMesDash]);
 
   // Processos por mês (6 meses do filtroAno, terminando no mês de referência)
   const porMes = useMemo(() => {
@@ -250,13 +264,13 @@ export default function Dashboard({ setPage }) {
           <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             {anosDisp.map(a => (
               <button key={a} onClick={() => setFiltroAno(a)}
-                style={{ padding: '6px 16px', fontSize: 13, fontWeight: filtroAno === a ? 700 : 400, background: filtroAno === a ? 'var(--color-accent)' : 'var(--color-surface)', color: filtroAno === a ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRight: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                style={{ padding: '6px 12px', fontSize: 13, fontWeight: filtroAno === a ? 700 : 400, background: filtroAno === a ? 'var(--color-accent)' : 'var(--color-surface)', color: filtroAno === a ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRight: '1px solid var(--color-border)', cursor: 'pointer', minWidth: 52 }}>
                 {a}
               </button>
             ))}
           </div>
           <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Mês:</span>
-          <select className="form-select" style={{ fontSize: 12, height: 34, padding: '0 8px' }}
+          <select className="form-select" style={{ fontSize: 12, height: 34, padding: '0 8px', minWidth: 110 }}
             value={filtroMesDash} onChange={e => setFiltroMesDash(e.target.value)}>
             <option value="todos">Todos</option>
             {MESES_FULL.map((m, i) => (
@@ -334,7 +348,16 @@ export default function Dashboard({ setPage }) {
           <div className="stat-card-value" style={{ color: 'var(--color-success)', fontSize: 18 }}>
             R$ {fmtBRL(financeiro.vlMes)}
           </div>
-          <div className="stat-card-sub">{financeiro.qtdMes} processo(s) concluído(s)</div>
+          <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 6, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Outros serviços</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{financeiro.qtdMesOutros}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+              <span style={{ color: 'var(--color-text-muted)' }}>Rec. de Firma</span>
+              <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>{financeiro.qtdMesRF}</span>
+            </div>
+          </div>
           {financeiro.vlAnt > 0 && (
             <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)', borderTop: '1px solid var(--color-border)', paddingTop: 5 }}>
               <span style={{ marginRight: 4 }}>{financeiro.labelAnt}:</span>
