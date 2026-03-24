@@ -657,7 +657,7 @@ export default function ModelosOficio() {
       setDados(p => ({
         ...p,
         destinatario: p.destinatario || oficio.destinatario || '',
-        referente:    oficio.assunto || '',
+        referente:    oficio.assunto || p.referente || '',
       }));
     }
   }, [oficio?.id]);
@@ -762,7 +762,12 @@ export default function ModelosOficio() {
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-header"><div className="card-title">1 — Selecione o Ofício</div></div>
           <div style={{ padding: '12px 16px' }}>
-            <select className="form-select" value={oficioSel} onChange={e => { setOficioSel(e.target.value); setDados({}); }}>
+            <select className="form-select" value={oficioSel} onChange={e => {
+              const id = e.target.value;
+              setOficioSel(id);
+              const of = oficios.find(o => String(o.id) === String(id));
+              setDados({ referente: of?.assunto || '', destinatario: of?.destinatario || '' });
+            }}>
               <option value="">— Selecione o ofício —</option>
               {oficiosOrdenados.map(o => <option key={o.id} value={o.id}>{o.numero} · {o.mes_ano} · {o.destinatario} · {o.assunto}</option>)}
             </select>
