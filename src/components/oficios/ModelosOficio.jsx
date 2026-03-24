@@ -652,15 +652,7 @@ export default function ModelosOficio() {
     }
   }, [assinantes, cartorio]);
 
-  useEffect(() => {
-    if (oficio) {
-      setDados(p => ({
-        ...p,
-        destinatario: p.destinatario || oficio.destinatario || '',
-        referente:    oficio.assunto || p.referente || '',
-      }));
-    }
-  }, [oficio?.id]);
+  // referente e destinatario são preenchidos diretamente no onChange do select de ofício
 
   const setD = (k,v) => setDados(p => ({...p,[k]:v}));
 
