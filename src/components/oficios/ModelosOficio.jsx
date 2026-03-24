@@ -400,7 +400,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const vara       = dados.vara       || oficio.destinatario || '___________________________';
     const juiz       = dados.juiz       || '';
     const procJud    = dados.proc_judicial || '';
-    const referente  = dados.referente  || '';
+    const referente  = dados.referente  || oficio.assunto || '';
     const corpo      = dados.corpo      || '';
     const parte1     = dados.parte1     || '';
     const parte2     = dados.parte2     || '';
@@ -873,7 +873,10 @@ export default function ModelosOficio() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Referente</label>
-                      <input className="form-input" value={dados.referente||''} onChange={e => setD('referente',e.target.value)} placeholder="Ex: Cumprimento ao Mandado de Retificação de Registro, extraído dos Autos nº 1000703-22..." />
+                      <input className="form-input"
+                        value={dados.referente || oficio?.assunto || ''}
+                        onChange={e => setD('referente', e.target.value)}
+                        placeholder="Ex: Cumprimento ao Mandado de Retificação de Registro, extraído dos Autos nº 1000703-22..." />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Nº Processo Judicial</label>
