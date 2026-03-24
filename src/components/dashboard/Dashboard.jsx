@@ -261,10 +261,10 @@ export default function Dashboard({ setPage }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Ano:</span>
-          <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-            {anosDisp.map(a => (
+          <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', overflow: 'visible' }}>
+            {anosDisp.map((a, idx) => (
               <button key={a} onClick={() => setFiltroAno(a)}
-                style={{ padding: '6px 12px', fontSize: 13, fontWeight: filtroAno === a ? 700 : 400, background: filtroAno === a ? 'var(--color-accent)' : 'var(--color-surface)', color: filtroAno === a ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRight: '1px solid var(--color-border)', cursor: 'pointer', minWidth: 52 }}>
+                style={{ padding: '6px 14px', fontSize: 13, fontWeight: filtroAno === a ? 700 : 400, background: filtroAno === a ? 'var(--color-accent)' : 'var(--color-surface)', color: filtroAno === a ? '#fff' : 'var(--color-text-muted)', border: 'none', borderRight: idx < anosDisp.length - 1 ? '1px solid var(--color-border)' : 'none', borderRadius: idx === 0 ? 'var(--radius-md) 0 0 var(--radius-md)' : idx === anosDisp.length - 1 ? '0 var(--radius-md) var(--radius-md) 0' : 0, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 60 }}>
                 {a}
               </button>
             ))}
