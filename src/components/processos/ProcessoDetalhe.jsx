@@ -671,15 +671,20 @@ function TabAndamentos({ processoId, usuarios }) {
 }
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
-function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
-  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
-  // Busca o primeiro interessado do processo na tabela usuarios pelo nome
-  const primeiraNome = partes[0]?.nome || '';
-  const usr = usuarios.find(u => u.nome_completo?.toLowerCase().trim() === primeiraNome.toLowerCase().trim())
-           || usuarios.find(u => u.nome_simples?.toLowerCase().trim() === primeiraNome.toLowerCase().trim());
-  const req = usr
-    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: usr.cep||'', email: usr.email||'', telefone: usr.celular||'' }
-    : { nome: primeiraNome, cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
+function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado) {
+  // Usa o usuário logado como requerente (quem assina o requerimento)
+  const req = usuarioLogado
+    ? {
+        nome:     usuarioLogado.nome_completo || usuarioLogado.nome_simples || '',
+        cpf:      usuarioLogado.cpf      || '',
+        rg:       usuarioLogado.rg       || '',
+        endereco: usuarioLogado.endereco || '',
+        cidade:   usuarioLogado.cidade   || 'Paranatinga - MT',
+        cep:      usuarioLogado.cep      || '',
+        email:    usuarioLogado.email    || '',
+        telefone: usuarioLogado.celular  || '',
+      }
+    : { nome: '', cpf: '', rg: '', endereco: '', cidade: 'Paranatinga - MT', cep: '', email: '', telefone: '' };
 
   const hoje         = new Date().toLocaleDateString('pt-BR');
   const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
@@ -1008,7 +1013,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   onBlur={flush}
                 />
                 <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
-                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio)}>
+                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario)}>
                   🖨 Imprimir
                 </button>
                 <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
@@ -1023,7 +1028,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
 // ── Modal Principal ───────────────────────────────────────────
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario } = useApp();
   const [aba, setAba]                   = useState('dados');
   const [editando, setEditando]         = useState(false);
   const [form, setForm]                 = useState({ ...processo });
