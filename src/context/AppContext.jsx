@@ -151,6 +151,10 @@ export function AppProvider({ children }) {
         addToast(`Erro: ${error.message}`, 'error');
         return false;
       }
+      // Solicita permissão de notificação ao fazer login
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
     } catch (err) {
