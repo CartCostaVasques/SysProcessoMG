@@ -87,7 +87,7 @@ function DonutChart({ slices }) {
 }
 
 export default function Dashboard({ setPage }) {
-  const { processos, tarefas, oficios, andamentos, usuarios, supabaseClient: sb } = useApp();
+  const { processos, tarefas, oficios, andamentos, usuarios, supabaseClient: sb, usuario } = useApp();
 
   const hoje = new Date();
   const anoAtual  = String(hoje.getFullYear());
@@ -96,9 +96,43 @@ export default function Dashboard({ setPage }) {
   const [filtroAno, setFiltroAno] = useState(anoAtual);
   const [filtroMesDash, setFiltroMesDash] = useState(String(hoje.getMonth() + 1).padStart(2,'0'));
   const [estoqueItens, setEstoqueItens] = useState([]);
+  const [modalTarefas, setModalTarefas] = useState(null); // null | array de tarefas
+
   useEffect(() => {
     sb.from('estoque_itens').select('*').order('nome').then(({ data }) => setEstoqueItens(data || []));
   }, [sb]);
+
+  // ── Alerta de tarefas vencendo (hoje ou amanhã) ──
+  useEffect(() => {
+    if (!usuario?.id || !tarefas.length) return;
+
+    const agora = new Date();
+    const hojeStr   = agora.toISOString().split('T')[0];
+    const amanhaStr = new Date(agora.getTime() + 86400000).toISOString().split('T')[0];
+
+    // Janela: 'manha' (antes das 13h Cuiabá = 17h UTC) ou 'tarde' (após)
+    const horaUtc = agora.getUTCHours();
+    const janela = horaUtc < 17 ? 'manha' : 'tarde';
+
+    const chave = `tarefa_alerta_${usuario.id}`;
+    let ultimo = {};
+    try { ultimo = JSON.parse(localStorage.getItem(chave) || '{}'); } catch {}
+
+    // Já alertou nessa janela hoje?
+    if (ultimo.data === hojeStr && ultimo.janela === janela) return;
+
+    // Busca tarefas do usuário vencendo hoje ou amanhã
+    const pendentes = tarefas.filter(t =>
+      !t.concluida &&
+      t.responsavel_id === usuario.id &&
+      (t.dt_fim === hojeStr || t.dt_fim === amanhaStr)
+    );
+
+    if (pendentes.length > 0) {
+      setModalTarefas(pendentes);
+      localStorage.setItem(chave, JSON.stringify({ data: hojeStr, janela }));
+    }
+  }, [usuario?.id, tarefas]);
 
   // Anos disponíveis nos processos
   const anosDisp = useMemo(() => {
@@ -610,5 +644,43 @@ export default function Dashboard({ setPage }) {
         </div>
       </div>
     </div>
+
+    {/* ── Modal Alerta de Tarefas ── */}
+    {modalTarefas && modalTarefas.length > 0 && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: 460, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+          <div style={{ background: '#f59e0b', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>⏰</span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b' }}>Atenção — Tarefas Próximas!</div>
+              <div style={{ fontSize: 12, color: '#78350f' }}>Você tem {modalTarefas.length} tarefa{modalTarefas.length > 1 ? 's' : ''} vencendo em breve</div>
+            </div>
+          </div>
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
+            {modalTarefas.map(t => {
+              const hojeStr = new Date().toISOString().split('T')[0];
+              const venceHoje = t.dt_fim === hojeStr;
+              return (
+                <div key={t.id} style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: `2px solid ${venceHoje ? '#dc2626' : '#f59e0b'}`, background: venceHoje ? 'color-mix(in srgb, #dc2626 8%, var(--color-surface))' : 'color-mix(in srgb, #f59e0b 8%, var(--color-surface))' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{t.titulo}</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700, background: venceHoje ? '#dc2626' : '#f59e0b', color: '#fff' }}>
+                      {venceHoje ? '🔴 Vence HOJE' : '🟡 Vence amanhã'}
+                    </span>
+                    {t.setor && <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{t.setor}</span>}
+                    {t.tipo  && <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{t.tipo}</span>}
+                  </div>
+                  {t.obs && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>{t.obs}</div>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={() => { setModalTarefas(null); setPage('tarefas'); }}>Ver Tarefas →</button>
+            <button className="btn btn-primary" onClick={() => setModalTarefas(null)}>OK, entendido</button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
