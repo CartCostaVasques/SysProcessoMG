@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
@@ -87,12 +87,60 @@ function ModalTarefa({ tarefa, onClose, onSave, usuarios, setores }) {
 }
 
 export default function Tarefas() {
-  const { tarefas, addTarefa, editTarefa, deleteTarefa, usuarios, setores, addToast } = useApp();
+  const { tarefas, addTarefa, editTarefa, deleteTarefa, usuarios, setores, addToast, supabaseClient: sb } = useApp();
   const [modal, setModal] = useState(null);
   const [filtroResp, setFiltroResp] = useState('');
   const [filtroSetor, setFiltroSetor] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('pendentes');
   const [busca, setBusca] = useState('');
+  const [aba, setAba] = useState('tarefas');
+
+  // Config alerta
+  const [alertaConfig, setAlertaConfig] = useState(null);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [testando, setTestando] = useState(false);
+
+  useEffect(() => {
+    sb.from('tarefas_alerta_config').select('*').limit(1).single()
+      .then(({ data }) => setAlertaConfig(data || { hora_envio: '07:00', dias_antecedencia: 1, ativo: true }));
+  }, [sb]);
+
+  const salvarConfig = async () => {
+    if (!alertaConfig) return;
+    setSalvandoConfig(true);
+    if (alertaConfig.id) {
+      await sb.from('tarefas_alerta_config').update({
+        hora_envio: alertaConfig.hora_envio,
+        dias_antecedencia: alertaConfig.dias_antecedencia,
+        ativo: alertaConfig.ativo,
+      }).eq('id', alertaConfig.id);
+    } else {
+      await sb.from('tarefas_alerta_config').insert({
+        hora_envio: alertaConfig.hora_envio,
+        dias_antecedencia: alertaConfig.dias_antecedencia,
+        ativo: alertaConfig.ativo,
+      });
+    }
+    addToast('Configuração salva', 'success');
+    setSalvandoConfig(false);
+  };
+
+  const testarAlerta = async () => {
+    setTestando(true);
+    const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    try {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/enviar-relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseAnon}` },
+        body: JSON.stringify({ acao: 'alerta_tarefas' }),
+      });
+      const data = await resp.json();
+      if (data.ok) addToast('Alerta de tarefas enviado!', 'success');
+      else addToast('Erro: ' + (data.erro || 'desconhecido'), 'error');
+    } catch { addToast('Erro ao conectar', 'error'); }
+    setTestando(false);
+  };
 
   const hoje = new Date();
   const lista = tarefas.filter(t => {
@@ -132,8 +180,83 @@ export default function Tarefas() {
           <div className="page-title">Tarefas</div>
           <div className="page-sub">{tarefas.filter(t => !t.concluida).length} pendentes · {tarefas.filter(t => t.concluida).length} concluídas</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal('novo')}>+ Nova Tarefa</button>
+        {aba === 'tarefas' && <button className="btn btn-primary" onClick={() => setModal('novo')}>+ Nova Tarefa</button>}
       </div>
+
+      <div className="tabs" style={{ marginBottom: 16 }}>
+        {[['tarefas','✓ Tarefas'],['alerta','🔔 Alerta por E-mail']].map(([id, label]) => (
+          <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
+        ))}
+      </div>
+
+      {aba === 'alerta' && alertaConfig && (
+        <div style={{ maxWidth: 520 }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div className="card-title">⏰ Configuração do Alerta de Tarefas</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                  E-mail enviado automaticamente para cada responsável com tarefas vencendo.
+                </div>
+              </div>
+              <div onClick={() => setAlertaConfig(c => ({ ...c, ativo: !c.ativo }))}
+                style={{ width: 40, height: 22, borderRadius: 11, background: alertaConfig.ativo ? 'var(--color-accent)' : 'var(--color-surface-3)', position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: alertaConfig.ativo ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Horário de envio <span style={{ fontWeight: 400, color: 'var(--color-text-faint)' }}>(horário de Cuiabá)</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input className="form-input" type="time" value={alertaConfig.hora_envio || '07:00'}
+                    onChange={e => setAlertaConfig(c => ({ ...c, hora_envio: e.target.value }))}
+                    style={{ width: 130 }} />
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    UTC: {alertaConfig.hora_envio ? String(parseInt(alertaConfig.hora_envio) + 4).padStart(2,'0') + ':' + alertaConfig.hora_envio.split(':')[1] : '—'}
+                  </span>
+                </div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Antecedência do alerta</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[['1','1 dia antes'],['2','2 dias antes'],['3','3 dias antes']].map(([v, l]) => {
+                    const ativo = String(alertaConfig.dias_antecedencia) === v;
+                    return (
+                      <button key={v} onClick={() => setAlertaConfig(c => ({ ...c, dias_antecedencia: Number(v) }))}
+                        style={{ padding: '6px 12px', fontSize: 12, fontWeight: ativo ? 700 : 400, borderRadius: 'var(--radius-md)', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'var(--color-surface)', color: ativo ? '#fff' : 'var(--color-text-muted)', cursor: 'pointer' }}>
+                        {l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ padding: '10px 12px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                📋 Para atualizar o horário no pg_cron, execute no Supabase SQL Editor:
+                <pre style={{ fontSize: 11, marginTop: 8, padding: '8px 10px', background: 'var(--color-surface-3)', borderRadius: 'var(--radius-md)', overflowX: 'auto' }}>
+{`SELECT cron.unschedule('alerta-tarefas-diario');
+SELECT cron.schedule(
+  'alerta-tarefas-diario',
+  '${alertaConfig.hora_envio ? `0 ${String(parseInt(alertaConfig.hora_envio) + 4).padStart(2,'0')}` : '0 11'} * * 1,2,3,4,5',
+  $$ SELECT net.http_post(...) $$
+);`}
+                </pre>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" onClick={testarAlerta} disabled={testando}>
+                  {testando ? '⏳ Enviando...' : '▶ Testar agora'}
+                </button>
+                <button className="btn btn-primary" onClick={salvarConfig} disabled={salvandoConfig}>
+                  {salvandoConfig ? 'Salvando...' : 'Salvar configuração'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aba === 'tarefas' && (<>
 
       <div className="filter-bar">
         <div className="search-bar" style={{ flex: 1 }}>
@@ -222,6 +345,7 @@ export default function Tarefas() {
           setores={setores}
         />
       )}
+      </>)}
     </div>
   );
 }
