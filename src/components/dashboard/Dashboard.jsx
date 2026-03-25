@@ -287,6 +287,7 @@ export default function Dashboard({ setPage }) {
   };
 
   return (
+    <>
     <div className="fade-in">
       <div className="page-header">
         <div>
@@ -682,5 +683,4 @@ export default function Dashboard({ setPage }) {
         </div>
       </div>
     )}
-  );
-}
+  </>);
