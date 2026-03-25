@@ -684,3 +684,4 @@ export default function Dashboard({ setPage }) {
       </div>
     )}
   </>);
+}
