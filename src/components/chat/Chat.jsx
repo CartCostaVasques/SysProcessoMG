@@ -17,10 +17,10 @@ const fmtData = (iso) => {
 };
 const getIniciais = (nome) => (nome || '?').trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-export default function Chat({ conversaInicial = null }) {
+export default function Chat() {
   const { supabaseClient: sb, usuario, usuarios } = useApp();
-  const [conversas, setConversas] = useState([]); // lista de conversas recentes
-  const [convAtual, setConvAtual] = useState(conversaInicial); // { tipo: '1:1'|'grupo', participantes: [ids], titulo }
+  const [conversas, setConversas] = useState([]);
+  const [convAtual, setConvAtual] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -31,121 +31,84 @@ export default function Chat({ conversaInicial = null }) {
 
   const usuariosAtivos = (usuarios || []).filter(u => u.ativo && u.id !== usuario?.id);
 
-  // ── Carrega conversas recentes ──
   const carregarConversas = useCallback(async () => {
     if (!usuario?.id) return;
-    // Busca mensagens enviadas ou recebidas pelo usuário nos últimos 7 dias
     const { data: recebidas } = await sb
       .from('mensagem_destinatarios')
-      .select('mensagem_id, lida, mensagens(id, texto, criado_em, de_usuario_id)')
+      .select('id, mensagem_id, lida, mensagens(id, texto, criado_em, de_usuario_id)')
       .eq('para_usuario_id', usuario.id)
       .order('mensagem_id', { ascending: false })
       .limit(100);
-
     const { data: enviadas } = await sb
       .from('mensagens')
       .select('id, texto, criado_em, de_usuario_id, mensagem_destinatarios(para_usuario_id)')
       .eq('de_usuario_id', usuario.id)
       .order('criado_em', { ascending: false })
       .limit(100);
-
-    // Agrupa por conversa (combinação de participantes)
-    const mapaConv: Record<string, any> = {};
-
-    const adicionarMsg = (msg: any, dests: string[]) => {
+    const mapaConv = {};
+    const adicionarMsg = (msg, dests) => {
       const participantes = [...new Set([msg.de_usuario_id, ...dests])].filter(Boolean).sort();
       const chave = participantes.join(',');
       if (!mapaConv[chave] || new Date(msg.criado_em) > new Date(mapaConv[chave].ultimaMsg.criado_em)) {
         mapaConv[chave] = { participantes, ultimaMsg: msg, chave };
       }
     };
-
-    for (const r of (recebidas || [])) {
-      if (r.mensagens) adicionarMsg(r.mensagens, [usuario.id]);
-    }
+    for (const r of (recebidas || [])) { if (r.mensagens) adicionarMsg(r.mensagens, [usuario.id]); }
     for (const e of (enviadas || [])) {
-      const dests = (e.mensagem_destinatarios || []).map((d: any) => d.para_usuario_id);
+      const dests = (e.mensagem_destinatarios || []).map(d => d.para_usuario_id);
       adicionarMsg(e, dests);
     }
-
-    const lista = Object.values(mapaConv).sort((a: any, b: any) =>
+    const lista = Object.values(mapaConv).sort((a, b) =>
       new Date(b.ultimaMsg.criado_em).getTime() - new Date(a.ultimaMsg.criado_em).getTime()
     );
-    setConversas(lista as any[]);
+    setConversas(lista);
   }, [sb, usuario?.id]);
 
   useEffect(() => { carregarConversas(); }, [carregarConversas]);
 
-  // ── Carrega mensagens da conversa atual ──
   const carregarMensagens = useCallback(async () => {
     if (!convAtual || !usuario?.id) return;
     const { participantes } = convAtual;
-
-    // Busca todas as mensagens entre esses participantes
     const { data } = await sb
       .from('mensagens')
-      .select('*, mensagem_destinatarios(para_usuario_id, lida)')
+      .select('*, mensagem_destinatarios(id, para_usuario_id, lida)')
       .in('de_usuario_id', participantes)
       .order('criado_em', { ascending: true });
-
-    // Filtra apenas mensagens onde todos participantes fazem parte
-    const filtradas = (data || []).filter((m: any) => {
-      const envolvidos = [m.de_usuario_id, ...(m.mensagem_destinatarios || []).map((d: any) => d.para_usuario_id)];
-      return participantes.every((p: string) => envolvidos.includes(p));
+    const filtradas = (data || []).filter(m => {
+      const envolvidos = [m.de_usuario_id, ...(m.mensagem_destinatarios || []).map(d => d.para_usuario_id)];
+      return participantes.every(p => envolvidos.includes(p));
     });
-
     setMensagens(filtradas);
-
-    // Marca como lidas
-    const naoLidas = filtradas
-      .filter((m: any) => m.de_usuario_id !== usuario.id)
-      .flatMap((m: any) => m.mensagem_destinatarios || [])
-      .filter((d: any) => d.para_usuario_id === usuario.id && !d.lida)
-      .map((d: any) => d.id);
-
-    if (naoLidas.length > 0) {
-      await sb.from('mensagem_destinatarios')
-        .update({ lida: true, lida_em: new Date().toISOString() })
-        .in('id', naoLidas);
+    const destIds = filtradas
+      .filter(m => m.de_usuario_id !== usuario.id)
+      .flatMap(m => m.mensagem_destinatarios || [])
+      .filter(d => d.para_usuario_id === usuario.id && !d.lida)
+      .map(d => d.id);
+    if (destIds.length > 0) {
+      await sb.from('mensagem_destinatarios').update({ lida: true, lida_em: new Date().toISOString() }).in('id', destIds);
     }
   }, [convAtual, sb, usuario?.id]);
 
   useEffect(() => { carregarMensagens(); }, [carregarMensagens]);
 
-  // ── Realtime ──
   useEffect(() => {
     if (!usuario?.id) return;
     const channel = sb.channel('chat_msgs')
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios',
-        filter: `para_usuario_id=eq.${usuario.id}`,
-      }, () => {
-        carregarMensagens();
-        carregarConversas();
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios', filter: `para_usuario_id=eq.${usuario.id}` },
+        () => { carregarMensagens(); carregarConversas(); })
       .subscribe();
     return () => { sb.removeChannel(channel); };
   }, [usuario?.id, sb, carregarMensagens, carregarConversas]);
 
-  // Scroll automático
-  useEffect(() => {
-    fimRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensagens]);
+  useEffect(() => { fimRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [mensagens]);
 
-  // ── Enviar mensagem ──
   const enviar = async () => {
     if (!texto.trim() || !convAtual || enviando) return;
     setEnviando(true);
-    const { data: msg } = await sb.from('mensagens').insert({
-      de_usuario_id: usuario.id,
-      texto: texto.trim(),
-    }).select().single();
-
+    const { data: msg } = await sb.from('mensagens').insert({ de_usuario_id: usuario.id, texto: texto.trim() }).select().single();
     if (msg) {
-      const dests = convAtual.participantes.filter((p: string) => p !== usuario.id);
-      await sb.from('mensagem_destinatarios').insert(
-        dests.map((p: string) => ({ mensagem_id: msg.id, para_usuario_id: p, lida: false }))
-      );
+      const dests = convAtual.participantes.filter(p => p !== usuario.id);
+      await sb.from('mensagem_destinatarios').insert(dests.map(p => ({ mensagem_id: msg.id, para_usuario_id: p, lida: false })));
     }
     setTexto('');
     setEnviando(false);
@@ -153,7 +116,6 @@ export default function Chat({ conversaInicial = null }) {
     carregarConversas();
   };
 
-  // ── Nova conversa ──
   const iniciarConversa = () => {
     if (!selDests.length) return;
     const participantes = [...new Set([usuario.id, ...selDests])].sort();
@@ -166,10 +128,10 @@ export default function Chat({ conversaInicial = null }) {
     setTituloGrupo('');
   };
 
-  const getNomeConv = (conv: any) => {
-    const outros = conv.participantes.filter((p: string) => p !== usuario?.id);
+  const getNomeConv = (conv) => {
+    const outros = conv.participantes.filter(p => p !== usuario?.id);
     if (outros.length === 1) return (usuarios || []).find(u => u.id === outros[0])?.nome_simples || 'Usuário';
-    return outros.map((id: string) => (usuarios || []).find(u => u.id === id)?.nome_simples?.split(' ')[0] || '').join(', ');
+    return outros.map(id => (usuarios || []).find(u => u.id === id)?.nome_simples?.split(' ')[0] || '').join(', ');
   };
 
   return (
@@ -183,19 +145,14 @@ export default function Chat({ conversaInicial = null }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12, height: 'calc(100vh - 200px)', minHeight: 400 }}>
-
-        {/* ── Lista de conversas ── */}
+        {/* Lista de conversas */}
         <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>
-            CONVERSAS
-          </div>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' }}>CONVERSAS</div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {conversas.length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>
-                Nenhuma conversa ainda.<br />Clique em + Nova Conversa.
-              </div>
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhuma conversa ainda.<br />Clique em + Nova Conversa.</div>
             )}
-            {conversas.map((conv: any) => {
+            {conversas.map(conv => {
               const nome = getNomeConv(conv);
               const ativo = convAtual?.participantes?.join(',') === conv.chave;
               return (
@@ -217,7 +174,7 @@ export default function Chat({ conversaInicial = null }) {
           </div>
         </div>
 
-        {/* ── Área de mensagens ── */}
+        {/* Área de mensagens */}
         <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {!convAtual ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-faint)', fontSize: 14 }}>
@@ -225,21 +182,18 @@ export default function Chat({ conversaInicial = null }) {
             </div>
           ) : (
             <>
-              {/* Header */}
               <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface-2)', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
                   {getIniciais(convAtual.titulo)}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{convAtual.titulo}</div>
               </div>
-
-              {/* Mensagens */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {mensagens.map((m: any, i: number) => {
+                {mensagens.map((m, i) => {
                   const minha = m.de_usuario_id === usuario?.id;
                   const remetente = (usuarios || []).find(u => u.id === m.de_usuario_id);
                   const dataAtual = fmtData(m.criado_em);
-                  const dataPrev = i > 0 ? fmtData((mensagens as any[])[i - 1].criado_em) : null;
+                  const dataPrev = i > 0 ? fmtData(mensagens[i - 1].criado_em) : null;
                   return (
                     <div key={m.id}>
                       {dataAtual !== dataPrev && (
@@ -260,9 +214,9 @@ export default function Chat({ conversaInicial = null }) {
                           <div style={{ padding: '8px 12px', borderRadius: minha ? '12px 12px 4px 12px' : '12px 12px 12px 4px', background: minha ? 'var(--color-accent)' : 'var(--color-surface-2)', color: minha ? '#fff' : 'var(--color-text)', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>
                             {m.texto}
                           </div>
-                          <div style={{ fontSize: 10, color: 'var(--color-text-faint)', marginTop: 2, textAlign: minha ? 'right' : 'left', marginLeft: minha ? 0 : 2 }}>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-faint)', marginTop: 2, textAlign: minha ? 'right' : 'left' }}>
                             {fmtHora(m.criado_em)}
-                            {minha && <span style={{ marginLeft: 4 }}>{(m.mensagem_destinatarios || []).every((d: any) => d.lida) ? '✓✓' : '✓'}</span>}
+                            {minha && <span style={{ marginLeft: 4 }}>{(m.mensagem_destinatarios || []).every(d => d.lida) ? '✓✓' : '✓'}</span>}
                           </div>
                         </div>
                       </div>
@@ -271,29 +225,25 @@ export default function Chat({ conversaInicial = null }) {
                 })}
                 <div ref={fimRef} />
               </div>
-
-              {/* Input */}
               <div style={{ padding: '10px 14px', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8 }}>
-                <input className="form-input" style={{ flex: 1 }} placeholder="Digite sua mensagem..."
+                <input className="form-input" style={{ flex: 1 }} placeholder="Digite sua mensagem... (Enter para enviar)"
                   value={texto} onChange={e => setTexto(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }} />
-                <button className="btn btn-primary" onClick={enviar} disabled={enviando || !texto.trim()}>
-                  {enviando ? '⏳' : '➤'}
-                </button>
+                <button className="btn btn-primary" onClick={enviar} disabled={enviando || !texto.trim()}>{enviando ? '⏳' : '➤'}</button>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* ── Modal nova conversa ── */}
+      {/* Modal nova conversa */}
       {modalNovaConv && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 400 }}>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Nova Conversa</div>
             <div className="form-group">
               <label className="form-label">Selecione os participantes</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
                 {usuariosAtivos.map(u => {
                   const sel = selDests.includes(u.id);
                   return (
@@ -302,8 +252,8 @@ export default function Chat({ conversaInicial = null }) {
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>
                         {getIniciais(u.nome_simples)}
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: sel ? 600 : 400 }}>{u.nome_simples}</span>
-                      {sel && <span style={{ marginLeft: 'auto', color: 'var(--color-accent)', fontSize: 14 }}>✓</span>}
+                      <span style={{ fontSize: 13, fontWeight: sel ? 600 : 400, flex: 1 }}>{u.nome_simples}</span>
+                      {sel && <span style={{ color: 'var(--color-accent)', fontSize: 14 }}>✓</span>}
                     </div>
                   );
                 })}
