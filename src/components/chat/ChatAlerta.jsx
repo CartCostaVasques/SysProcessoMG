@@ -3,10 +3,36 @@ import { useApp } from '../../context/AppContext.jsx';
 
 const getIniciais = (nome) => (nome || '?').trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
+// Solicita permissão de notificação do SO
+async function solicitarPermissao() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+// Dispara notificação nativa do SO
+function notificarSO(titulo, corpo) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  // Só notifica se o sistema estiver minimizado ou em outra aba
+  if (document.visibilityState === 'visible') return;
+  try {
+    const n = new Notification(titulo, {
+      body: corpo,
+      icon: '/favicon.svg',
+      tag: 'chat-' + Date.now(),
+    });
+    setTimeout(() => n.close(), 6000);
+  } catch {}
+}
+
 export default function ChatAlerta({ onAbrirChat }) {
   const { supabaseClient: sb, usuario, usuarios } = useApp();
-  const [alertas, setAlertas] = useState([]); // array de mensagens não lidas
-  const [respostas, setRespostas] = useState({}); // { msgId: texto }
+  const [alertas, setAlertas] = useState([]);
+  const [respostas, setRespostas] = useState({});
+
+  // Solicita permissão ao montar
+  useEffect(() => { solicitarPermissao(); }, []);
 
   const carregarNaoLidas = useCallback(async () => {
     if (!usuario?.id) return;
@@ -17,28 +43,40 @@ export default function ChatAlerta({ onAbrirChat }) {
       .eq('lida', false)
       .order('mensagem_id', { ascending: false });
 
-    if (!data?.length) return;
+    if (!data?.length) {
+      setAlertas([]);
+      return;
+    }
 
-    // Evita duplicar alertas já exibidos
+    const novos = data.map(d => ({
+      destId: d.id,
+      mensagemId: d.mensagem_id,
+      texto: d.mensagens?.texto || '',
+      remetenteId: d.mensagens?.de_usuario_id,
+      criadoEm: d.mensagens?.criado_em,
+    }));
+
+    // Verifica quais são realmente novos para notificar o SO
     setAlertas(prev => {
-      const idsExistentes = new Set(prev.map(a => a.destId));
-      const novos = data.filter(d => !idsExistentes.has(d.id)).map(d => ({
-        destId: d.id,
-        mensagemId: d.mensagem_id,
-        texto: d.mensagens?.texto || '',
-        remetenteId: d.mensagens?.de_usuario_id,
-        criadoEm: d.mensagens?.criado_em,
-      }));
-      return [...prev, ...novos];
+      const idsAntigos = new Set(prev.map(a => a.destId));
+      const recentesNovos = novos.filter(n => !idsAntigos.has(n.destId));
+      if (recentesNovos.length > 0) {
+        const remetente = (usuarios || []).find(u => u.id === recentesNovos[0].remetenteId);
+        notificarSO(
+          `💬 ${remetente?.nome_simples || 'Mensagem nova'}`,
+          recentesNovos[0].texto
+        );
+      }
+      return novos; // sempre substitui pelo estado atual do banco
     });
-  }, [sb, usuario?.id]);
+  }, [sb, usuario?.id, usuarios]);
 
   // Realtime
   useEffect(() => {
     if (!usuario?.id) return;
-    const channel = sb.channel('chat_alerta')
+    const channel = sb.channel(`chat_alerta_${usuario.id}`)
       .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios',
+        event: '*', schema: 'public', table: 'mensagem_destinatarios',
         filter: `para_usuario_id=eq.${usuario.id}`,
       }, () => carregarNaoLidas())
       .subscribe();
@@ -47,37 +85,39 @@ export default function ChatAlerta({ onAbrirChat }) {
   }, [usuario?.id, sb, carregarNaoLidas]);
 
   const dispensar = async (alerta) => {
-    // Marca como lida
-    await sb.from('mensagem_destinatarios').update({ lida: true, lida_em: new Date().toISOString() }).eq('id', alerta.destId);
+    await sb.from('mensagem_destinatarios')
+      .update({ lida: true, lida_em: new Date().toISOString() })
+      .eq('id', alerta.destId);
     setAlertas(prev => prev.filter(a => a.destId !== alerta.destId));
   };
 
   const responderRapido = async (alerta) => {
     const txt = respostas[alerta.destId]?.trim();
     if (!txt) return;
-    // Busca destinatários originais para saber a conversa
-    const { data: msg } = await sb.from('mensagens').select('de_usuario_id, mensagem_destinatarios(para_usuario_id)').eq('id', alerta.mensagemId).single();
-    if (!msg) return;
-
-    const { data: novaMsg } = await sb.from('mensagens').insert({ de_usuario_id: usuario.id, texto: txt }).select().single();
+    const { data: novaMsg } = await sb.from('mensagens')
+      .insert({ de_usuario_id: usuario.id, texto: txt })
+      .select().single();
     if (novaMsg) {
-      await sb.from('mensagem_destinatarios').insert({ mensagem_id: novaMsg.id, para_usuario_id: alerta.remetenteId, lida: false });
+      await sb.from('mensagem_destinatarios').insert({
+        mensagem_id: novaMsg.id,
+        para_usuario_id: alerta.remetenteId,
+        lida: false,
+      });
     }
     setRespostas(prev => ({ ...prev, [alerta.destId]: '' }));
     await dispensar(alerta);
   };
 
-  const abrirChat = (alerta) => {
-    dispensar(alerta);
-    // Busca participantes para abrir a conversa correta
-    sb.from('mensagens').select('de_usuario_id, mensagem_destinatarios(para_usuario_id)').eq('id', alerta.mensagemId).single()
-      .then(({ data }) => {
-        if (!data) return;
-        const dests = (data.mensagem_destinatarios || []).map(d => d.para_usuario_id);
-        const participantes = [...new Set([data.de_usuario_id, ...dests])].sort();
-        const remetente = (usuarios || []).find(u => u.id === alerta.remetenteId);
-        onAbrirChat({ participantes, titulo: remetente?.nome_simples || 'Chat', tipo: participantes.length > 2 ? 'grupo' : '1:1' });
-      });
+  const abrirChat = async (alerta) => {
+    await dispensar(alerta);
+    const { data } = await sb.from('mensagens')
+      .select('de_usuario_id, mensagem_destinatarios(para_usuario_id)')
+      .eq('id', alerta.mensagemId).single();
+    if (!data) return;
+    const dests = (data.mensagem_destinatarios || []).map(d => d.para_usuario_id);
+    const participantes = [...new Set([data.de_usuario_id, ...dests])].sort();
+    const remetente = (usuarios || []).find(u => u.id === alerta.remetenteId);
+    onAbrirChat({ participantes, titulo: remetente?.nome_simples || 'Chat', tipo: participantes.length > 2 ? 'grupo' : '1:1' });
   };
 
   if (!alertas.length) return null;
@@ -103,7 +143,7 @@ export default function ChatAlerta({ onAbrirChat }) {
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-faint)', fontSize: 14, padding: '2px 4px' }}>✕</button>
             </div>
             {/* Texto */}
-            <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--color-text)', lineHeight: 1.5, cursor: 'pointer', maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}
+            <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--color-text)', lineHeight: 1.5, cursor: 'pointer', maxHeight: 60, overflow: 'hidden' }}
               onClick={() => abrirChat(alerta)}>
               {alerta.texto}
             </div>
@@ -120,9 +160,7 @@ export default function ChatAlerta({ onAbrirChat }) {
               />
               <button className="btn btn-primary btn-sm" style={{ height: 30, padding: '0 10px', fontSize: 12 }}
                 onClick={() => responderRapido(alerta)}
-                disabled={!respostas[alerta.destId]?.trim()}>
-                ➤
-              </button>
+                disabled={!respostas[alerta.destId]?.trim()}>➤</button>
             </div>
           </div>
         );
@@ -132,7 +170,7 @@ export default function ChatAlerta({ onAbrirChat }) {
           +{alertas.length - 5} mensagem(ns) não lida(s)
         </div>
       )}
-      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+      <style>{`@keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
     </div>
   );
 }
