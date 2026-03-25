@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import { getInitials } from '../../data/mockData.js';
 
@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { id: 'importacaocsv',  label: 'Importação CSV',     icon: '📄', section: 'Configurações' },
   { id: 'interessados',   label: 'Interessados',     icon: '👤', section: 'Operacional' },
   { id: 'tarefas',        label: 'Tarefas',          icon: '✓',  section: 'Operacional' },
-  { id: 'estoque',        label: 'Estoque',           icon: '📦', section: 'Operacional' },
+  { id: 'chat',           label: 'Chat',             icon: '💬', section: 'Operacional' },
   { id: 'oficios',        label: 'Ofícios',          icon: '✉',  section: 'Operacional' },
   { id: 'recibos',        label: 'Recibos',          icon: '🧾', section: 'Operacional' },
   { id: 'regcivil',       label: 'Registro Civil — Atos', icon: '⚖', section: 'Operacional' },
@@ -82,8 +82,20 @@ export function Sidebar({ page, setPage }) {
 }
 
 export function Header({ page, setPage }) {
-  const { sidebarCollapsed, setSidebarCollapsed, toggleTema, tema, usuario, cartorio, logout, temPermissao } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, toggleTema, tema, usuario, cartorio, logout, temPermissao, supabaseClient: sb } = useApp();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [naoLidas, setNaoLidas] = useState(0);
+
+  useEffect(() => {
+    if (!usuario?.id || !sb) return;
+    const buscar = () => sb.from('mensagem_destinatarios').select('id', { count: 'exact', head: true }).eq('para_usuario_id', usuario.id).eq('lida', false)
+      .then(({ count }) => setNaoLidas(count || 0));
+    buscar();
+    const channel = sb.channel('header_badge')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mensagem_destinatarios', filter: `para_usuario_id=eq.${usuario.id}` }, buscar)
+      .subscribe();
+    return () => { sb.removeChannel(channel); };
+  }, [usuario?.id, sb]);
 
   const PAGE_LABELS = {
     dashboard: 'Dashboard', processos: 'Processos', andamentos: 'Processo Detalhe', interessados: 'Interessados',
@@ -175,13 +187,19 @@ export function Header({ page, setPage }) {
       </div>
 
       <div className="main-header-actions">
-        <button
-          className="btn-icon"
-          onClick={toggleTema}
-          title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
-        >
+        <button className="btn-icon" onClick={toggleTema} title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}>
           {tema === 'dark' ? '☀' : '◑'}
         </button>
+        <div style={{ position: 'relative' }}>
+          <button className="btn-icon" onClick={() => setPage('chat')} title="Chat interno">
+            💬
+          </button>
+          {naoLidas > 0 && (
+            <span style={{ position: 'absolute', top: 0, right: 0, background: '#dc2626', color: '#fff', borderRadius: '50%', fontSize: 9, fontWeight: 700, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              {naoLidas > 9 ? '9+' : naoLidas}
+            </span>
+          )}
+        </div>
         <div className="header-divider" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <div className="avatar avatar-sm">{getInitials(usuario?.nome_simples)}</div>
