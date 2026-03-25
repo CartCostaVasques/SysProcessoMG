@@ -41,7 +41,8 @@ import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
 import RelatorioServicos from './components/relatorios/RelatorioServicos.jsx';
 import RelatorioConfig   from './components/relatorios/RelatorioConfig.jsx';
 import { Configuracoes, LogsAcesso } from './components/configuracoes/Config.jsx';
-import Estoque from './components/estoque/Estoque.jsx';
+import Chat from './components/chat/Chat.jsx';
+import ChatAlerta from './components/chat/ChatAlerta.jsx';
 
 function AppShell() {
   const { usuario, tema } = useApp();
@@ -71,7 +72,7 @@ function AppShell() {
       case 'setores':       return <Setores />;
       case 'relservicos':   return <RelatorioServicos />;
       case 'relconfig':     return <RelatorioConfig />;
-      case 'estoque':       return <Estoque />;
+      case 'chat':          return <Chat />;
       case 'configuracoes': return <Configuracoes />;
       case 'logs':          return <LogsAcesso />;
       default:              return <Dashboard setPage={setPage} />;
@@ -90,6 +91,7 @@ function AppShell() {
         </main>
       </div>
       <ToastContainer />
+      <ChatAlerta onAbrirChat={(conv) => { setPage('chat'); }} />
     </div>
   );
 }
