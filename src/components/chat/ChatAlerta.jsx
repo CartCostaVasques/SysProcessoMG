@@ -3,15 +3,6 @@ import { useApp } from '../../context/AppContext.jsx';
 
 const getIniciais = (nome) => (nome || '?').trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
-// Solicita permissão de notificação do SO
-async function solicitarPermissao() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission();
-  }
-}
-
-// Dispara notificação nativa do SO
 async function solicitarPermissao() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') await Notification.requestPermission();
