@@ -149,10 +149,13 @@ export default function Chat() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={async () => {
             try {
-              const reg = await navigator.serviceWorker.register('/sw.js');
-              await navigator.serviceWorker.ready;
-              await reg.showNotification('Teste SysProcesso', { body: 'Notificação de teste via SW' });
-            } catch(e) { alert('Erro SW: ' + e.message); }
+              await navigator.serviceWorker.register('/sw.js');
+              const reg = await navigator.serviceWorker.ready;
+              await reg.showNotification('💬 Teste SysProcesso', {
+                body: 'Se apareceu, está funcionando!',
+                requireInteraction: false,
+              });
+            } catch(e) { alert('Erro: ' + e.message); }
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
           </button>
