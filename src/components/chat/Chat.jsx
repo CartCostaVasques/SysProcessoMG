@@ -151,10 +151,11 @@ export default function Chat() {
             try {
               await navigator.serviceWorker.register('/sw.js');
               const reg = await navigator.serviceWorker.ready;
-              await reg.showNotification('💬 Teste SysProcesso', {
-                body: 'Se apareceu, está funcionando!',
-                requireInteraction: false,
-              });
+              if (reg.active) {
+                reg.active.postMessage({ type: 'SHOW_NOTIFICATION', titulo: '💬 Teste SysProcesso', corpo: 'Notificação funcionando!' });
+              } else {
+                alert('SW não está ativo ainda. Recarregue a página e tente novamente.');
+              }
             } catch(e) { alert('Erro: ' + e.message); }
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
