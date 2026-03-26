@@ -149,13 +149,9 @@ export default function Chat() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={async () => {
             try {
-              await navigator.serviceWorker.register('/sw.js');
               const reg = await navigator.serviceWorker.ready;
-              if (reg.active) {
-                reg.active.postMessage({ type: 'SHOW_NOTIFICATION', titulo: '💬 Teste SysProcesso', corpo: 'Notificação funcionando!' });
-              } else {
-                alert('SW não está ativo ainda. Recarregue a página e tente novamente.');
-              }
+              await reg.showNotification('💬 Teste SysProcesso', { body: 'Notificação funcionando!' });
+              alert('Comando enviado! Verifique se apareceu no Windows.');
             } catch(e) { alert('Erro: ' + e.message); }
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
