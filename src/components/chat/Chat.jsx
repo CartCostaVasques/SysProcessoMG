@@ -152,7 +152,7 @@ export default function Chat() {
               Notification?.requestPermission().then(p => alert('Permissão: ' + p));
             } else {
               try {
-                new Notification('✅ Teste de Notificação', { body: 'Se apareceu esta mensagem, está funcionando!', icon: '/favicon.svg' });
+                new Notification('✅ Teste de Notificação', { body: 'Se apareceu esta mensagem, está funcionando!' });
               } catch(e) { alert('Erro: ' + e.message); }
             }
           }}>
