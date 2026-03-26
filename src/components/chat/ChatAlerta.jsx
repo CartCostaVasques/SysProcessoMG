@@ -77,15 +77,10 @@ export default function ChatAlerta({ onAbrirChat }) {
     const channel = sb.channel(`chat_alerta_${usuario.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios',
-      }, (payload) => {
-        // Verifica se a mensagem é para este usuário
-        if (payload.new?.para_usuario_id === usuario.id) {
-          carregarNaoLidas();
-        }
+      }, () => {
+        carregarNaoLidas();
       })
-      .subscribe((status) => {
-        console.log('[ChatAlerta] Realtime status:', status);
-      });
+      .subscribe();
     carregarNaoLidas();
     return () => { sb.removeChannel(channel); };
   }, [usuario?.id, sb, carregarNaoLidas]);
