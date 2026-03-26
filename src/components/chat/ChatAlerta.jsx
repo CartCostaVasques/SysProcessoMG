@@ -15,11 +15,7 @@ async function solicitarPermissao() {
 function notificarSO(titulo, corpo) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
-    const n = new Notification(titulo, {
-      body: corpo,
-      icon: '/favicon.svg',
-      tag: 'chat-' + Date.now(),
-    });
+    const n = new Notification(titulo, { body: corpo, tag: 'chat-' + Date.now() });
     setTimeout(() => n.close(), 6000);
   } catch {}
 }
