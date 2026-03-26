@@ -147,13 +147,12 @@ export default function Chat() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => {
-            const suporte = 'Notification' in window;
-            const permissao = suporte ? Notification.permission : 'não suportado';
-            alert(`Suporte: ${suporte}\nPermissão: ${permissao}\nSW: ${'serviceWorker' in navigator}`);
-            if (suporte && permissao === 'granted') {
-              new Notification('Teste SysProcesso', { body: 'Notificação de teste' });
-            }
+          <button className="btn btn-secondary btn-sm" onClick={async () => {
+            try {
+              const reg = await navigator.serviceWorker.register('/sw.js');
+              await navigator.serviceWorker.ready;
+              await reg.showNotification('Teste SysProcesso', { body: 'Notificação de teste via SW' });
+            } catch(e) { alert('Erro SW: ' + e.message); }
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
           </button>
