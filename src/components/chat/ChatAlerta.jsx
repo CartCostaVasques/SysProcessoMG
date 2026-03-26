@@ -76,10 +76,16 @@ export default function ChatAlerta({ onAbrirChat }) {
     if (!usuario?.id) return;
     const channel = sb.channel(`chat_alerta_${usuario.id}`)
       .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'mensagem_destinatarios',
-        filter: `para_usuario_id=eq.${usuario.id}`,
-      }, () => carregarNaoLidas())
-      .subscribe();
+        event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios',
+      }, (payload) => {
+        // Verifica se a mensagem é para este usuário
+        if (payload.new?.para_usuario_id === usuario.id) {
+          carregarNaoLidas();
+        }
+      })
+      .subscribe((status) => {
+        console.log('[ChatAlerta] Realtime status:', status);
+      });
     carregarNaoLidas();
     return () => { sb.removeChannel(channel); };
   }, [usuario?.id, sb, carregarNaoLidas]);
