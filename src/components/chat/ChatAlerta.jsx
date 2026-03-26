@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
 const getIniciais = (nome) => (nome || '?').trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -17,6 +17,7 @@ export default function ChatAlerta({ onAbrirChat }) {
   const { supabaseClient: sb, usuario, usuarios } = useApp();
   const [alertas, setAlertas] = useState([]);
   const [respostas, setRespostas] = useState({});
+  const alertasRef = useRef([]);
 
   // Solicita permissão ao montar
   useEffect(() => { solicitarPermissao(); }, []);
@@ -43,19 +44,18 @@ export default function ChatAlerta({ onAbrirChat }) {
       criadoEm: d.mensagens?.criado_em,
     }));
 
-    // Verifica quais são realmente novos para notificar o SO
-    setAlertas(prev => {
-      const idsAntigos = new Set(prev.map(a => a.destId));
-      const recentesNovos = novos.filter(n => !idsAntigos.has(n.destId));
-      if (recentesNovos.length > 0) {
-        const remetente = (usuarios || []).find(u => u.id === recentesNovos[0].remetenteId);
-        notificarSO(
-          `💬 ${remetente?.nome_simples || 'Mensagem nova'}`,
-          recentesNovos[0].texto
-        );
-      }
-      return novos; // sempre substitui pelo estado atual do banco
+    // Detecta novos usando ref (fora do ciclo de render)
+    const idsAntigos = new Set(alertasRef.current.map(a => a.destId));
+    const recentesNovos = novos.filter(n => !idsAntigos.has(n.destId));
+
+    // Notifica o SO para cada mensagem nova
+    recentesNovos.forEach(n => {
+      const remetente = (usuarios || []).find(u => u.id === n.remetenteId);
+      notificarSO(`💬 ${remetente?.nome_simples || 'Mensagem nova'}`, n.texto);
     });
+
+    alertasRef.current = novos;
+    setAlertas(novos);
   }, [sb, usuario?.id, usuarios]);
 
   // Realtime apenas — sem polling para não gerar spam de notificações
