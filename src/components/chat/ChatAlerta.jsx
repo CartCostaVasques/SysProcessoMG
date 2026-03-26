@@ -8,9 +8,15 @@ async function solicitarPermissao() {
   if (Notification.permission === 'default') await Notification.requestPermission();
 }
 
-function notificarSO(titulo, corpo) {
+async function notificarSO(titulo, corpo) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try { new Notification(titulo, { body: corpo }); } catch {}
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    await reg.showNotification(titulo, { body: corpo, tag: 'chat-msg' });
+  } catch {
+    try { new Notification(titulo, { body: corpo }); } catch {}
+  }
 }
 
 export default function ChatAlerta({ onAbrirChat }) {
