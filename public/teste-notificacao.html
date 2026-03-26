@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Teste Notificação</title></head>
+<body style="font-family:Arial;padding:40px;max-width:500px">
+  <h2>Teste de Notificação</h2>
+  <p id="status" style="padding:10px;background:#f0f0f0;border-radius:6px">Aguardando...</p>
+  <br>
+  <button onclick="testar()" style="padding:12px 24px;font-size:16px;cursor:pointer;background:#3b82f6;color:white;border:none;border-radius:6px">
+    Clique aqui para testar
+  </button>
+  <br><br>
+  <div id="log" style="font-size:12px;color:#666"></div>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').innerHTML += '<br>' + msg;
+      document.getElementById('status').textContent = msg;
+    };
+
+    async function testar() {
+      log('Verificando suporte...');
+      
+      if (!('Notification' in window)) {
+        log('❌ Browser não suporta notificações');
+        return;
+      }
+      log('✅ Suporte: OK');
+      log('Permissão atual: ' + Notification.permission);
+
+      if (Notification.permission === 'denied') {
+        log('❌ Bloqueado. Vá nas configurações do browser e permita.');
+        return;
+      }
+
+      if (Notification.permission !== 'granted') {
+        log('Solicitando permissão...');
+        const p = await Notification.requestPermission();
+        log('Resposta: ' + p);
+        if (p !== 'granted') { log('❌ Permissão negada'); return; }
+      }
+
+      log('Tentando new Notification()...');
+      try {
+        new Notification('✅ Funcionou!', { body: 'Notificação via new Notification()' });
+        log('✅ new Notification() executado');
+      } catch(e) {
+        log('❌ Erro: ' + e.message);
+      }
+
+      log('Tentando via Service Worker...');
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        await reg.showNotification('✅ Via SW', { body: 'Notificação via Service Worker' });
+        log('✅ SW showNotification() executado');
+      } catch(e) {
+        log('❌ SW erro: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
