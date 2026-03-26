@@ -71,18 +71,20 @@ export default function ChatAlerta({ onAbrirChat }) {
     });
   }, [sb, usuario?.id, usuarios]);
 
-  // Realtime
+  // Realtime + polling fallback a cada 5s
   useEffect(() => {
     if (!usuario?.id) return;
     const channel = sb.channel(`chat_alerta_${usuario.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'mensagem_destinatarios',
-      }, () => {
-        carregarNaoLidas();
-      })
+      }, () => { carregarNaoLidas(); })
       .subscribe();
+
+    // Polling fallback — garante que funciona mesmo se Realtime falhar
+    const intervalo = setInterval(() => { carregarNaoLidas(); }, 5000);
+
     carregarNaoLidas();
-    return () => { sb.removeChannel(channel); };
+    return () => { sb.removeChannel(channel); clearInterval(intervalo); };
   }, [usuario?.id, sb, carregarNaoLidas]);
 
   const dispensar = async (alerta) => {
