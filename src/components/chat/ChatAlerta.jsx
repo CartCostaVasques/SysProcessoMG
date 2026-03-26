@@ -12,28 +12,14 @@ async function solicitarPermissao() {
 }
 
 // Dispara notificação nativa do SO
-// Registra Service Worker
-async function registrarSW() {
-  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
-  try {
-    await navigator.serviceWorker.register('/sw.js');
-  } catch {}
+async function solicitarPermissao() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') await Notification.requestPermission();
 }
 
-// Dispara notificação via Service Worker (funciona mesmo com página em foco)
-async function notificarSO(titulo, corpo) {
+function notificarSO(titulo, corpo) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    await reg.showNotification(titulo, {
-      body: corpo,
-      tag: 'chat-' + Date.now(),
-      requireInteraction: false,
-    });
-  } catch {
-    // Fallback para new Notification se SW falhar
-    try { new Notification(titulo, { body: corpo }); } catch {}
-  }
+  try { new Notification(titulo, { body: corpo }); } catch {}
 }
 
 export default function ChatAlerta({ onAbrirChat }) {
@@ -41,11 +27,8 @@ export default function ChatAlerta({ onAbrirChat }) {
   const [alertas, setAlertas] = useState([]);
   const [respostas, setRespostas] = useState({});
 
-  // Registra SW e solicita permissão ao montar
-  useEffect(() => {
-    registrarSW();
-    solicitarPermissao();
-  }, []);
+  // Solicita permissão ao montar
+  useEffect(() => { solicitarPermissao(); }, []);
 
   const carregarNaoLidas = useCallback(async () => {
     if (!usuario?.id) return;
