@@ -147,18 +147,11 @@ export default function Chat() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={async () => {
-            if (Notification?.permission !== 'granted') {
-              const p = await Notification?.requestPermission();
-              alert('Permissão: ' + p);
-            } else {
-              try {
-                const reg = await navigator.serviceWorker.ready;
-                await reg.showNotification('✅ Teste de Notificação', { body: 'Se apareceu esta mensagem, está funcionando!' });
-              } catch(e) {
-                try { new Notification('✅ Teste', { body: 'Fallback' }); } catch(e2) { alert('Erro: ' + e2.message); }
-              }
-            }
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            if (!('Notification' in window)) { alert('Seu browser não suporta notificações.'); return; }
+            if (Notification.permission === 'denied') { alert('Notificações bloqueadas. Vá em Configurações do site e permita.'); return; }
+            if (Notification.permission === 'default') { Notification.requestPermission().then(p => { if (p === 'granted') new Notification('✅ Ativado!', { body: 'Notificações ativadas com sucesso.' }); }); return; }
+            new Notification('✅ Teste', { body: 'Notificação funcionando!' });
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
           </button>
