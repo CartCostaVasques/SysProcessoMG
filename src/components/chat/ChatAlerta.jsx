@@ -12,11 +12,7 @@ async function notificarSO(titulo, corpo) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
     const reg = await navigator.serviceWorker.ready;
-    if (reg.active) {
-      reg.active.postMessage({ type: 'SHOW_NOTIFICATION', titulo, corpo });
-    } else {
-      new Notification(titulo, { body: corpo });
-    }
+    await reg.showNotification(titulo, { body: corpo });
   } catch {
     try { new Notification(titulo, { body: corpo }); } catch {}
   }
