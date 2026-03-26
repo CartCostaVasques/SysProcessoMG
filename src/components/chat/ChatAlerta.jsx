@@ -14,8 +14,6 @@ async function solicitarPermissao() {
 // Dispara notificação nativa do SO
 function notificarSO(titulo, corpo) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  // Só notifica se o sistema estiver minimizado ou em outra aba
-  if (document.visibilityState === 'visible') return;
   try {
     const n = new Notification(titulo, {
       body: corpo,
