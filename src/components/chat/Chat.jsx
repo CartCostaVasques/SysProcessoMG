@@ -147,13 +147,17 @@ export default function Chat() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => {
+          <button className="btn btn-secondary btn-sm" onClick={async () => {
             if (Notification?.permission !== 'granted') {
-              Notification?.requestPermission().then(p => alert('Permissão: ' + p));
+              const p = await Notification?.requestPermission();
+              alert('Permissão: ' + p);
             } else {
               try {
-                new Notification('✅ Teste de Notificação', { body: 'Se apareceu esta mensagem, está funcionando!' });
-              } catch(e) { alert('Erro: ' + e.message); }
+                const reg = await navigator.serviceWorker.ready;
+                await reg.showNotification('✅ Teste de Notificação', { body: 'Se apareceu esta mensagem, está funcionando!' });
+              } catch(e) {
+                try { new Notification('✅ Teste', { body: 'Fallback' }); } catch(e2) { alert('Erro: ' + e2.message); }
+              }
             }
           }}>
             {Notification?.permission === 'granted' ? '🔔 Testar Notificação' : '🔕 Ativar Notificações'}
