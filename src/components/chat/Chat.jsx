@@ -139,9 +139,31 @@ export default function Chat() {
       <div className="page-header">
         <div>
           <div className="page-title">💬 Chat</div>
-          <div className="page-sub">Mensagens internas</div>
+          <div className="page-sub">
+            Mensagens internas &nbsp;·&nbsp;
+            Notificações: <strong style={{ color: Notification?.permission === 'granted' ? '#16a34a' : '#dc2626' }}>
+              {Notification?.permission === 'granted' ? 'Ativas ✓' : Notification?.permission === 'denied' ? 'Bloqueadas ✕' : 'Pendentes'}
+            </strong>
+          </div>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalNovaConv(true)}>+ Nova Conversa</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={async () => {
+            if (!('Notification' in window)) { alert('Browser não suporta notificações.'); return; }
+            if (Notification.permission !== 'granted') {
+              const p = await Notification.requestPermission();
+              alert('Permissão: ' + p);
+              return;
+            }
+            try {
+              const reg = await navigator.serviceWorker.ready;
+              await reg.showNotification('💬 Teste SysProcesso', { body: 'Se apareceu no Windows, está funcionando!' });
+            } catch(e) {
+              try { new Notification('💬 Teste SysProcesso', { body: 'Se apareceu no Windows, está funcionando!' }); }
+              catch(e2) { alert('Erro: ' + e2.message); }
+            }
+          }}>🔔 Testar Notificação</button>
+          <button className="btn btn-primary" onClick={() => setModalNovaConv(true)}>+ Nova Conversa</button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12, height: 'calc(100vh - 200px)', minHeight: 400 }}>
