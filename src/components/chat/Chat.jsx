@@ -141,31 +141,7 @@ export default function Chat() {
           <div className="page-title">💬 Chat</div>
           <div className="page-sub">Mensagens internas</div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={async () => {
-            const suporte = 'Notification' in window;
-            const permissao = suporte ? Notification.permission : 'não suportado';
-            const sw = 'serviceWorker' in navigator;
-            let swStatus = 'não verificado';
-            try {
-              const reg = await navigator.serviceWorker.getRegistration('/');
-              swStatus = reg ? (reg.active?.state || 'sem worker ativo') : 'não registrado';
-            } catch(e) { swStatus = 'erro: ' + e.message; }
-            alert(`Suporte: ${suporte}\nPermissão: ${permissao}\nService Worker API: ${sw}\nSW Status: ${swStatus}`);
-          }}>🔍 Diagnóstico</button>
-          <button className="btn btn-secondary btn-sm" onClick={async () => {
-            if (!('Notification' in window)) { alert('Browser não suporta notificações.'); return; }
-            if (Notification.permission !== 'granted') { Notification.requestPermission().then(p => alert('Permissão: ' + p)); return; }
-            try {
-              const reg = await navigator.serviceWorker.ready;
-              await reg.showNotification('💬 Teste SysProcesso', { body: 'Se apareceu no Windows, está funcionando!' });
-            } catch(e) {
-              try { new Notification('💬 Teste SysProcesso', { body: 'Se apareceu no Windows, está funcionando!' }); }
-              catch(e2) { alert('Erro: ' + e2.message); }
-            }
-          }}>🔔 Testar</button>
-          <button className="btn btn-primary" onClick={() => setModalNovaConv(true)}>+ Nova Conversa</button>
-        </div>
+        <button className="btn btn-primary" onClick={() => setModalNovaConv(true)}>+ Nova Conversa</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12, height: 'calc(100vh - 200px)', minHeight: 400 }}>
