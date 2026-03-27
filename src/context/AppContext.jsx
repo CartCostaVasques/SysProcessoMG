@@ -44,6 +44,11 @@ export function AppProvider({ children }) {
 
   // ── AUTH ────────────────────────────────────────────────
   useEffect(() => {
+    // Registra SW ao carregar
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (session?.user) {
         carregarPerfil(session.user.id);
@@ -151,9 +156,12 @@ export function AppProvider({ children }) {
         addToast(`Erro: ${error.message}`, 'error');
         return false;
       }
-      // Solicita permissão de notificação ao fazer login
+      // Solicita permissão e registra SW
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
       }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
