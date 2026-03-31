@@ -6,7 +6,7 @@ import { formatDate } from '../../data/mockData.js';
 const HOJE = () => new Date().toISOString().split('T')[0];
 const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vendedor', 'Credor', 'Devedor', 'Representante', 'Outros'];
 const STATUS_OPTS   = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
-const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
+const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Jurídico', 'Arquivado', 'Outros'];
 const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
 const STATUS_CONF_GLOBAL = {
