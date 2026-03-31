@@ -44,11 +44,6 @@ export function AppProvider({ children }) {
 
   // ── AUTH ────────────────────────────────────────────────
   useEffect(() => {
-    // Registra SW ao carregar
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (session?.user) {
         carregarPerfil(session.user.id);
@@ -151,21 +146,21 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (email, senha) => {
     try {
+      console.log('[LOGIN] Tentando login para:', email);
+      console.log('[LOGIN] URL Supabase:', SUPABASE_URL);
+      console.log('[LOGIN] ANON Key (primeiros 20 chars):', SUPABASE_ANON?.substring(0, 20));
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      console.log('[LOGIN] Resposta data:', data);
+      console.log('[LOGIN] Resposta error:', error);
       if (error) {
-        addToast(`Erro: ${error.message}`, 'error');
+        console.error('[LOGIN] Erro completo:', JSON.stringify(error));
+        addToast(`Erro: ${error.message} (status: ${error.status})`, 'error');
         return false;
-      }
-      // Solicita permissão e registra SW
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
       }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
     } catch (err) {
+      console.error('[LOGIN] Exceção:', err);
       addToast('Erro ao conectar. Tente novamente.', 'error');
       return false;
     }
@@ -216,11 +211,17 @@ export function AppProvider({ children }) {
 
   // ── FETCH ──────────────────────────────────────────────
   const salvarPrefsUsuario = async (prefs) => {
-    if (!usuario?.id) return;
+    console.log('[PREFS] Iniciando salvar:', prefs, 'usuario.id:', usuario?.id);
+    if (!usuario?.id) { console.warn('[PREFS] Sem usuario.id, abortando'); return; }
     try {
       const { data, error } = await supabase.from('usuarios').update(prefs).eq('id', usuario.id).select();
-      if (!error) setUsuario(prev => ({ ...prev, ...prefs }));
-    } catch(e) {}
+      if (error) {
+        console.error('[PREFS] Erro Supabase:', error);
+      } else {
+        console.log('[PREFS] Salvo com sucesso:', data);
+        setUsuario(prev => ({ ...prev, ...prefs }));
+      }
+    } catch(e) { console.error('[PREFS] Exceção:', e); }
   };
 
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
@@ -378,7 +379,7 @@ export function AppProvider({ children }) {
   const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
 
   const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); setProcessos(p=>p.map(proc=>proc.id===d.processo_id?{...proc,total_andamentos:(proc.total_andamentos||0)+1}:proc)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
-  const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().single(); if(error) throw error; setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().maybeSingle(); if(error) throw error; if(data) setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteAndamento = useCallback(async (id) => { try { await supabase.from('andamentos').delete().eq('id',id); setAndamentos(p=>p.filter(a=>a.id!==id)); } catch(e){ addToast(e.message,'error'); } }, []);
   const addInteressado    = useCallback(async (d) => { try { const {data,error} = await supabase.from('interessados').insert(d).select().single(); if(error) throw error; setInteressados(p=>[...p,data]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const editInteressado   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('interessados').update(d).eq('id',id).select().single(); if(error) throw error; setInteressados(p=>p.map(i=>i.id===id?data:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
