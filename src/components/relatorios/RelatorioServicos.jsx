@@ -151,11 +151,12 @@ export default function RelatorioServicos() {
     const mapa = {};
     lista.forEach(p => {
       const cat = p.categoria || 'Sem Categoria';
-      if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0, qtdTotal: 0 };
+      if (!mapa[cat]) mapa[cat] = { categoria: cat, processos: [], total: 0, qtdTotal: 0, qtdProcessos: 0 };
       const _partes = (() => { try { return JSON.parse(p.partes||'[]').slice(0,2).map(x=>(x.nome||'').split(' ').slice(0,2).join(' ')).filter(Boolean).join(', '); } catch { return ''; } })();
       mapa[cat].processos.push({ ...p, _partes });
-      mapa[cat].total    += parseFloat(p.valor_ato || 0);
-      mapa[cat].qtdTotal += parseInt(p.quantidade || 1);
+      mapa[cat].total       += parseFloat(p.valor_ato || 0);
+      mapa[cat].qtdTotal    += parseInt(p.quantidade || 1);
+      mapa[cat].qtdProcessos += 1;
     });
     return Object.values(mapa).sort((a, b) => a.categoria.localeCompare(b.categoria));
   }, [processos, filtro, filtroMes, filtroAno, busca, modoData, dtInicio, dtFim]);
@@ -181,7 +182,7 @@ export default function RelatorioServicos() {
         <div>
           <div className="page-title">Serviços por Setor</div>
           <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
-            {qtdGeral} processo(s) &nbsp;·&nbsp; Total R$ {formatBRL(totalGeral)}
+            {grupos.reduce((s, g) => s + g.qtdProcessos, 0)} processo(s) &nbsp;·&nbsp; {qtdGeral} serviço(s) &nbsp;·&nbsp; Total R$ {formatBRL(totalGeral)}
           </div>
         </div>
         <button className="btn btn-secondary btn-sm"
@@ -284,7 +285,8 @@ export default function RelatorioServicos() {
                   {/* Ícone de setor */}
                   <span style={{ fontSize: 16 }}>⚙</span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.01em' }}>{g.categoria}</span>
-                  <span className="badge badge-neutral" style={{ fontSize: 11 }}>{g.qtdTotal}</span>
+                  <span className="badge badge-neutral" style={{ fontSize: 11 }} title="Nº de processos (n. interno)">{g.qtdProcessos} proc.</span>
+                  <span className="badge badge-info" style={{ fontSize: 11 }} title="Total de serviços (campo quantidade)">{g.qtdTotal} serv.</span>
                   {limiteSetor !== 'todos' && g.processos.length > limiteSetor && (
                     <span style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>exibindo {limiteSetor}</span>
                   )}
