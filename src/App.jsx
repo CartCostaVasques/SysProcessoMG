@@ -43,6 +43,7 @@ import RelatorioConfig   from './components/relatorios/RelatorioConfig.jsx';
 import { Configuracoes, LogsAcesso } from './components/configuracoes/Config.jsx';
 import Chat from './components/chat/Chat.jsx';
 import ChatAlerta from './components/chat/ChatAlerta.jsx';
+import Estoque from './components/estoque/Estoque.jsx';
 
 function AppShell() {
   const { usuario, tema } = useApp();
@@ -73,6 +74,7 @@ function AppShell() {
       case 'relservicos':   return <RelatorioServicos />;
       case 'relconfig':     return <RelatorioConfig />;
       case 'chat':          return <Chat />;
+      case 'estoque':       return <Estoque />;
       case 'configuracoes': return <Configuracoes />;
       case 'logs':          return <LogsAcesso />;
       default:              return <Dashboard setPage={setPage} />;
