@@ -44,7 +44,12 @@ export function AppProvider({ children }) {
 
   // ── AUTH ────────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    // Registra SW ao carregar
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         carregarPerfil(session.user.id);
       } else {
@@ -55,6 +60,8 @@ export function AppProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         carregarPerfil(session.user.id);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // sessão renovada silenciosamente
       } else if (event === 'SIGNED_OUT') {
         setUsuario(null);
         setAuthLoading(false);
@@ -146,21 +153,20 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (email, senha) => {
     try {
-      console.log('[LOGIN] Tentando login para:', email);
-      console.log('[LOGIN] URL Supabase:', SUPABASE_URL);
-      console.log('[LOGIN] ANON Key (primeiros 20 chars):', SUPABASE_ANON?.substring(0, 20));
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-      console.log('[LOGIN] Resposta data:', data);
-      console.log('[LOGIN] Resposta error:', error);
       if (error) {
-        console.error('[LOGIN] Erro completo:', JSON.stringify(error));
-        addToast(`Erro: ${error.message} (status: ${error.status})`, 'error');
+        addToast(`Erro: ${error.message}`, 'error');
         return false;
+      }
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
       }
       addToast('Bem-vindo ao SysProcesso!', 'success');
       return true;
     } catch (err) {
-      console.error('[LOGIN] Exceção:', err);
       addToast('Erro ao conectar. Tente novamente.', 'error');
       return false;
     }
