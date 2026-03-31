@@ -38,6 +38,7 @@ export default function Estoque() {
   const [mostrarInativos, setMostrarInativos] = useState(false);
   const [pedidos, setPedidos] = useState([]);
   const [modalPedido, setModalPedido] = useState(false);
+  const [editPedido, setEditPedido] = useState(null); // null = novo, objeto = editando
   const [formPedido, setFormPedido] = useState({ item_id: '', quantidade: 1, dt_pedido: new Date().toISOString().split('T')[0], dt_previsao: '', observacao: '' });
   const [salvandoPedido, setSalvandoPedido] = useState(false);
 
@@ -168,22 +169,46 @@ export default function Estoque() {
   };
 
   // ── Pedidos ──
+  const abrirModalPedido = (pedido = null) => {
+    setEditPedido(pedido);
+    setFormPedido(pedido ? {
+      item_id: pedido.item_id,
+      quantidade: pedido.quantidade,
+      dt_pedido: pedido.dt_pedido || new Date().toISOString().split('T')[0],
+      dt_previsao: pedido.dt_previsao || '',
+      observacao: pedido.observacao || '',
+    } : { item_id: '', quantidade: 1, dt_pedido: new Date().toISOString().split('T')[0], dt_previsao: '', observacao: '' });
+    setModalPedido(true);
+  };
+
   const salvarPedido = async () => {
     if (!formPedido.item_id) return addToast('Selecione o material', 'error');
     if (!formPedido.quantidade || Number(formPedido.quantidade) <= 0) return addToast('Quantidade inválida', 'error');
     setSalvandoPedido(true);
-    await sb.from('estoque_pedidos').insert({
-      item_id: formPedido.item_id,
-      quantidade: Number(formPedido.quantidade),
-      dt_pedido: formPedido.dt_pedido,
-      dt_previsao: formPedido.dt_previsao || null,
-      observacao: formPedido.observacao || null,
-      responsavel_id: usuario.id,
-      status: 'aguardando',
-    });
-    addToast('Pedido registrado — alertas suspensos para este item', 'success');
+    if (editPedido) {
+      await sb.from('estoque_pedidos').update({
+        item_id: formPedido.item_id,
+        quantidade: Number(formPedido.quantidade),
+        dt_pedido: formPedido.dt_pedido,
+        dt_previsao: formPedido.dt_previsao || null,
+        observacao: formPedido.observacao || null,
+      }).eq('id', editPedido.id);
+      addToast('Pedido atualizado!', 'success');
+    } else {
+      await sb.from('estoque_pedidos').insert({
+        item_id: formPedido.item_id,
+        quantidade: Number(formPedido.quantidade),
+        dt_pedido: formPedido.dt_pedido,
+        dt_previsao: formPedido.dt_previsao || null,
+        observacao: formPedido.observacao || null,
+        responsavel_id: usuario.id,
+        status: 'aguardando',
+      });
+      addToast('Pedido registrado — alertas suspensos para este item', 'success');
+    }
     setSalvandoPedido(false);
     setModalPedido(false);
+    setEditPedido(null);
     setFormPedido({ item_id: '', quantidade: 1, dt_pedido: new Date().toISOString().split('T')[0], dt_previsao: '', observacao: '' });
     carregar();
   };
@@ -423,7 +448,7 @@ export default function Estoque() {
       {aba === 'pedidos' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setModalPedido(true)}>+ Registrar Pedido</button>
+            <button className="btn btn-primary" onClick={() => abrirModalPedido()}>+ Registrar Pedido</button>
           </div>
 
           {/* Aguardando */}
@@ -473,6 +498,7 @@ export default function Estoque() {
                             <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{p.observacao || '—'}</td>
                             <td>
                               <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => abrirModalPedido(p)}>✎ Editar</button>
                                 <button className="btn btn-success btn-sm" onClick={() => receberPedido(p)}>✓ Recebido</button>
                                 <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => cancelarPedido(p)}>Cancelar</button>
                               </div>
@@ -713,7 +739,7 @@ SELECT cron.schedule(
       {modalPedido && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>🛒 Registrar Pedido</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>{editPedido ? '✎ Editar Pedido' : '🛒 Registrar Pedido'}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="form-group">
                 <label className="form-label">Material *</label>
@@ -752,9 +778,9 @@ SELECT cron.schedule(
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-              <button className="btn btn-ghost" onClick={() => setModalPedido(false)}>Cancelar</button>
+              <button className="btn btn-ghost" onClick={() => { setModalPedido(false); setEditPedido(null); }}>Cancelar</button>
               <button className="btn btn-primary" onClick={salvarPedido} disabled={salvandoPedido}>
-                {salvandoPedido ? 'Salvando...' : 'Registrar Pedido'}
+                {salvandoPedido ? 'Salvando...' : editPedido ? 'Salvar Alterações' : 'Registrar Pedido'}
               </button>
             </div>
           </div>
