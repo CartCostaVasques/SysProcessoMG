@@ -244,7 +244,7 @@ export function AppProvider({ children }) {
       setProcessos(todos.map(p => ({ ...p, total_andamentos: counts[p.id]||0 })));
     } catch(e) { console.error('processos', e); }
   };
-  const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*, processos(numero_interno)').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
+  const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
   const fetchTarefas   = async () => { try { const {data} = await supabase.from('tarefas').select('*').order('dt_fim',{ascending:true}); if(data) setTarefas(data); } catch(e){} };
   const fetchOficios   = async () => { try { const {data} = await supabase.from('oficios').select('*').order('dt_oficio',{ascending:false}); if(data) setOficios(data); } catch(e){} };
   const fetchOficioContatos = async () => { try { const {data} = await supabase.from('oficio_contatos').select('*').order('nome'); if(data) setOficioContatos(data); } catch(e){} };
