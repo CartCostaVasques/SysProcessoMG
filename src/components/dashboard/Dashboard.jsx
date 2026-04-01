@@ -27,7 +27,7 @@ function BarChart({ data }) {
     : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, width: '100%' }}>
       {data.map((d, i) => {
         const barH = Math.max(4, (d.valor / maxVal) * 60);
         const ativo = d.highlight;
@@ -478,14 +478,16 @@ export default function Dashboard({ setPage }) {
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
         {/* Valor por mês */}
-        <div className="card">
+        <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="card-header">
             <div>
               <div className="card-title">Valor por Mês — {filtroAno}</div>
               <div className="card-subtitle">Barra = valor total concluído · número = qtd processos</div>
             </div>
           </div>
-          <BarChart data={porMes} />
+          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+            <BarChart data={porMes} />
+          </div>
         </div>
 
         {/* Por categoria */}
