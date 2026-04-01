@@ -27,25 +27,21 @@ function BarChart({ data }) {
     : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 100, paddingTop: 8 }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
       {data.map((d, i) => {
-        const barH = Math.max(4, (d.valor / maxVal) * 80);
+        const barH = Math.max(4, (d.valor / maxVal) * 60);
         const ativo = d.highlight;
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-            {/* Barra */}
-            <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 80 }}>
+            <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 60 }}>
               <div style={{
                 width: '80%', height: barH,
                 background: ativo ? 'var(--color-accent)' : 'var(--color-border-light)',
                 borderRadius: '3px 3px 0 0',
                 transition: 'height 0.3s ease',
-                position: 'relative',
               }} title={fmtBRL(d.valor)} />
             </div>
-            {/* Mês */}
-            <span style={{ fontSize: 9, color: ativo ? 'var(--color-accent)' : 'var(--color-text-faint)', fontWeight: ativo ? 700 : 400, marginTop: 3, whiteSpace: 'nowrap' }}>{d.label}</span>
-            {/* Qtd processos */}
+            <span style={{ fontSize: 9, color: ativo ? 'var(--color-accent)' : 'var(--color-text-faint)', fontWeight: ativo ? 700 : 400, marginTop: 2, whiteSpace: 'nowrap' }}>{d.label}</span>
             <span style={{ fontSize: 9, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{d.qtd > 0 ? d.qtd : '—'}</span>
           </div>
         );
