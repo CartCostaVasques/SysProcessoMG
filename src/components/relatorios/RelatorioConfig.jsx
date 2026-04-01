@@ -18,6 +18,8 @@ const EMPTY = {
   periodo_mes: '', periodo_ano: '',
   agendamento: 'manual', hora_envio: '18:00', dia_semana: 1,
   incluir_detalhado: true, incluir_categoria: false,
+  incluir_agrupado_resp: false, incluir_individual_resp: false,
+  destinatarios_individual: [],
 };
 
 export default function RelatorioConfig() {
@@ -99,6 +101,7 @@ export default function RelatorioConfig() {
         incluir_categoria:        form.incluir_categoria === true,
         incluir_agrupado_resp:    form.incluir_agrupado_resp === true,
         incluir_individual_resp:  form.incluir_individual_resp === true,
+        destinatarios_individual: form.incluir_individual_resp ? (form.destinatarios_individual || []) : [],
       };
       if (modal === 'novo') {
         const { error } = await sb.from('relatorio_config').insert(payload);
@@ -315,7 +318,44 @@ export default function RelatorioConfig() {
                 )}
               </div>
 
-              {/* Período */}
+              {/* Seleção de responsáveis para e-mail individual */}
+              {form.incluir_individual_resp && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>
+                      Responsáveis que recebem e-mail individual
+                      <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', marginLeft: 6 }}>(vazio = todos ativos)</span>
+                    </label>
+                    <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
+                      onClick={() => {
+                        const ativos = (usuarios || []).filter(u => u.ativo && u.email).map(u => u.id);
+                        setF('destinatarios_individual', ativos);
+                      }}>
+                      ✓ Marcar todos os ativos
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {(usuarios || []).filter(u => u.ativo && u.email).map(u => {
+                      const sel = (form.destinatarios_individual || []).includes(u.id);
+                      return (
+                        <button key={u.id} type="button"
+                          className={`btn btn-sm ${sel ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => {
+                            const atual = form.destinatarios_individual || [];
+                            setF('destinatarios_individual', sel ? atual.filter(id => id !== u.id) : [...atual, u.id]);
+                          }}>
+                          {u.nome_simples}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(usuarios || []).filter(u => u.ativo && !u.email).length > 0 && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-faint)' }}>
+                      ⚠ Responsáveis sem e-mail cadastrado não aparecem na lista.
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Período de busca</label>
                 <select className="form-select" value={form.periodo_tipo||'dias'} onChange={e => {
