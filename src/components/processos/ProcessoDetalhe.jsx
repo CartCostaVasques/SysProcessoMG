@@ -1197,6 +1197,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 }
 
 // ── Modal Principal ───────────────────────────────────────────
+export { ModalTelaAndamento };
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
   const [aba, setAba]                   = useState('dados');
@@ -1205,7 +1206,6 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const [salvando, setSalvando]         = useState(false);
   const [modalStatus, setModalStatus]   = useState(false);
   const [modalNovoInt, setModalNovoInt] = useState(false);
-  const [modalTelaAnd, setModalTelaAnd] = useState(false);
 
   // Sincroniza se o processo mudar externamente
   useEffect(() => { if (!editando) setForm({ ...processo }); }, [processo]);
@@ -1269,7 +1269,6 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {!editando && (
                 <>
-                  <button className="btn btn-secondary btn-sm" onClick={() => setModalTelaAnd(true)}>📋 Tela Andamento</button>
                   <button className="btn btn-secondary btn-sm" onClick={() => setModalStatus(true)}
                     style={{ background: conf.cor + '18', borderColor: conf.cor, color: conf.cor }}>
                     {conf.icon} Alterar Status
@@ -1353,7 +1352,6 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
           </div>
         </Portal>
       )}
-      {modalTelaAnd && <ModalTelaAndamento onClose={() => setModalTelaAnd(false)} />}
       {modalStatus && (
         <ModalAlterarStatus
           processo={form}
