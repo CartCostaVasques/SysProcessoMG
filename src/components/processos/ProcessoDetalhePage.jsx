@@ -286,6 +286,7 @@ export default function ProcessoDetalhePage() {
     return (!busca || txt.includes(busca.toLowerCase()))
         && (!filtroStatus ? true
             : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
+            : filtroStatus === 'andamento_reanalise' ? ['Em andamento', 'Em reanálise'].includes(p.status)
             : p.status === filtroStatus)
         && matchData && matchResp;
   }), [processos, busca, filtroStatus, filtroResp, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios]);
@@ -315,7 +316,7 @@ export default function ProcessoDetalhePage() {
     return `${nomeMes} / ${filtroAno}`;
   }, [modoData, dtInicio, dtFim, filtroMes, filtroAno]);
 
-  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus || 'Todos os status';
+  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus === 'andamento_reanalise' ? 'And. + Reanálise' : filtroStatus || 'Todos os status';
 
   const imprimirLista = () => imprimir({
     titulo: 'Relatório de Processos',
@@ -338,11 +339,11 @@ export default function ProcessoDetalhePage() {
     cartorio, usuarios, andamentos, interessados,
   });
 
-  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp
+  const temFiltroAtivo = !!(busca || filtroStatus !== 'andamento_reanalise' || filtroResp
     || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0'));
 
   const limparFiltros = () => {
-    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp('');
+    setBusca(''); setFiltroStatus('andamento_reanalise'); setFiltroResp('');
     setModoData('mes');
     setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
     setFiltroAno(String(new Date().getFullYear()));
