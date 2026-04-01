@@ -20,24 +20,36 @@ function MiniChart({ data, color = 'var(--color-text-muted)', height = 36 }) {
   );
 }
 
-function BarChart({ data, color = 'var(--color-border-light)' }) {
-  const max = Math.max(...data.map(d => d.value)) || 1;
+function BarChart({ data }) {
+  const maxVal = Math.max(...data.map(d => d.valor)) || 1;
+  const fmtBRL = (v) => v >= 1000
+    ? 'R$ ' + (v / 1000).toFixed(1).replace('.', ',') + 'k'
+    : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
-      {data.map((d, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <div
-            style={{
-              width: '100%',
-              height: Math.max(2, (d.value / max) * 52),
-              background: d.highlight ? 'var(--color-accent)' : color,
-              borderRadius: '2px 2px 0 0',
-              transition: 'height 0.3s ease',
-            }}
-          />
-          <span style={{ fontSize: 9, color: 'var(--color-text-faint)', whiteSpace: 'nowrap' }}>{d.label}</span>
-        </div>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 100, paddingTop: 8 }}>
+      {data.map((d, i) => {
+        const barH = Math.max(4, (d.valor / maxVal) * 80);
+        const ativo = d.highlight;
+        return (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+            {/* Barra */}
+            <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 80 }}>
+              <div style={{
+                width: '80%', height: barH,
+                background: ativo ? 'var(--color-accent)' : 'var(--color-border-light)',
+                borderRadius: '3px 3px 0 0',
+                transition: 'height 0.3s ease',
+                position: 'relative',
+              }} title={fmtBRL(d.valor)} />
+            </div>
+            {/* Mês */}
+            <span style={{ fontSize: 9, color: ativo ? 'var(--color-accent)' : 'var(--color-text-faint)', fontWeight: ativo ? 700 : 400, marginTop: 3, whiteSpace: 'nowrap' }}>{d.label}</span>
+            {/* Qtd processos */}
+            <span style={{ fontSize: 9, color: 'var(--color-text-faint)', fontFamily: 'var(--font-mono)' }}>{d.qtd > 0 ? d.qtd : '—'}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -257,19 +269,18 @@ export default function Dashboard({ setPage }) {
 
   // Processos por mês (6 meses do filtroAno, terminando no mês de referência)
   const porMes = useMemo(() => {
-    const result = [];
-    for (let i = 5; i >= 0; i--) {
-      const m = mesRef - i;
-      const ajuste = m <= 0;
-      const mesNum = ajuste ? m + 12 : m;
-      const anoNum = ajuste ? Number(filtroAno) - 1 : Number(filtroAno);
-      const mes = String(mesNum).padStart(2,'0');
-      const ano = String(anoNum);
-      const qtd = processos.filter(p => p.dt_conclusao?.startsWith(ano) && p.dt_conclusao?.substring(5,7) === mes)
-        .reduce((s,p) => s + parseInt(p.quantidade||1), 0);
-      result.push({ label: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][mesNum-1], value: qtd, highlight: i === 0 });
-    }
-    return result;
+    const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return MESES_ABREV.map((label, idx) => {
+      const mes = String(idx + 1).padStart(2,'0');
+      const doMes = processos.filter(p =>
+        p.dt_conclusao?.startsWith(filtroAno) &&
+        p.dt_conclusao?.substring(5,7) === mes
+      );
+      const valor = doMes.reduce((s,p) => s + parseFloat(p.valor_ato||0), 0);
+      const qtd   = doMes.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
+      const mesAtual = String(hoje.getMonth() + 1).padStart(2,'0');
+      return { label, valor, qtd, highlight: mes === mesAtual && String(hoje.getFullYear()) === filtroAno };
+    });
   }, [processos, filtroAno]);
 
   const processosPendentes = processos.filter(p => ['Em andamento', 'Devolvido', 'Em reanálise'].includes(p.status)).slice(0, 5);
@@ -470,12 +481,12 @@ export default function Dashboard({ setPage }) {
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-        {/* Processos por mês */}
+        {/* Valor por mês */}
         <div className="card">
           <div className="card-header">
             <div>
-              <div className="card-title">Processos por Mês</div>
-              <div className="card-subtitle">Abertos nos últimos 9 meses</div>
+              <div className="card-title">Valor por Mês — {filtroAno}</div>
+              <div className="card-subtitle">Barra = valor total concluído · número = qtd processos</div>
             </div>
           </div>
           <BarChart data={porMes} />
