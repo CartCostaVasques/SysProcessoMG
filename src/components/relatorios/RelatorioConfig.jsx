@@ -293,6 +293,8 @@ export default function RelatorioConfig() {
                   {[
                     { key: 'incluir_detalhado', label: 'Processos detalhados (lista completa)', sub: 'Uma linha por processo com número, data, espécie, responsável e valor' },
                     { key: 'incluir_categoria', label: 'Resumo por Categoria', sub: 'Tabela agrupada: categoria | quantidade | valor total' },
+                    { key: 'incluir_agrupado_resp', label: 'Relatório por Responsável (e-mail único)', sub: 'Um único e-mail para os destinatários com todos os responsáveis agrupados por categoria' },
+                    { key: 'incluir_individual_resp', label: 'E-mail individual por Responsável', sub: 'Cada responsável recebe no seu próprio e-mail apenas os processos dele, agrupados por categoria' },
                   ].map(op => (
                     <div key={op.key} onClick={() => setF(op.key, !form[op.key])}
                       style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${form[op.key] ? 'var(--color-accent)' : 'var(--color-border)'}`, background: form[op.key] ? 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))' : 'var(--color-surface)', cursor: 'pointer' }}>
@@ -306,7 +308,7 @@ export default function RelatorioConfig() {
                     </div>
                   ))}
                 </div>
-                {!form.incluir_detalhado && !form.incluir_categoria && (
+                {!form.incluir_detalhado && !form.incluir_categoria && !form.incluir_agrupado_resp && !form.incluir_individual_resp && (
                   <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-danger)' }}>⚠ Selecione ao menos uma seção.</div>
                 )}
               </div>
