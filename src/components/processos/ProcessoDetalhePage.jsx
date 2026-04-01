@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 import ProcessoDetalhe from './ProcessoDetalhe.jsx';
+import { ModalTelaAndamento } from './ProcessoDetalhe.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 function formatBRL(v) {
@@ -232,6 +233,7 @@ export default function ProcessoDetalhePage() {
   const [filtroMes,    setFiltroMes]    = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno,    setFiltroAno]    = useState(String(new Date().getFullYear()));
   const [modoData,     setModoData]     = useState('mes');
+  const [modalTelaAnd, setModalTelaAnd] = useState(false);
   const hojeStr   = new Date().toISOString().slice(0, 10);
   const inicioMes = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-01`;
   const [dtInicio, setDtInicio] = useState(inicioMes);
@@ -284,7 +286,6 @@ export default function ProcessoDetalhePage() {
     return (!busca || txt.includes(busca.toLowerCase()))
         && (!filtroStatus ? true
             : filtroStatus === 'pendentes' ? STATUS_PENDENTES.includes(p.status)
-            : filtroStatus === 'andamento_reanalise' ? ['Em andamento', 'Em reanálise'].includes(p.status)
             : p.status === filtroStatus)
         && matchData && matchResp;
   }), [processos, busca, filtroStatus, filtroResp, filtroMes, filtroAno, modoData, dtInicio, dtFim, interessados, usuarios]);
@@ -314,7 +315,7 @@ export default function ProcessoDetalhePage() {
     return `${nomeMes} / ${filtroAno}`;
   }, [modoData, dtInicio, dtFim, filtroMes, filtroAno]);
 
-  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus === 'andamento_reanalise' ? 'And. + Reanálise' : filtroStatus || 'Todos os status';
+  const labelStatus = filtroStatus === 'pendentes' ? 'Pendentes' : filtroStatus || 'Todos os status';
 
   const imprimirLista = () => imprimir({
     titulo: 'Relatório de Processos',
@@ -337,11 +338,11 @@ export default function ProcessoDetalhePage() {
     cartorio, usuarios, andamentos, interessados,
   });
 
-  const temFiltroAtivo = !!(busca || filtroStatus !== 'andamento_reanalise' || filtroResp
+  const temFiltroAtivo = !!(busca || filtroStatus !== 'Em andamento' || filtroResp
     || modoData !== 'mes' || filtroMes !== String(new Date().getMonth()+1).padStart(2,'0'));
 
   const limparFiltros = () => {
-    setBusca(''); setFiltroStatus('andamento_reanalise'); setFiltroResp('');
+    setBusca(''); setFiltroStatus('Em andamento'); setFiltroResp('');
     setModoData('mes');
     setFiltroMes(String(new Date().getMonth()+1).padStart(2,'0'));
     setFiltroAno(String(new Date().getFullYear()));
@@ -374,6 +375,9 @@ export default function ProcessoDetalhePage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setModalTelaAnd(true)}>
+            📋 Tela Andamento
+          </button>
           <button className="btn btn-secondary btn-sm" disabled={lista.length === 0}
             onClick={modoVis === 'lista' ? imprimirLista : imprimirTodosResponsaveis}>
             🖨 {modoVis === 'lista' ? 'Imprimir Lista' : 'Imprimir Todos'}
@@ -400,7 +404,7 @@ export default function ProcessoDetalhePage() {
 
         <select className="form-select" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
           <option value="">Todos os status</option>
-          <option value="andamento_reanalise">Em andamento + Reanálise</option>
+          <option value="pendentes">⏳ Pendentes (todos)</option>
           <option value="Em andamento">Em andamento</option>
           <option value="Devolvido">Devolvido</option>
           <option value="Em reanálise">Em reanálise</option>
@@ -494,6 +498,7 @@ export default function ProcessoDetalhePage() {
               ))}
             </div>
       )}
+      {modalTelaAnd && <ModalTelaAndamento onClose={() => setModalTelaAnd(false)} />}
     </div>
   );
 }
