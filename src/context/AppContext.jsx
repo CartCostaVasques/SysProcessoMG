@@ -354,13 +354,26 @@ export function AppProvider({ children }) {
   const editProcesso   = useCallback(async (id, d) => { try {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
 
-  const alterarStatusProcesso = useCallback(async (processoId, statusAtual, novoStatus, obs = '') => {
+  const alterarStatusProcesso = useCallback(async (processoId, statusAtual, novoStatus, obs = '', dtCustom = null, historicoId = null) => {
     try {
-      const hoje = new Date().toISOString().split('T')[0];
+      const dtUsar = dtCustom || new Date().toISOString().split('T')[0];
+
+      if (historicoId) {
+        // Modo edição — apenas atualiza o registro do histórico
+        await supabase.from('processo_historico').update({
+          status_novo: novoStatus,
+          dt_alteracao: dtUsar,
+          obs: obs || null,
+        }).eq('id', historicoId);
+        await fetchProcessoHistorico();
+        addToast('Registro atualizado!', 'success');
+        return;
+      }
+
+      // Modo novo — altera status do processo e insere histórico
       const updates = { status: novoStatus };
-      if (novoStatus === 'Concluído') updates.dt_conclusao = hoje;
-      if (novoStatus === 'Encerrado') updates.dt_encerramento = hoje;
-      // Se saindo de Concluído/Encerrado, limpa as datas
+      if (novoStatus === 'Concluído') updates.dt_conclusao = dtUsar;
+      if (novoStatus === 'Encerrado') updates.dt_encerramento = dtUsar;
       if (novoStatus !== 'Concluído') updates.dt_conclusao = null;
       if (novoStatus !== 'Encerrado') updates.dt_encerramento = null;
 
@@ -368,12 +381,11 @@ export function AppProvider({ children }) {
       if (error) throw error;
       setProcessos(p => p.map(i => i.id === processoId ? { ...i, ...data } : i));
 
-      // Registra no histórico
       await supabase.from('processo_historico').insert({
         processo_id: processoId,
         status_anterior: statusAtual,
         status_novo: novoStatus,
-        dt_alteracao: hoje,
+        dt_alteracao: dtUsar,
         obs: obs || null,
         usuario_id: usuario?.id || null,
       });
