@@ -95,8 +95,10 @@ export default function RelatorioConfig() {
         agendamento:         form.agendamento,
         hora_envio:          form.hora_envio,
         dia_semana:          Number(form.dia_semana),
-        incluir_detalhado:   form.incluir_detalhado !== false,
-        incluir_categoria:   form.incluir_categoria === true,
+        incluir_detalhado:        form.incluir_detalhado !== false,
+        incluir_categoria:        form.incluir_categoria === true,
+        incluir_agrupado_resp:    form.incluir_agrupado_resp === true,
+        incluir_individual_resp:  form.incluir_individual_resp === true,
       };
       if (modal === 'novo') {
         const { error } = await sb.from('relatorio_config').insert(payload);
