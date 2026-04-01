@@ -6,7 +6,7 @@ import { formatDate } from '../../data/mockData.js';
 const HOJE = () => new Date().toISOString().split('T')[0];
 const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vendedor', 'Credor', 'Devedor', 'Representante', 'Outros'];
 const STATUS_OPTS   = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
-const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Jurídico', 'Arquivado', 'Outros'];
+const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
 const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
 const STATUS_CONF_GLOBAL = {
@@ -21,17 +21,22 @@ const STATUS_CONF_GLOBAL = {
 const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
 
 // ── Modal Alterar Status ──────────────────────────────────────
-function ModalAlterarStatus({ processo, onClose, onSalvar }) {
-  const [novoStatus, setNovoStatus] = useState('');
-  const [obs, setObs]               = useState('');
+function ModalAlterarStatus({ processo, onClose, onSalvar, registroEditar = null }) {
+  const hoje = new Date().toISOString().split('T')[0];
+  const [novoStatus, setNovoStatus] = useState(registroEditar?.status_novo || '');
+  const [obs, setObs]               = useState(registroEditar?.obs || '');
+  const [dtAlteracao, setDtAlteracao] = useState(registroEditar?.dt_alteracao?.split('T')[0] || hoje);
   const [salvando, setSalvando]     = useState(false);
+  const editando = !!registroEditar;
 
-  const statusDisponiveis = STATUS_OPTS.filter(s => s !== processo.status);
+  const statusDisponiveis = editando
+    ? STATUS_OPTS
+    : STATUS_OPTS.filter(s => s !== processo.status);
 
   const salvar = async () => {
     if (!novoStatus) return;
     setSalvando(true);
-    await onSalvar(novoStatus, obs);
+    await onSalvar(novoStatus, obs, dtAlteracao, registroEditar?.id);
     setSalvando(false);
     onClose();
   };
@@ -41,21 +46,22 @@ function ModalAlterarStatus({ processo, onClose, onSalvar }) {
       <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
         <div style={{ width: 'min(460px, 96vw)', background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div className="modal-header">
-            <div style={{ fontWeight: 700, fontSize: 15 }}>Alterar Status do Processo</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{editando ? '✎ Editar Registro de Status' : 'Alterar Status do Processo'}</div>
             <button className="btn-icon" onClick={onClose}>✕</button>
           </div>
           <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Status atual */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Status atual</div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: (STATUS_CONF_GLOBAL[processo.status]?.cor || '#888') + '22', border: `1px solid ${STATUS_CONF_GLOBAL[processo.status]?.cor || '#888'}` }}>
-                <span>{STATUS_CONF_GLOBAL[processo.status]?.icon}</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: STATUS_CONF_GLOBAL[processo.status]?.cor }}>{processo.status}</span>
+            {!editando && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Status atual</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: (STATUS_CONF_GLOBAL[processo.status]?.cor || '#888') + '22', border: `1px solid ${STATUS_CONF_GLOBAL[processo.status]?.cor || '#888'}` }}>
+                  <span>{STATUS_CONF_GLOBAL[processo.status]?.icon}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: STATUS_CONF_GLOBAL[processo.status]?.cor }}>{processo.status}</span>
+                </div>
               </div>
-            </div>
+            )}
             {/* Novo status */}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Novo status *</label>
+              <label className="form-label">{editando ? 'Status' : 'Novo status'} *</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {statusDisponiveis.map(s => {
                   const c = STATUS_CONF_GLOBAL[s] || {};
@@ -69,6 +75,11 @@ function ModalAlterarStatus({ processo, onClose, onSalvar }) {
                 })}
               </div>
             </div>
+            {/* Data da alteração */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Data da alteração</label>
+              <input className="form-input" type="date" value={dtAlteracao} onChange={e => setDtAlteracao(e.target.value)} style={{ maxWidth: 200 }} />
+            </div>
             {/* Observação */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Observação (opcional)</label>
@@ -78,7 +89,7 @@ function ModalAlterarStatus({ processo, onClose, onSalvar }) {
           <div className="modal-footer" style={{ gap: 8 }}>
             <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button className="btn btn-primary" onClick={salvar} disabled={!novoStatus || salvando}>
-              {salvando ? 'Salvando...' : '✓ Confirmar Alteração'}
+              {salvando ? 'Salvando...' : editando ? '✓ Salvar Edição' : '✓ Confirmar Alteração'}
             </button>
           </div>
         </div>
@@ -88,9 +99,10 @@ function ModalAlterarStatus({ processo, onClose, onSalvar }) {
 }
 
 // ── Aba: Histórico de Situações ───────────────────────────────
-function TabHistorico({ processoId }) {
-  const { processoHistorico } = useApp();
+function TabHistorico({ processoId, processo }) {
+  const { processoHistorico, alterarStatusProcesso } = useApp();
   const historico = processoHistorico.filter(h => h.processo_id === processoId);
+  const [editando, setEditando] = useState(null);
 
   if (historico.length === 0) {
     return (
@@ -104,32 +116,25 @@ function TabHistorico({ processoId }) {
 
   return (
     <div style={{ position: 'relative', paddingLeft: 28 }}>
-      {/* Linha vertical */}
       <div style={{ position: 'absolute', left: 10, top: 8, bottom: 8, width: 2, background: 'var(--color-border)', borderRadius: 2 }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
         {historico.map((h, i) => {
           const c = STATUS_CONF_GLOBAL[h.status_novo] || { cor: '#888', icon: '●' };
           return (
             <div key={h.id} style={{ position: 'relative', paddingBottom: 20 }}>
-              {/* Bolinha na linha do tempo */}
               <div style={{ position: 'absolute', left: -22, top: 4, width: 14, height: 14, borderRadius: '50%', background: c.cor, border: '2px solid var(--color-surface)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }} />
               <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: h.obs ? 6 : 0 }}>
-                  {/* Novo status */}
                   <span style={{ fontSize: 12, fontWeight: 700, color: c.cor }}>{c.icon} {h.status_novo}</span>
-                  {/* De qual status veio */}
                   {h.status_anterior && (
-                    <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>
-                      ← {h.status_anterior}
-                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>← {h.status_anterior}</span>
                   )}
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-                    {/* Data */}
                     <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>{formatDate(h.dt_alteracao)}</span>
-                    {/* Usuário */}
                     {h.usuarios?.nome_simples && (
                       <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>por {h.usuarios.nome_simples}</span>
                     )}
+                    <button className="btn-icon btn-sm" style={{ fontSize: 12, opacity: 0.7 }} onClick={() => setEditando(h)} title="Editar">✎</button>
                   </div>
                 </div>
                 {h.obs && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic', borderTop: '1px solid var(--color-border)', paddingTop: 6, marginTop: 4 }}>"{h.obs}"</div>}
@@ -138,6 +143,17 @@ function TabHistorico({ processoId }) {
           );
         })}
       </div>
+      {editando && (
+        <ModalAlterarStatus
+          processo={processo}
+          registroEditar={editando}
+          onClose={() => setEditando(null)}
+          onSalvar={async (novoStatus, obs, dtAlteracao, id) => {
+            await alterarStatusProcesso(processoId, null, novoStatus, obs, dtAlteracao, id);
+            setEditando(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -671,20 +687,15 @@ function TabAndamentos({ processoId, usuarios }) {
 }
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
-function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado) {
-  // Usa o usuário logado como requerente (quem assina o requerimento)
-  const req = usuarioLogado
-    ? {
-        nome:     usuarioLogado.nome_completo || usuarioLogado.nome_simples || '',
-        cpf:      usuarioLogado.cpf      || '',
-        rg:       usuarioLogado.rg       || '',
-        endereco: usuarioLogado.endereco || '',
-        cidade:   usuarioLogado.cidade   || 'Paranatinga - MT',
-        cep:      usuarioLogado.cep      || '',
-        email:    usuarioLogado.email    || '',
-        telefone: usuarioLogado.celular  || '',
-      }
-    : { nome: '', cpf: '', rg: '', endereco: '', cidade: 'Paranatinga - MT', cep: '', email: '', telefone: '' };
+function gerarRequerimento(proc, certidoes, usuarios, cartorio) {
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  // Busca o primeiro interessado do processo na tabela usuarios pelo nome
+  const primeiraNome = partes[0]?.nome || '';
+  const usr = usuarios.find(u => u.nome_completo?.toLowerCase().trim() === primeiraNome.toLowerCase().trim())
+           || usuarios.find(u => u.nome_simples?.toLowerCase().trim() === primeiraNome.toLowerCase().trim());
+  const req = usr
+    ? { nome: usr.nome_completo||'', cpf: usr.cpf||'', rg: usr.rg||'', endereco: usr.endereco||'', cidade: usr.cidade||'', cep: usr.cep||'', email: usr.email||'', telefone: usr.celular||'' }
+    : { nome: primeiraNome, cpf: '', rg: '', endereco: '', cidade: '', cep: '', email: '', telefone: '' };
 
   const hoje         = new Date().toLocaleDateString('pt-BR');
   const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
@@ -943,7 +954,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 }
 
 
-function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso, usuario }) {
+function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso }) {
   const [certLocal, setCertLocal] = useState(
     () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
   );
@@ -1013,7 +1024,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   onBlur={flush}
                 />
                 <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
-                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario)}>
+                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio)}>
                   🖨 Imprimir
                 </button>
                 <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
@@ -1028,7 +1039,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
 // ── Modal Principal ───────────────────────────────────────────
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario } = useApp();
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
   const [aba, setAba]                   = useState('dados');
   const [editando, setEditando]         = useState(false);
   const [form, setForm]                 = useState({ ...processo });
@@ -1068,8 +1079,8 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
 
   const descartar = () => { setForm({ ...processo }); setEditando(false); };
 
-  const handleAlterarStatus = async (novoStatus, obs) => {
-    await alterarStatusProcesso(processo.id, processo.status, novoStatus, obs);
+  const handleAlterarStatus = async (novoStatus, obs, dtAlteracao) => {
+    await alterarStatusProcesso(processo.id, processo.status, novoStatus, obs, dtAlteracao);
   };
 
   const conf = STATUS_CONF_GLOBAL[form.status] || { cor: 'var(--color-text-faint)', sigla: '??', icon: '?' };
@@ -1139,13 +1150,13 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabAndamentos processoId={processo.id} usuarios={usuarios} />
             )}
             {aba === 'historico' && (
-              <TabHistorico processoId={processo.id} />
+              <TabHistorico processoId={processo.id} processo={processo} />
             )}
             {aba === 'oficios' && (
               <TabOficiosExpedidos processoId={processo.id} />
             )}
             {aba === 'certidoes' && (
-              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} usuario={usuario} />
+              <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} />
             )}
           </div>
 
