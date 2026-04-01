@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
@@ -6,7 +6,7 @@ import { formatDate } from '../../data/mockData.js';
 const HOJE = () => new Date().toISOString().split('T')[0];
 const TIPOS_VINCULO = ['Outorgante', 'Outorgado', 'Anuente', 'Comprador', 'Vendedor', 'Credor', 'Devedor', 'Representante', 'Outros'];
 const STATUS_OPTS   = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
-const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
+const TIPOS_AND     = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Jurídico', 'Arquivado', 'Outros'];
 const TIPOS_CERT    = ['Certidão Atualizada', 'Certidão de Ônus', 'Cadeia Dominial', 'Nascimento', 'Casamento', 'Óbito', 'Matrícula', 'Transcrição', 'Averbação', 'Outros'];
 
 const STATUS_CONF_GLOBAL = {
@@ -17,8 +17,167 @@ const STATUS_CONF_GLOBAL = {
   'Encerrado':    { cor: '#64748b',               sigla: 'EN', icon: '🔒' },
 };
 
-// Status que ainda estão "na fila" (pendentes)
 const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+
+const fmtNomeInteressados = (partes) => {
+  try {
+    const preposicoes = new Set(['de','da','do','das','dos','e','a','o']);
+    const lista = JSON.parse(partes || '[]');
+    return lista.slice(0, 2).map(p => {
+      const palavras = (p.nome || '').trim().split(/\s+/);
+      const nomes = [];
+      for (const w of palavras) {
+        if (!preposicoes.has(w.toLowerCase())) { nomes.push(w); if (nomes.length === 2) break; }
+      }
+      return nomes.join(' ');
+    }).filter(Boolean).join(' · ');
+  } catch { return '—'; }
+};
+
+function ModalTelaAndamento({ onClose }) {
+  const { processos, andamentos, interessados } = useApp();
+  const [filtroStatus, setFiltroStatus] = useState('pendentes'); // pendentes|todos|Em andamento|Devolvido|Em reanálise
+  const [filtroAnd, setFiltroAnd]       = useState('pendentes'); // pendentes|finalizados|todos
+  const [busca, setBusca]               = useState('');
+  const hoje = new Date().toISOString().split('T')[0];
+
+  const fmtBRL = (v) => Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const lista = useMemo(() => {
+    // Filtra processos por status
+    const procsFiltrados = processos.filter(p => {
+      if (filtroStatus === 'pendentes') return STATUS_PENDENTES.includes(p.status);
+      if (filtroStatus === 'todos') return true;
+      return p.status === filtroStatus;
+    });
+
+    return procsFiltrados.map(p => {
+      // Filtra andamentos deste processo
+      let ands = andamentos.filter(a => a.processo_id === p.id);
+      if (filtroAnd === 'pendentes')   ands = ands.filter(a => !a.concluido);
+      if (filtroAnd === 'finalizados') ands = ands.filter(a => a.concluido);
+
+      // Só mostra se tiver andamentos após filtro
+      if (ands.length === 0) return null;
+
+      // Busca
+      if (busca) {
+        const q = busca.toLowerCase();
+        const nomes = fmtNomeInteressados(p.partes).toLowerCase();
+        if (!(String(p.numero_interno).includes(q) || nomes.includes(q) || (p.especie||'').toLowerCase().includes(q))) return null;
+      }
+
+      return { proc: p, ands };
+    }).filter(Boolean);
+  }, [processos, andamentos, filtroStatus, filtroAnd, busca]);
+
+  return (
+    <Portal>
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()} style={{ alignItems: 'flex-start', paddingTop: 40 }}>
+        <div style={{ width: 'min(1000px, 96vw)', background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', maxHeight: '88vh', overflow: 'hidden' }}>
+          {/* Header */}
+          <div className="modal-header">
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>📋 Tela de Andamentos</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{lista.length} processo(s) encontrado(s)</div>
+            </div>
+            <button className="btn-icon" onClick={onClose}>✕</button>
+          </div>
+
+          {/* Filtros */}
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Busca */}
+            <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
+              <span className="search-bar-icon">⌕</span>
+              <input className="search-bar-input" placeholder="Buscar por nº interno, interessado, espécie..." value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+            {/* Status processo */}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Status:</span>
+              {[['pendentes','Pendentes (todos)'],['Em andamento','Em andamento'],['Devolvido','Devolvido'],['Em reanálise','Em reanálise'],['todos','Todos']].map(([v, l]) => (
+                <button key={v} onClick={() => setFiltroStatus(v)}
+                  className={`btn btn-sm ${filtroStatus === v ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11 }}>{l}</button>
+              ))}
+            </div>
+            {/* Filtro andamento */}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Andamento:</span>
+              {[['pendentes','Pendentes'],['finalizados','Finalizados'],['todos','Todos']].map(([v, l]) => (
+                <button key={v} onClick={() => setFiltroAnd(v)}
+                  className={`btn btn-sm ${filtroAnd === v ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ fontSize: 11 }}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tabela */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
+            {lista.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-faint)' }}>Nenhum processo encontrado com os filtros selecionados.</div>
+            ) : (
+              <table className="data-table" style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 90 }}>N. Interno</th>
+                    <th style={{ width: 100 }}>Dt. Abertura</th>
+                    <th>Interessados</th>
+                    <th>Andamentos</th>
+                    <th style={{ width: 110, textAlign: 'right' }}>Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lista.map(({ proc, ands }) => {
+                    const nomes = fmtNomeInteressados(proc.partes);
+                    const conf = STATUS_CONF_GLOBAL[proc.status] || {};
+                    return (
+                      <tr key={proc.id}>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, verticalAlign: 'top' }}>
+                          <div>{proc.numero_interno}</div>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: conf.cor + '22', color: conf.cor, fontWeight: 700, fontFamily: 'sans-serif' }}>{proc.status}</span>
+                        </td>
+                        <td style={{ fontSize: 12, verticalAlign: 'top' }}>{formatDate(proc.dt_abertura)}</td>
+                        <td style={{ fontSize: 12, verticalAlign: 'top', color: 'var(--color-text-muted)' }}>{nomes || '—'}</td>
+                        <td style={{ verticalAlign: 'top' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {ands.map(a => {
+                              const vencido = a.vencimento && a.vencimento < hoje && !a.concluido;
+                              return (
+                                <div key={a.id} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 'var(--radius-md)', background: a.concluido ? 'color-mix(in srgb, var(--color-success) 8%, transparent)' : vencido ? 'color-mix(in srgb, var(--color-danger) 8%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${a.concluido ? 'color-mix(in srgb, var(--color-success) 20%, transparent)' : vencido ? 'color-mix(in srgb, var(--color-danger) 20%, transparent)' : 'var(--color-border)'}` }}>
+                                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                    {a.concluido && <span style={{ color: 'var(--color-success)', fontSize: 10 }}>✓</span>}
+                                    {a.tipo && <span className="badge badge-neutral" style={{ fontSize: 10, padding: '1px 6px' }}>{a.tipo}</span>}
+                                    <span style={{ color: 'var(--color-text)' }}>{a.descricao}</span>
+                                  </div>
+                                  {a.vencimento && (
+                                    <div style={{ fontSize: 10, color: vencido ? 'var(--color-danger)' : 'var(--color-text-faint)', marginTop: 2 }}>
+                                      {vencido ? '⚠ VENCIDO — ' : '⏰ '}{formatDate(a.vencimento)}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, verticalAlign: 'top', color: 'var(--color-success)' }}>
+                          {proc.valor_ato > 0 ? `R$ ${fmtBRL(proc.valor_ato)}` : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
 
 // ── Modal Alterar Status ──────────────────────────────────────
 function ModalAlterarStatus({ processo, onClose, onSalvar, registroEditar = null }) {
@@ -1046,6 +1205,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const [salvando, setSalvando]         = useState(false);
   const [modalStatus, setModalStatus]   = useState(false);
   const [modalNovoInt, setModalNovoInt] = useState(false);
+  const [modalTelaAnd, setModalTelaAnd] = useState(false);
 
   // Sincroniza se o processo mudar externamente
   useEffect(() => { if (!editando) setForm({ ...processo }); }, [processo]);
@@ -1109,6 +1269,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               {!editando && (
                 <>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setModalTelaAnd(true)}>📋 Tela Andamento</button>
                   <button className="btn btn-secondary btn-sm" onClick={() => setModalStatus(true)}
                     style={{ background: conf.cor + '18', borderColor: conf.cor, color: conf.cor }}>
                     {conf.icon} Alterar Status
@@ -1192,6 +1353,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
           </div>
         </Portal>
       )}
+      {modalTelaAnd && <ModalTelaAndamento onClose={() => setModalTelaAnd(false)} />}
       {modalStatus && (
         <ModalAlterarStatus
           processo={form}
