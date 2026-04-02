@@ -63,6 +63,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [selecionado, setSelecionado] = useState(null);
   const [respId, setRespId]           = useState(usuario?.id || '');
   const [data, setData]               = useState(HOJE());
+  const [concluido, setConcluido]     = useState(true);
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const [salvando, setSalvando]       = useState(false);
   const primeiroRef = useRef(null);
@@ -114,8 +115,8 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
       especie:        selecionado.especie,
       responsavel_id: respId || null,
       dt_abertura:    dt,
-      dt_conclusao:   dt,
-      status:         'Concluído',
+      dt_conclusao:   concluido ? dt : null,
+      status:         concluido ? 'Concluído' : 'Em andamento',
       valor_ato:      parseBRL(l.valor),
       partes:         '[]',
       municipio:      'Paranatinga',
@@ -226,31 +227,55 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
             </div>
           )}
 
-          {/* Responsável + Data — escolha única */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Responsável</label>
-              <select className="form-select" value={respId} onChange={e => setRespId(e.target.value)}>
-                <option value="">—</option>
-                {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome_simples}</option>)}
-              </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Data</label>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                {[['Hoje', HOJE()],['Ontem', ONTEM()]].map(([l, v]) => (
-                  <button key={l} onClick={() => setData(v)} style={{
-                    padding: '8px 14px', borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${data===v ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                    background: data===v ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
-                    color: data===v ? 'var(--color-text)' : 'var(--color-text-muted)',
-                    cursor: 'pointer', fontSize: 13, fontWeight: data===v ? 600 : 400,
-                  }}>{l}</button>
-                ))}
-                <input type="date" className="form-input" value={data} onChange={e => setData(e.target.value)}
-                  style={{ fontSize: 13, height: 36, width: 140, padding: '0 8px' }} />
+          {/* Responsável + Concluído + Data */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Responsável</label>
+                <select className="form-select" value={respId} onChange={e => setRespId(e.target.value)}>
+                  <option value="">—</option>
+                  {usuarios.filter(u => u.ativo).map(u => <option key={u.id} value={u.id}>{u.nome_simples}</option>)}
+                </select>
+              </div>
+              {/* Toggle Concluído */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Status</label>
+                <div onClick={() => setConcluido(c => !c)} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                  padding: '8px 14px', borderRadius: 'var(--radius-md)', height: 36,
+                  border: `2px solid ${concluido ? 'var(--color-success)' : 'var(--color-border)'}`,
+                  background: concluido ? 'color-mix(in srgb, var(--color-success) 10%, var(--color-surface))' : 'var(--color-surface-2)',
+                  userSelect: 'none',
+                }}>
+                  <div style={{ width: 36, height: 20, borderRadius: 10, background: concluido ? 'var(--color-success)' : 'var(--color-surface-3)', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                    <div style={{ position: 'absolute', top: 3, left: concluido ? 18 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: concluido ? 'var(--color-success)' : 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                    {concluido ? 'Concluído' : 'Em andamento'}
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Data — só aparece se concluído */}
+            {concluido && (
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Data de conclusão</label>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {[['Hoje', HOJE()],['Ontem', ONTEM()]].map(([l, v]) => (
+                    <button key={l} onClick={() => setData(v)} style={{
+                      padding: '8px 14px', borderRadius: 'var(--radius-md)',
+                      border: `1px solid ${data===v ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                      background: data===v ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+                      color: data===v ? 'var(--color-text)' : 'var(--color-text-muted)',
+                      cursor: 'pointer', fontSize: 13, fontWeight: data===v ? 600 : 400,
+                    }}>{l}</button>
+                  ))}
+                  <input type="date" className="form-input" value={data} onChange={e => setData(e.target.value)}
+                    style={{ fontSize: 13, height: 36, width: 140, padding: '0 8px' }} />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Grade de lançamentos */}
@@ -292,7 +317,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
           </div>
 
           <div style={{ padding: '6px 10px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', fontSize: 11, color: 'var(--color-text-faint)' }}>
-            Status: Concluído · Dt. Cadastro = Dt. Conclusão · Enter avança entre campos
+            {concluido ? 'Status: Concluído · Dt. Abertura = Dt. Conclusão' : 'Status: Em andamento · Sem data de conclusão'} · Enter avança entre campos
           </div>
         </div>
         <div className="modal-footer">
