@@ -56,31 +56,37 @@ const SERVICOS_RAPIDOS = [
 // ─── Modal Cadastro Rápido ───────────────────────────────────
 const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 
-function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
+function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const { servicos, usuario } = useApp();
+  const [modo, setModo]               = useState(null); // null | 'certidoes' | 'atos'
+  const [categoriaAtos, setCategoriaAtos] = useState('');
   const [selecionado, setSelecionado] = useState(null);
   const [respId, setRespId]           = useState(usuario?.id || '');
   const [data, setData]               = useState(HOJE());
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const [salvando, setSalvando]       = useState(false);
-  const [duplicados, setDuplicados]   = useState({}); // { idx: true }
   const primeiroRef = useRef(null);
 
   useEffect(() => { primeiroRef.current?.focus(); }, []);
 
-  const setLinha = (idx, k, v) => {
-    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
-    if (k === 'numero') setDuplicados(prev => ({ ...prev, [idx]: false }));
-  };
-  const addLinha = () => setLinhas(prev => [...prev, LINHA_VAZIA()]);
-  const remLinha = (idx) => { setLinhas(prev => prev.filter((_, i) => i !== idx)); setDuplicados(prev => { const n = { ...prev }; delete n[idx]; return n; }); };
+  // Serviços da categoria Certidão de Atos
+  const certidoes = servicos.filter(s => s.categoria === 'Certidao de Atos' || s.categoria === 'Certidão de Atos');
 
-  const checkDuplicado = (idx, valor) => {
-    const base = valor.trim();
-    if (!base) return;
-    const existe = (processos || []).some(p => p.numero_interno.trim() === base);
-    setDuplicados(prev => ({ ...prev, [idx]: existe }));
-  };
+  // Categorias excluindo Certidão de Atos e Reconhecimento de Firma
+  const categoriasAtos = [...new Set(
+    servicos
+      .filter(s => s.categoria !== 'Certidao de Atos' && s.categoria !== 'Certidão de Atos' && s.categoria !== 'Reconhecimento de Firma')
+      .map(s => s.categoria)
+  )].sort();
+
+  // Serviços da categoria selecionada
+  const servicosDaCategoria = categoriaAtos
+    ? servicos.filter(s => s.categoria === categoriaAtos)
+    : [];
+
+  const setLinha = (idx, k, v) => setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [k]: v } : l));
+  const addLinha = () => setLinhas(prev => [...prev, LINHA_VAZIA()]);
+  const remLinha = (idx) => setLinhas(prev => prev.filter((_, i) => i !== idx));
 
   const handleKeyDown = (e, idx) => {
     if (e.key === 'Enter') {
@@ -92,13 +98,14 @@ function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
     }
   };
 
+  const selecionarServico = (svc) => {
+    setSelecionado({ label: svc.subcategoria, categoria: svc.categoria, especie: svc.subcategoria });
+  };
+
   const salvar = async () => {
     if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
     const validas = linhas.filter(l => l.numero.trim());
     if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
-    // Bloqueia se houver duplicados não confirmados
-    const temDuplicado = validas.some((l, idx) => duplicados[linhas.indexOf(l)]);
-    if (temDuplicado) { alert('Corrija ou confirme os números duplicados antes de salvar.'); return; }
     setSalvando(true);
     const dt = data || HOJE();
     await onSalvar(validas.map(l => ({
@@ -116,13 +123,13 @@ function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
     })));
   };
 
-  const btnStyle = (ativo) => ({
-    padding: '10px 14px', textAlign: 'left', cursor: 'pointer',
-    background: ativo ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+  const btnModo = (ativo) => ({
+    flex: 1, padding: '14px 10px', cursor: 'pointer', borderRadius: 'var(--radius-md)',
     border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
-    borderRadius: 'var(--radius-md)', color: ativo ? 'var(--color-text)' : 'var(--color-text-muted)',
-    fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: ativo ? 600 : 400,
-    display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.12s',
+    background: ativo ? 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))' : 'var(--color-surface-2)',
+    color: ativo ? 'var(--color-accent)' : 'var(--color-text-muted)',
+    fontSize: 14, fontWeight: ativo ? 700 : 400, textAlign: 'center',
+    transition: 'all 0.12s', fontFamily: 'var(--font-sans)',
   });
 
   return (
@@ -134,30 +141,90 @@ function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
         </div>
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Tipo de serviço */}
+          {/* Escolha do modo */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Tipo de Serviço *</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {SERVICOS_RAPIDOS.map((s, i) => {
-                // Busca o serviço real no banco — match exato primeiro, depois parcial
-                const svcReal = servicos.find(sv => sv.subcategoria?.toLowerCase() === s.especie.toLowerCase())
-                  || servicos.find(sv => sv.subcategoria?.toLowerCase().includes(s.especie.toLowerCase()));
-                const item = svcReal
-                  ? { label: s.label, categoria: svcReal.categoria, especie: svcReal.subcategoria }
-                  : s;
-                const ativo = selecionado?.label === s.label;
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button style={btnModo(modo === 'certidoes')} onClick={() => { setModo('certidoes'); setSelecionado(null); setCategoriaAtos(''); }}>
+                📄 Certidões
+              </button>
+              <button style={btnModo(modo === 'atos')} onClick={() => { setModo('atos'); setSelecionado(null); setCategoriaAtos(''); }}>
+                🏛 Outros Serviços
+              </button>
+            </div>
+          </div>
+
+          {/* Certidões — chips */}
+          {modo === 'certidoes' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {certidoes.map((svc, i) => {
+                const ativo = selecionado?.especie === svc.subcategoria;
                 return (
-                  <button key={i} onClick={() => setSelecionado(item)} style={btnStyle(ativo)}>
-                    <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, color: 'var(--color-bg)' }}>
+                  <button key={i} onClick={() => selecionarServico(svc)} style={{
+                    padding: '9px 12px', textAlign: 'left', cursor: 'pointer',
+                    background: ativo ? 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))' : 'var(--color-surface-2)',
+                    border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    borderRadius: 'var(--radius-md)', color: ativo ? 'var(--color-text)' : 'var(--color-text-muted)',
+                    fontSize: 13, fontWeight: ativo ? 600 : 400, display: 'flex', alignItems: 'center', gap: 8,
+                    fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
+                  }}>
+                    <span style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`, background: ativo ? 'var(--color-accent)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 9, color: '#fff' }}>
                       {ativo ? '✓' : ''}
                     </span>
-                    {s.label}
-                    {svcReal && <span style={{ fontSize: 10, color: 'var(--color-text-faint)', marginLeft: 4 }}>✓</span>}
+                    {svc.subcategoria}
                   </button>
                 );
               })}
             </div>
-          </div>
+          )}
+
+          {/* Outros serviços — categoria + serviço */}
+          {modo === 'atos' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Chips de categoria */}
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 6 }}>Categoria</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {categoriasAtos.map(cat => {
+                    const ativo = categoriaAtos === cat;
+                    return (
+                      <button key={cat} onClick={() => { setCategoriaAtos(cat); setSelecionado(null); }} style={{
+                        padding: '6px 14px', cursor: 'pointer', borderRadius: 20,
+                        border: `2px solid ${ativo ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                        background: ativo ? 'color-mix(in srgb, var(--color-accent) 12%, var(--color-surface))' : 'var(--color-surface-2)',
+                        color: ativo ? 'var(--color-accent)' : 'var(--color-text-muted)',
+                        fontSize: 13, fontWeight: ativo ? 700 : 400,
+                        fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
+                      }}>{cat}</button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Select de serviço */}
+              {categoriaAtos && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Serviço</label>
+                  <select className="form-select" value={selecionado?.especie || ''} onChange={e => {
+                    const svc = servicosDaCategoria.find(s => s.subcategoria === e.target.value);
+                    if (svc) selecionarServico(svc);
+                  }}>
+                    <option value="">— Selecione o serviço —</option>
+                    {servicosDaCategoria.map(svc => (
+                      <option key={svc.id || svc.subcategoria} value={svc.subcategoria}>{svc.subcategoria}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Serviço selecionado — confirmação visual */}
+          {selecionado && (
+            <div style={{ padding: '8px 12px', background: 'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))', borderRadius: 'var(--radius-md)', border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)', fontSize: 12, color: 'var(--color-accent)', fontWeight: 600 }}>
+              ✓ {selecionado.categoria} — {selecionado.especie}
+            </div>
+          )}
 
           {/* Responsável + Data — escolha única */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'end' }}>
@@ -195,29 +262,16 @@ function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {linhas.map((l, idx) => (
-                <div key={l._id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, alignItems: 'start' }}>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      ref={idx === 0 ? primeiroRef : null}
-                      className="form-input rapido-input"
-                      value={l.numero}
-                      onChange={e => setLinha(idx, 'numero', e.target.value)}
-                      onBlur={e => checkDuplicado(idx, e.target.value)}
-                      onKeyDown={e => handleKeyDown(e, idx)}
-                      placeholder={`Nº ${idx + 1}`}
-                      style={{ fontSize: 13, borderColor: duplicados[idx] ? 'var(--color-danger)' : undefined }}
-                    />
-                    {duplicados[idx] && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 10px', boxShadow: 'var(--shadow-lg)', minWidth: 200, marginTop: 2 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-danger)', marginBottom: 4 }}>⚠ Nº já existe!</div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 6 }}>Deseja registrar mesmo assim?</div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setLinha(idx, 'numero', '')}>Limpar</button>
-                          <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => setDuplicados(prev => ({ ...prev, [idx]: false }))}>Sim, manter</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <div key={l._id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 28px', gap: 8, alignItems: 'center' }}>
+                  <input
+                    ref={idx === 0 ? primeiroRef : null}
+                    className="form-input rapido-input"
+                    value={l.numero}
+                    onChange={e => setLinha(idx, 'numero', e.target.value)}
+                    onKeyDown={e => handleKeyDown(e, idx)}
+                    placeholder={`Nº ${idx + 1}`}
+                    style={{ fontSize: 13 }}
+                  />
                   <input
                     className="form-input rapido-input"
                     value={l.valor}
@@ -227,7 +281,7 @@ function ModalServicRapido({ usuarios, processos, onSalvar, onClose }) {
                     style={{ fontSize: 13, textAlign: 'right' }}
                     placeholder="0,00"
                   />
-                  <button onClick={() => remLinha(idx)} style={{ background: 'none', border: 'none', color: linhas.length > 1 ? 'var(--color-danger)' : 'var(--color-text-faint)', cursor: linhas.length > 1 ? 'pointer' : 'default', fontSize: 16, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 6 }}
+                  <button onClick={() => remLinha(idx)} style={{ background: 'none', border: 'none', color: linhas.length > 1 ? 'var(--color-danger)' : 'var(--color-text-faint)', cursor: linhas.length > 1 ? 'pointer' : 'default', fontSize: 16, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     disabled={linhas.length <= 1}>✕</button>
                 </div>
               ))}
@@ -365,7 +419,6 @@ export default function Processos() {
   const [filtroResp, setFiltroResp]     = useState('');
   const [filtroCateg, setFiltroCateg]   = useState('');
   const [limite, setLimite]             = useState(30);
-  const [numDuplicado, setNumDuplicado] = useState(false); // alerta de nº duplicado
   const numRef = useRef(null);
   const focadoRef = useRef(false);
 
@@ -420,26 +473,15 @@ export default function Processos() {
     return `${base}-${i}`;
   };
 
-  const saveNewRow = async (confirmarDuplicado = false) => {
+  const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
     if (salvandoNovo) return;
-
-    const base = newRow.numero_interno.trim();
-    const existe = processos.some(p => p.numero_interno.trim() === base);
-
-    // Se existe e usuário ainda não confirmou → mostra alerta
-    if (existe && !confirmarDuplicado) {
-      setNumDuplicado(true);
-      return;
-    }
-
     setSalvandoNovo(true);
-    setNumDuplicado(false);
-    const numeroFinal = existe ? gerarNumeroUnico(base) : base;
+    const numeroFinal = gerarNumeroUnico(newRow.numero_interno.trim());
     const { _sel, ...rest } = newRow;
     await addProcesso({ ...rest, numero_interno: numeroFinal, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
-    if (numeroFinal !== base) {
-      addToast(`Salvo como "${numeroFinal}" para evitar duplicidade.`, 'info');
+    if (numeroFinal !== newRow.numero_interno.trim()) {
+      addToast(`Nº duplicado — salvo como "${numeroFinal}"`, 'info');
     }
     setSalvandoNovo(false);
     setNewRow(null);
@@ -561,15 +603,15 @@ export default function Processos() {
           <thead>
             <tr>
               <th style={{ width: 55 }}>Nº</th>
-              <th style={{ width: 100 }}>Dt. Cadastro</th>
+              <th style={{ width: 82 }}>Dt. Cadastro</th>
               <th style={{ width: 95 }}>Categoria</th>
               <th style={{ minWidth: 150 }}>Serviço</th>
               <th style={{ minWidth: 220 }}>Interessados</th>
               <th style={{ width: 60 }}>Resp.</th>
               <th style={{ width: 110 }}>Valor</th>
-              <th style={{ width: 70 }}>Qtd</th>
+              <th style={{ width: 45 }}>Qtd</th>
               <th style={{ width: 100 }}>Status</th>
-              <th style={{ width: 100 }}>Conclusão</th>
+              <th style={{ width: 75 }}>Conclusão</th>
               <th style={{ width: 75 }}></th>
             </tr>
           </thead>
@@ -577,28 +619,8 @@ export default function Processos() {
             {/* Nova linha */}
             {newRow && (
               <tr className="row-editing">
-                <td style={{ position: 'relative' }}>
-                  <input ref={numRef} className="td-input" value={newRow.numero_interno}
-                    onChange={e => { setNR('numero_interno', e.target.value); setNumDuplicado(false); }}
-                    onBlur={() => {
-                      const base = newRow.numero_interno.trim();
-                      if (base && processos.some(p => p.numero_interno.trim() === base)) setNumDuplicado(true);
-                    }}
-                    placeholder="Nº *" style={{ width: 70, borderColor: numDuplicado ? 'var(--color-danger)' : undefined }} />
-                  {numDuplicado && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 100, background: 'var(--color-surface)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '8px 10px', boxShadow: 'var(--shadow-lg)', minWidth: 220, marginTop: 2 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-danger)', marginBottom: 6 }}>⚠ Nº já existe!</div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 8 }}>
-                        Será salvo como <strong>{gerarNumeroUnico(newRow.numero_interno.trim())}</strong>. Confirma?
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }} onClick={() => setNumDuplicado(false)}>Cancelar</button>
-                        <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => saveNewRow(true)}>Sim, registrar</button>
-                      </div>
-                    </div>
-                  )}
-                </td>
-                <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
+                <td><input ref={numRef} className="td-input" value={newRow.numero_interno} onChange={e => setNR('numero_interno', e.target.value)} placeholder="Nº *" style={{ width: 70 }} /></td>
+                <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
                 <td><select className="td-select" value={newRow.categoria} onChange={e => { setNR('categoria', e.target.value); setNR('especie', ''); }} style={{ width: 105 }}>
                   <option value="">Categoria</option>{categorias.map(c => <option key={c}>{c}</option>)}
                 </select></td>
@@ -612,11 +634,11 @@ export default function Processos() {
                 </td>
                 <td>{selResp(newRow.responsavel_id, v => setNR('responsavel_id', v))}</td>
                 <td><InputValor value={newRow.valor_ato} onChange={v => setNR('valor_ato', v)} style={{ width: 80 }} /></td>
-                <td><input className="td-input" type="number" min="1" value={newRow.quantidade || 1} onChange={e => setNR('quantidade', parseInt(e.target.value)||1)} style={{ width: 62, textAlign: 'center' }} title="Quantidade de serviços" /></td>
+                <td><input className="td-input" type="number" min="1" value={newRow.quantidade || 1} onChange={e => setNR('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={newRow.status} onChange={e => { setNR('status', e.target.value); if (e.target.value === 'Concluído') setNR('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 118 }} /></td>
+                <td><input className="td-input" type="date" value={newRow.dt_conclusao} onChange={e => setNR('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveNewRow} disabled={salvandoNovo} title="Salvar processo">
                     {salvandoNovo ? '⏳' : '✓'}
@@ -633,7 +655,7 @@ export default function Processos() {
             {listaLimitada.map(p => editingId === p.id ? (
               <tr key={p.id} className="row-editing">
                 <td><input className="td-input" value={editRow.numero_interno} onChange={e => setEd('numero_interno', e.target.value)} style={{ width: 70 }} /></td>
-                <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 118 }} /></td>
+                <td><input className="td-input" type="date" value={editRow.dt_abertura} onChange={e => setEd('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
                 <td><select className="td-select" value={editRow.categoria} onChange={e => { setEd('categoria', e.target.value); setEd('especie', ''); }} style={{ width: 105 }}>
                   <option value="">—</option>
                   {categorias.map(c => <option key={c}>{c}</option>)}
@@ -651,11 +673,11 @@ export default function Processos() {
                 </td>
                 <td>{selResp(editRow.responsavel_id, v => setEd('responsavel_id', v))}</td>
                 <td><InputValor value={editRow.valor_ato} onChange={v => setEd('valor_ato', v)} style={{ width: 80 }} /></td>
-                <td><input className="td-input" type="number" min="1" value={editRow.quantidade || 1} onChange={e => setEd('quantidade', parseInt(e.target.value)||1)} style={{ width: 62, textAlign: 'center' }} title="Quantidade de serviços" /></td>
+                <td><input className="td-input" type="number" min="1" value={editRow.quantidade || 1} onChange={e => setEd('quantidade', parseInt(e.target.value)||1)} style={{ width: 40, textAlign: 'center' }} title="Quantidade de serviços" /></td>
                 <td><select className="td-select" value={editRow.status} onChange={e => { setEd('status', e.target.value); if (e.target.value === 'Concluído' && !editRow.dt_conclusao) setEd('dt_conclusao', HOJE()); }} style={{ width: 105 }}>
                   {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
                 </select></td>
-                <td><input className="td-input" type="date" value={editRow.dt_conclusao || ''} onChange={e => setEd('dt_conclusao', e.target.value)} style={{ width: 118 }} /></td>
+                <td><input className="td-input" type="date" value={editRow.dt_conclusao || ''} onChange={e => setEd('dt_conclusao', e.target.value)} style={{ width: 90 }} /></td>
                 <td><div style={{ display: 'flex', gap: 3 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit}>✓</button>
                   <button className="btn btn-ghost btn-sm" onClick={cancelEdit}>✕</button>
@@ -704,7 +726,7 @@ export default function Processos() {
         </table>
       </div>
 
-      {modalRapido && <ModalServicRapido usuarios={usuarios} processos={processos} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
+      {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
       {processoDetalhe && (
         <ProcessoDetalhe
