@@ -1212,7 +1212,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 // ── Modal Principal ───────────────────────────────────────────
 export { ModalTelaAndamento };
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios } = useApp();
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario } = useApp();
   const [aba, setAba]                   = useState('dados');
   const [editando, setEditando]         = useState(false);
   const [form, setForm]                 = useState({ ...processo });
