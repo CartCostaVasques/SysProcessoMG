@@ -35,7 +35,7 @@ const fmtNomeInteressados = (partes) => {
 };
 
 function ModalTelaAndamento({ onClose }) {
-  const { processos, andamentos, interessados } = useApp();
+  const { processos, andamentos, interessados, usuarios } = useApp();
   const [filtroStatus, setFiltroStatus] = useState('pendentes'); // pendentes|todos|Em andamento|Devolvido|Em reanálise
   const [filtroAnd, setFiltroAnd]       = useState('pendentes'); // pendentes|finalizados|todos
   const [busca, setBusca]               = useState('');
@@ -123,6 +123,7 @@ function ModalTelaAndamento({ onClose }) {
                     <th style={{ width: 100 }}>Dt. Abertura</th>
                     <th>Interessados</th>
                     <th>Andamentos</th>
+                    <th style={{ width: 44, textAlign: 'center' }}>Resp.</th>
                     <th style={{ width: 110, textAlign: 'right' }}>Valor</th>
                   </tr>
                 </thead>
@@ -130,6 +131,8 @@ function ModalTelaAndamento({ onClose }) {
                   {lista.map(({ proc, ands }) => {
                     const nomes = fmtNomeInteressados(proc.partes);
                     const conf = STATUS_CONF_GLOBAL[proc.status] || {};
+                    const resp = (usuarios || []).find(u => u.id === proc.responsavel_id);
+                    const iniciais = resp ? resp.nome_simples.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?';
                     return (
                       <tr key={proc.id}>
                         <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, verticalAlign: 'top' }}>
@@ -157,6 +160,11 @@ function ModalTelaAndamento({ onClose }) {
                                 </div>
                               );
                             })}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'center', verticalAlign: 'top' }}>
+                          <div title={resp?.nome_simples || '—'} style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--color-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
+                            {iniciais}
                           </div>
                         </td>
                         <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, verticalAlign: 'top', color: 'var(--color-success)' }}>
