@@ -40,6 +40,8 @@ export default function SenhaPainel() {
   const [historico, setHistorico]   = useState([]);
   const [hora, setHora]             = useState('');
   const [data, setData]             = useState('');
+  const [logoUrl, setLogoUrl]       = useState(null);
+  const [nomeCartorio, setNomeCartorio] = useState('Cartório Costa Vasques');
   const ultimaRef = useRef(null);
 
   useEffect(() => {
@@ -88,6 +90,12 @@ export default function SenhaPainel() {
     (setsData || []).forEach(s => { mapa[s.id] = s; });
     setSetores(mapa);
 
+    const { data: cart } = await sb.from('cartorio').select('nome, logo_url').eq('id', 1).single();
+    if (cart) {
+      if (cart.nome) setNomeCartorio(cart.nome);
+      if (cart.logo_url) setLogoUrl(cart.logo_url);
+    }
+
     const { data: chamadas } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
@@ -111,12 +119,17 @@ export default function SenhaPainel() {
 
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
           {/* Logo */}
-          <div style={{ width: 52, height: 52, borderRadius: 12, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 900, color: '#1a1a1a', flexShrink: 0 }}>C</div>
+          <div style={{ width: 60, height: 60, borderRadius: 12, background: logoUrl ? 'transparent' : '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            {logoUrl
+              ? <img src={logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : <span style={{ fontSize: 28, fontWeight: 900, color: '#1a1a1a' }}>C</span>
+            }
+          </div>
           <div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5 }}>Cartório Costa Vasques</div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>Sistema de Atendimento</div>
+            <div style={{ fontSize: 34, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
+            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Sistema de Atendimento</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
