@@ -39,7 +39,7 @@ async function imprimirZebra(zpl) {
   }
 }
 
-function TelaSetores({ setores, onEscolher }) {
+function TelaSetores({ setores, onEscolher, nomeCartorio }) {
   const [hora, setHora] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
   useEffect(() => {
     const t = setInterval(() => setHora(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })), 1000);
@@ -47,21 +47,21 @@ function TelaSetores({ setores, onEscolher }) {
   }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: '#1e293b', padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155' }}>
+      <div style={{ background: '#1e293b', padding: 'clamp(16px,3vw,24px) clamp(20px,5vw,40px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155' }}>
         <div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: '#f1f5f9' }}>Cartório Costa Vasques</div>
-          <div style={{ fontSize: 18, color: '#64748b', marginTop: 4 }}>Toque para retirar sua senha</div>
+          <div style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: '#f59e0b' }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 'clamp(14px, 2vw, 18px)', color: '#64748b', marginTop: 4 }}>Toque para retirar sua senha</div>
         </div>
-        <div style={{ fontSize: 52, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
+        <div style={{ fontSize: 'clamp(32px,5vw,52px)', fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
       </div>
-      <div style={{ flex: 1, padding: '40px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24, alignContent: 'start' }}>
+      <div style={{ flex: 1, padding: 'clamp(16px,3vw,40px)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(12px,2vw,24px)', alignContent: 'start' }}>
         {setores.map(setor => (
           <button key={setor.id} onClick={() => onEscolher(setor)}
-            style={{ padding: '40px 24px', background: '#1e293b', border: '2px solid #334155', borderRadius: 20, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, transition: 'all .15s' }}
+            style={{ padding: 'clamp(24px,4vw,40px) clamp(16px,3vw,24px)', background: '#1e293b', border: '2px solid #334155', borderRadius: 20, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px,2vw,16px)', transition: 'all .15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: '#fff' }}>{setor.prefixo}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#f1f5f9', textAlign: 'center' }}>{setor.nome}</div>
+            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 700, color: '#1e40af', textAlign: 'center' }}>{setor.nome}</div>
           </button>
         ))}
       </div>
@@ -126,17 +126,23 @@ function TelaConfirmacao({ cod, tipo, setor, onVoltar }) {
 }
 
 export default function SenhaTotem() {
-  const [setores, setSetores]   = useState([]);
-  const [etapa, setEtapa]       = useState('setores');
-  const [setorSel, setSetorSel] = useState(null);
-  const [emissao, setEmissao]   = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [setores, setSetores]           = useState([]);
+  const [etapa, setEtapa]               = useState('setores');
+  const [setorSel, setSetorSel]         = useState(null);
+  const [emissao, setEmissao]           = useState(null);
+  const [loading, setLoading]           = useState(false);
+  const [nomeCartorio, setNomeCartorio] = useState('Cartório');
 
-  useEffect(() => { carregarSetores(); }, []);
+  useEffect(() => { carregarDados(); }, []);
 
-  const carregarSetores = async () => {
-    const { data } = await sb.from('senha_setores').select('*').eq('ativo', true).order('ordem');
-    setSetores(data || []);
+  const carregarDados = async () => {
+    const [{ data: cartData }, { data: setData }] = await Promise.all([
+      sb.from('cartorio').select('nome, nome_simples').limit(1),
+      sb.from('senha_setores').select('*').eq('ativo', true).order('ordem'),
+    ]);
+    const cart = cartData?.[0];
+    if (cart) setNomeCartorio(cart.nome_simples || cart.nome || 'Cartório');
+    setSetores(setData || []);
   };
 
   const escolherSetor = (setor) => { setSetorSel(setor); setEtapa('tipo'); };
@@ -171,5 +177,5 @@ export default function SenhaTotem() {
 
   if (etapa === 'tipo')        return <TelaTipo setor={setorSel} onEscolher={escolherTipo} onVoltar={voltar} loading={loading} />;
   if (etapa === 'confirmacao') return <TelaConfirmacao {...emissao} onVoltar={voltar} />;
-  return <TelaSetores setores={setores} onEscolher={escolherSetor} />;
+  return <TelaSetores setores={setores} onEscolher={escolherSetor} nomeCartorio={nomeCartorio} />;
 }
