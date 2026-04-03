@@ -57,10 +57,12 @@ function SeletorCor({ label, chave, valor, onChange, tipo = 'cor' }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SenhaGuiche() {
-  const { supabaseClient: sb, addToast, usuarios, temPermissao } = useApp();
+  const { supabaseClient: sb, addToast, usuarios, temPermissao, usuario } = useApp();
   const [setores, setSetores]       = useState([]);
   const [senhas, setSenhas]         = useState([]);
   const [historico, setHistorico]   = useState([]);
+  const [filtroPeriodo, setFiltroPeriodo] = useState('hoje'); // hoje | semana | mes
+  const [setoresAbertos, setSetoresAbertos] = useState({});  // { 'resp::setor': bool }
   const [aba, setAba]               = useState('fila'); // fila | historico
   const [filtroSetor, setFiltroSetor] = useState('');
   const [guiche, setGuiche]         = useState(localStorage.getItem('guiche_nome') || '');
@@ -122,12 +124,19 @@ export default function SenhaGuiche() {
       .order('criado_em', { ascending: true });
     setSenhas(senhasData || []);
 
+    const inicio = (() => {
+      const d = new Date();
+      if (filtroPeriodo === 'semana') d.setDate(d.getDate() - 6);
+      else if (filtroPeriodo === 'mes') d.setDate(1);
+      return d.toISOString().split('T')[0];
+    })();
     const { data: histData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
-      .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+      .gte('criado_em', inicio + 'T00:00:00-03:00')
       .order('chamado_em', { ascending: false });
     setHistorico(histData || []);
+    setSetoresAbertos({});
   };
 
   const getCod = (s) => {
@@ -152,7 +161,7 @@ export default function SenhaGuiche() {
       const proxima = senhasFiltradas[0];
       const { error } = await sb.from('senhas').update({
         status: 'chamada',
-        guiche: guiche || null,
+        guiche: usuario?.nome_simples || guiche || null,
         chamado_em: new Date().toISOString(),
       }).eq('id', proxima.id);
       if (error) throw error;
@@ -171,7 +180,7 @@ export default function SenhaGuiche() {
     try {
       const { error } = await sb.from('senhas').update({
         status: 'chamada',
-        guiche: guiche || null,
+        guiche: usuario?.nome_simples || guiche || null,
         chamado_em: new Date().toISOString(),
       }).eq('id', senha.id);
       if (error) throw error;
@@ -209,18 +218,49 @@ export default function SenhaGuiche() {
   const totalNorm = senhasFiltradas.filter(s => s.tipo === 'normal').length;
 
   // Agrupa histórico por guichê
-  const historicoPorGuiche = useMemo(() => {
+  // ── Periodo helper ────────────────────────────────────────────────────────
+  const inicioPeriodo = () => {
+    const d = new Date();
+    if (filtroPeriodo === 'semana') { d.setDate(d.getDate() - 6); }
+    else if (filtroPeriodo === 'mes') { d.setDate(1); }
+    return d.toISOString().split('T')[0];
+  };
+
+  // ── Resumo geral por setor (todos os responsaveis) ─────────────────────────
+  const resumoPorSetor = useMemo(() => {
     const mapa = {};
     for (const s of historico) {
-      const key = s.guiche || '(sem guichê)';
-      if (!mapa[key]) mapa[key] = { guiche: key, total: 0, porSetor: {} };
+      const nome = s.senha_setores?.nome || 'Desconhecido';
+      if (!mapa[nome]) mapa[nome] = 0;
+      mapa[nome]++;
+    }
+    return Object.entries(mapa).sort((a, b) => b[1] - a[1]);
+  }, [historico]);
+
+  // ── Historico filtrado por responsavel ────────────────────────────────────
+  const isAdmin = usuario?.perfil === 'Administrador';
+  const historicoFiltrado = useMemo(() => {
+    if (isAdmin) return historico;
+    return historico.filter(s => s.guiche === (usuario?.nome_simples || ''));
+  }, [historico, isAdmin, usuario]);
+
+  const historicoPorResp = useMemo(() => {
+    const mapa = {};
+    for (const s of historicoFiltrado) {
+      const key = s.guiche || '(sem responsável)';
+      if (!mapa[key]) mapa[key] = { resp: key, total: 0, porSetor: {} };
       mapa[key].total++;
       const nomeSetor = s.senha_setores?.nome || 'Desconhecido';
       if (!mapa[key].porSetor[nomeSetor]) mapa[key].porSetor[nomeSetor] = [];
       mapa[key].porSetor[nomeSetor].push(s);
     }
     return Object.values(mapa).sort((a, b) => b.total - a.total);
-  }, [historico]);
+  }, [historicoFiltrado]);
+
+  const toggleSetor = (key) => setSetoresAbertos(p => ({ ...p, [key]: !p[key] }));
+
+  useEffect(() => { carregarDados(); }, [filtroPeriodo]);
+
 
   return (
     <div className="fade-in">
@@ -266,48 +306,97 @@ export default function SenhaGuiche() {
 
       {aba === 'historico' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {historicoPorGuiche.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-faint)' }}>
-              Nenhuma senha chamada hoje ainda.
-            </div>
-          ) : historicoPorGuiche.map(({ guiche: gc, total, porSetor }) => (
-            <div key={gc} className="card">
-              {/* Cabeçalho do guichê */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', margin: '-16px -16px 16px -16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#fff' }}>
-                    {gc.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{gc}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{total} senha(s) chamada(s)</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-accent)' }}>{total}</div>
-              </div>
 
-              {/* Por setor */}
-              {Object.entries(porSetor).map(([nomeSetor, senhasSetor]) => (
-                <div key={nomeSetor} style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>{nomeSetor}</span>
-                    <span style={{ padding: '1px 8px', borderRadius: 10, background: 'var(--color-surface-2)', fontSize: 11 }}>{senhasSetor.length}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {senhasSetor.map(s => {
-                      const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(3,'0')}`;
-                      const isPref = s.tipo === 'preferencial';
-                      return (
-                        <div key={s.id} style={{ padding: '4px 12px', borderRadius: 8, background: isPref ? 'color-mix(in srgb, var(--color-warning) 12%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${isPref ? 'color-mix(in srgb, var(--color-warning) 30%, transparent)' : 'var(--color-border)'}`, fontSize: 14, fontWeight: 700, color: isPref ? 'var(--color-warning)' : 'var(--color-text)', fontFamily: 'var(--font-mono)' }}>
-                          {isPref && '⭐'} {cod}
-                        </div>
-                      );
-                    })}
-                  </div>
+          {/* ── Filtro de período ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Período:</span>
+            {[['hoje','Hoje'],['semana','Últimos 7 dias'],['mes','Este mês']].map(([id, label]) => (
+              <button key={id} onClick={() => setFiltroPeriodo(id)}
+                style={{ padding: '5px 14px', fontSize: 12, borderRadius: 'var(--radius-md)', cursor: 'pointer', border: `1px solid ${filtroPeriodo === id ? 'var(--color-accent)' : 'var(--color-border)'}`, background: filtroPeriodo === id ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-surface-2)', color: filtroPeriodo === id ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: filtroPeriodo === id ? 700 : 400 }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Cards resumo por setor (geral) ── */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Resumo Geral — Atendimentos por Setor</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+              {resumoPorSetor.length === 0 ? (
+                <div style={{ color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhum atendimento ainda.</div>
+              ) : resumoPorSetor.map(([setor, qtd]) => (
+                <div key={setor} style={{ padding: '14px 16px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{setor}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-accent)', lineHeight: 1 }}>{qtd}</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>senha{qtd !== 1 ? 's' : ''} atendida{qtd !== 1 ? 's' : ''}</div>
                 </div>
               ))}
             </div>
-          ))}
+          </div>
+
+          {/* ── Histórico por responsável ── */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              {isAdmin ? 'Histórico por Responsável' : `Suas senhas — ${usuario?.nome_simples || ''}`}
+            </div>
+
+            {historicoPorResp.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-faint)' }}>
+                Nenhuma senha chamada neste período.
+              </div>
+            ) : historicoPorResp.map(({ resp, total, porSetor }) => (
+              <div key={resp} className="card" style={{ marginBottom: 12 }}>
+                {/* Cabeçalho do responsável */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', margin: '-16px -16px 16px -16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                      {resp.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{resp}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{total} senha(s) chamada(s)</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-accent)' }}>{total}</div>
+                </div>
+
+                {/* Setores colapsáveis */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {Object.entries(porSetor).map(([nomeSetor, senhasSetor]) => {
+                    const key = `${resp}::${nomeSetor}`;
+                    const aberto = !!setoresAbertos[key];
+                    return (
+                      <div key={nomeSetor} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                        {/* Header clicável */}
+                        <div onClick={() => toggleSetor(key)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: 'var(--color-surface-2)', cursor: 'pointer', userSelect: 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.8 }}>{nomeSetor}</span>
+                            <span style={{ padding: '1px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', color: 'var(--color-accent)', fontSize: 11, fontWeight: 700 }}>{senhasSetor.length}</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: 'var(--color-text-faint)' }}>{aberto ? '▲' : '▼'}</span>
+                        </div>
+                        {/* Senhas */}
+                        {aberto && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 14px' }}>
+                            {senhasSetor.map(s => {
+                              const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(3,'0')}`;
+                              const isPref = s.tipo === 'preferencial';
+                              return (
+                                <div key={s.id} style={{ padding: '4px 12px', borderRadius: 8, background: isPref ? 'color-mix(in srgb, var(--color-warning) 12%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${isPref ? 'color-mix(in srgb, var(--color-warning) 30%, transparent)' : 'var(--color-border)'}`, fontSize: 14, fontWeight: 700, color: isPref ? 'var(--color-warning)' : 'var(--color-text)', fontFamily: 'var(--font-mono)' }}>
+                                  {isPref && '⭐'} {cod}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
