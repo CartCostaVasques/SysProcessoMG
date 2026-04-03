@@ -229,7 +229,7 @@ export default function SenhaPainel() {
           <div style={{ padding: '14px 20px', borderBottom: `2px solid ${bordaCor}`, fontSize: 12, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 3 }}>
             Últimas Chamadas
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flex: 1, overflowY: 'hidden', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historico.map((s, i) => {
               const cod = getCod(s);
               const nomeSetor = getNomeSetor(s);
@@ -243,21 +243,21 @@ export default function SenhaPainel() {
                 return (
                   <div key={s.id} style={{ borderRadius: 10, background: fundoHeader, border: `1px solid ${bordaCor}`, overflow: 'hidden', marginBottom: 4 }}>
                     {/* Label topo */}
-                    <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
                       Senha anterior
                     </div>
                     {/* Código */}
                     <div style={{ textAlign: 'center', padding: '10px 8px 4px' }}>
-                      <div style={{ fontSize: 52, fontWeight: 900, color: corSenha, letterSpacing: -2, lineHeight: 1 }}>
+                      <div style={{ fontSize: 55, fontWeight: 900, color: corSenha, letterSpacing: -2, lineHeight: 1 }}>
                         {cod}{isPref && <span style={{ fontSize: 18, marginLeft: 4 }}>⭐</span>}
                       </div>
                     </div>
                     {/* Setor */}
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: textoCor, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderTop: `1px solid ${bordaCor}`, borderBottom: `1px solid ${bordaCor}` }}>
+                    <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 700, color: textoCor, textTransform: 'uppercase', letterSpacing: 1, padding: '6px 8px', borderTop: `1px solid ${bordaCor}`, borderBottom: `1px solid ${bordaCor}` }}>
                       {nomeSetor}
                     </div>
                     {/* Tempo */}
-                    <div style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', padding: '6px 8px 8px' }}>
+                    <div style={{ textAlign: 'center', fontSize: 13, color: textoMuted, padding: '6px 8px 10px' }}>
                       {tempoRelativo(s.chamado_em)}
                     </div>
                   </div>
@@ -267,10 +267,15 @@ export default function SenhaPainel() {
               // demais — compactas
               const opacity = Math.max(0.35, 1 - (i - 1) * 0.1);
               return (
-                <div key={s.id} style={{ padding: '7px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1, minWidth: 64 }}>{cod}</div>
-                  {isPref && <span style={{ fontSize: 11, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
-                  <div style={{ fontSize: 11, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
+                <div key={s.id} style={{ padding: '8px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ fontSize: 25, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1 }}>{cod}</div>
+                      {isPref && <span style={{ fontSize: 14, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: textoMuted, opacity: 0.7 }}>{tempoRelativo(s.chamado_em)}</div>
+                  </div>
+                  <div style={{ fontSize: 14, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
                 </div>
               );
             })}
