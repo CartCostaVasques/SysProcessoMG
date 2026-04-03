@@ -41,6 +41,7 @@ export default function SenhaPainel() {
   const [hora, setHora]             = useState('');
   const [data, setData]             = useState('');
   const [nomeCartorio, setNomeCartorio] = useState('Cartório');
+  const [cfg, setCfg]                   = useState({});
   const ultimaRef = useRef(null);
 
   useEffect(() => {
@@ -89,7 +90,11 @@ export default function SenhaPainel() {
     (setsData || []).forEach(s => { mapa[s.id] = s; });
     setSetores(mapa);
 
-    const { data: cartData } = await sb.from('cartorio').select('nome, nome_simples, logo_url').limit(1);
+    const [{ data: cartData }, { data: cfgData }] = await Promise.all([
+      sb.from('cartorio').select('nome, nome_simples').limit(1),
+      sb.from('senha_config').select('chave, valor'),
+    ]);
+    if (cfgData) setCfg(Object.fromEntries(cfgData.map(r => [r.chave, r.valor])));
     const cart = cartData?.[0];
     if (cart) {
       if (cart.nome_simples || cart.nome) setNomeCartorio(cart.nome_simples || cart.nome);
@@ -114,12 +119,12 @@ export default function SenhaPainel() {
   const getNomeSetor = (s) => s.senha_setores?.nome || setores[s.setor_id]?.nome || '—';
 
   return (
-    <div style={{ height: '100vh', background: '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ height: '100vh', background: cfg['painel_cor_fundo'] || '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
 
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace', lineHeight: 1 }}>{hora}</div>
@@ -141,7 +146,7 @@ export default function SenhaPainel() {
               {/* Código com borda âmbar */}
               <div style={{
                 fontSize: 180, fontWeight: 900, lineHeight: 1,
-                color: ultimaChamada.tipo === 'preferencial' ? '#f59e0b' : '#38bdf8',
+                color: ultimaChamada.tipo === 'preferencial' ? (cfg['painel_cor_senha_pref'] || '#f59e0b') : (cfg['painel_cor_senha_normal'] || '#38bdf8'),
                 letterSpacing: -8,
                 textShadow: ultimaChamada.tipo === 'preferencial'
                   ? '0 0 80px rgba(245,158,11,0.5)'
@@ -151,7 +156,7 @@ export default function SenhaPainel() {
                 {getCod(ultimaChamada)}
               </div>
               {ultimaChamada.tipo === 'preferencial' && (
-                <div style={{ fontSize: 26, fontWeight: 700, color: '#f59e0b', border: '3px solid #f59e0b', padding: '6px 24px', borderRadius: 12, marginTop: 16 }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: cfg['painel_cor_senha_pref'] || '#f59e0b', border: `3px solid ${cfg['painel_cor_senha_pref'] || '#f59e0b'}`, padding: '6px 24px', borderRadius: 12, marginTop: 16 }}>
                   ⭐ PREFERENCIAL
                 </div>
               )}
@@ -190,11 +195,11 @@ export default function SenhaPainel() {
                     <div style={{
                       fontSize: isFirst ? 34 : 28,
                       fontWeight: 900,
-                      color: isPref ? '#f59e0b' : '#38bdf8',
+                      color: isPref ? (cfg['painel_cor_senha_pref'] || '#f59e0b') : (cfg['painel_cor_senha_normal'] || '#38bdf8'),
                       letterSpacing: -1,
                       lineHeight: 1,
                     }}>{cod}</div>
-                    {isPref && <span style={{ fontSize: 12, color: '#f59e0b' }}>⭐</span>}
+                    {isPref && <span style={{ fontSize: 12, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
                   </div>
                   <div style={{ fontSize: isFirst ? 13 : 12, color: isFirst ? '#d1d5db' : '#9ca3af', fontWeight: isFirst ? 600 : 400 }}>
                     {nomeSetor}
