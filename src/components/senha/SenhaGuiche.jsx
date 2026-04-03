@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext.jsx';
 const HOJE = () => new Date().toISOString().split('T')[0];
 
 export default function SenhaGuiche() {
-  const { supabaseClient: sb, addToast, usuarios } = useApp();
+  const { supabaseClient: sb, addToast, usuarios, temPermissao } = useApp();
   const [setores, setSetores]       = useState([]);
   const [senhas, setSenhas]         = useState([]);
   const [historico, setHistorico]   = useState([]);
@@ -15,9 +15,13 @@ export default function SenhaGuiche() {
   const [guicheTemp, setGuicheTemp] = useState(guiche);
   const [chamando, setChamando]     = useState(false);
   const [ultimaChamada, setUltima]  = useState(null);
+  const [config, setConfig]         = useState({});
+  const [configEdit, setConfigEdit] = useState({});
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
 
   useEffect(() => {
     carregarDados();
+    carregarConfig();
 
     const canal = sb.channel('guiche-senhas')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, () => {
@@ -27,6 +31,31 @@ export default function SenhaGuiche() {
 
     return () => sb.removeChannel(canal);
   }, []);
+
+  const carregarConfig = async () => {
+    const { data } = await sb.from('senha_config').select('chave, valor');
+    if (data) {
+      const obj = Object.fromEntries(data.map(r => [r.chave, r.valor]));
+      setConfig(obj);
+      setConfigEdit(obj);
+    }
+  };
+
+  const salvarConfig = async () => {
+    setSalvandoConfig(true);
+    try {
+      const rows = Object.entries(configEdit).map(([chave, valor]) => ({ chave, valor }));
+      for (const row of rows) {
+        await sb.from('senha_config').upsert(row, { onConflict: 'chave' });
+      }
+      setConfig({ ...configEdit });
+      addToast('Configurações salvas!', 'success');
+    } catch (e) {
+      addToast('Erro ao salvar: ' + e.message, 'error');
+    } finally {
+      setSalvandoConfig(false);
+    }
+  };
 
   const carregarDados = async () => {
     const { data: setsData } = await sb.from('senha_setores').select('*').eq('ativo', true).order('ordem');
@@ -168,7 +197,7 @@ export default function SenhaGuiche() {
       </div>
 
       <div className="tabs" style={{ marginBottom: 16, borderBottom: '1px solid var(--color-border)' }}>
-        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia']].map(([id, label]) => (
+        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia'], ...(temPermissao('senha_aparencia') ? [['aparencia', '🎨 Aparência']] : [])].map(([id, label]) => (
           <button key={id} onClick={() => setAba(id)}
             className={`tab-btn ${aba === id ? 'active' : ''}`}>
             {label}
@@ -366,6 +395,89 @@ export default function SenhaGuiche() {
         </div>
       </div>
       )}
+      {aba === 'aparencia' && temPermissao('senha_aparencia') && (
+        <div style={{ maxWidth: 680 }}>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header"><div className="card-title">🖥 Totem (Tablet)</div></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '8px 0' }}>
+              {[
+                ['totem_cor_fundo',          'Cor de fundo'],
+                ['totem_cor_nome_cartorio',  'Nome do cartório'],
+                ['totem_cor_prefixo_bg',     'Fundo do prefixo (letra)'],
+                ['totem_cor_nome_setor',     'Nome do setor'],
+              ].map(([chave, label]) => (
+                <div key={chave} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="color" value={configEdit[chave] || '#000000'}
+                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
+                      style={{ width: 44, height: 36, border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
+                    <input className="form-input" value={configEdit[chave] || ''}
+                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header"><div className="card-title">📺 Painel (TV)</div></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '8px 0' }}>
+              {[
+                ['painel_cor_fundo',          'Cor de fundo'],
+                ['painel_cor_nome_cartorio',  'Nome do cartório'],
+                ['painel_cor_senha_normal',   'Senha normal'],
+                ['painel_cor_senha_pref',     'Senha preferencial'],
+              ].map(([chave, label]) => (
+                <div key={chave} className="form-group">
+                  <label className="form-label">{label}</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="color" value={configEdit[chave] || '#000000'}
+                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
+                      style={{ width: 44, height: 36, border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
+                    <input className="form-input" value={configEdit[chave] || ''}
+                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview rápido */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header"><div className="card-title">👁 Preview</div></div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1, background: configEdit['totem_cor_fundo'] || '#0f172a', borderRadius: 10, padding: '14px 18px', minHeight: 90 }}>
+                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>TOTEM</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: configEdit['totem_cor_nome_cartorio'] || '#f59e0b', marginBottom: 8 }}>Cartório</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: configEdit['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff' }}>A</div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: configEdit['totem_cor_nome_setor'] || '#4ade80' }}>Escritura</span>
+                </div>
+              </div>
+              <div style={{ flex: 1, background: configEdit['painel_cor_fundo'] || '#0f172a', borderRadius: 10, padding: '14px 18px', minHeight: 90 }}>
+                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>PAINEL TV</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: configEdit['painel_cor_nome_cartorio'] || '#f59e0b', marginBottom: 8 }}>Cartório</div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: configEdit['painel_cor_senha_normal'] || '#38bdf8' }}>A001</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: configEdit['painel_cor_senha_pref'] || '#f59e0b' }}>B002⭐</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary" onClick={() => setConfigEdit({ ...config })}>↩ Descartar</button>
+            <button onClick={salvarConfig} disabled={salvandoConfig}
+              style={{ padding: '10px 24px', background: 'var(--color-accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
+              {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar Configurações'}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
