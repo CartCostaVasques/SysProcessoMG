@@ -134,7 +134,17 @@ export default function SenhaTotem() {
   const [nomeCartorio, setNomeCartorio] = useState('Cartório');
   const [config, setConfig]             = useState({});
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => {
+    carregarDados();
+
+    const canal = sb.channel('totem-config')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'senha_config' }, () => {
+        carregarDados();
+      })
+      .subscribe();
+
+    return () => sb.removeChannel(canal);
+  }, []);
 
   const carregarDados = async () => {
     const [{ data: cartData }, { data: setData }, { data: cfgData }] = await Promise.all([
