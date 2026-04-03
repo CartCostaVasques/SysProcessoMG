@@ -111,9 +111,7 @@ export default function SenhaGuiche() {
     setSalvandoConfig(true);
     try {
       const rows = Object.entries(configEdit).map(([chave, valor]) => ({ chave, valor }));
-      for (const row of rows) {
-        await sb.from('senha_config').upsert(row, { onConflict: 'chave' });
-      }
+      await sb.from('senha_config').upsert(rows, { onConflict: 'chave' });
       setConfig({ ...configEdit });
       addToast('Configurações salvas!', 'success');
     } catch (e) {
