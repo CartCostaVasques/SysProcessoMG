@@ -267,15 +267,18 @@ export default function SenhaPainel() {
               // demais — compactas
               const opacity = Math.max(0.35, 1 - (i - 1) * 0.1);
               return (
-                <div key={s.id} style={{ padding: '8px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 70 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ fontSize: 25, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1 }}>{cod}</div>
-                      {isPref && <span style={{ fontSize: 14, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
-                    </div>
+                <div key={s.id} style={{ padding: '8px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 0, opacity, transition: 'all .3s' }}>
+                  {/* Coluna: código + tempo — largura fixa para alinhar tudo */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, width: 100, flexShrink: 0 }}>
+                    <div style={{ fontSize: 29, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1 }}>{cod}</div>
                     <div style={{ fontSize: 11, color: textoMuted, opacity: 0.7 }}>{tempoRelativo(s.chamado_em)}</div>
                   </div>
-                  <div style={{ fontSize: 14, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
+                  {/* Estrela — largura fixa, centralizada, sempre ocupa o espaço */}
+                  <div style={{ width: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {isPref && <span style={{ fontSize: 14, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
+                  </div>
+                  {/* Setor — alinhado após a estrela */}
+                  <div style={{ fontSize: 17, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
                 </div>
               );
             })}
