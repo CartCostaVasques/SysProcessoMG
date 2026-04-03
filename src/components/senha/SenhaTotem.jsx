@@ -139,9 +139,9 @@ export default function SenhaTotem() {
 
     const canal = sb.channel('totem-config')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senha_config' }, () => {
-        sb.from('senha_config').select('chave, valor').then(({ data }) => {
+        setTimeout(() => sb.from('senha_config').select('chave, valor').then(({ data }) => {
           if (data) setConfig(Object.fromEntries(data.map(r => [r.chave, r.valor])));
-        });
+        }), 400);
       })
       .subscribe();
 
