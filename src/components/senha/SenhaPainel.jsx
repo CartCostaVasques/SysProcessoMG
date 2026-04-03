@@ -153,7 +153,7 @@ export default function SenhaPainel() {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, overflow: 'hidden' }}>
 
         {/* Senha atual — área principal em cinza médio */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#252b3a' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#252b3a', position: 'relative' }}>
           {ultimaChamada ? (
             <>
               <div style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 12 }}>Senha Chamada</div>
@@ -183,6 +183,13 @@ export default function SenhaPainel() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 72, marginBottom: 16, opacity: 0.2 }}>🎫</div>
               <div style={{ fontSize: 22, color: '#4b5563' }}>Aguardando senhas...</div>
+            </div>
+          )}
+          {/* Faixa do atendente — mesma largura do header */}
+          {ultimaChamada?.guiche && (
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: '360px', background: '#2a2f3e', borderTop: '2px solid #374151', padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 14, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2, flexShrink: 0 }}>Atendente:</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
             </div>
           )}
         </div>
