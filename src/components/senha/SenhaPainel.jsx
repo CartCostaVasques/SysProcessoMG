@@ -55,6 +55,9 @@ export default function SenhaPainel() {
 
     // Realtime
     const canal = sb.channel('painel-senhas')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'senha_config' }, () => {
+        carregarDados();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, payload => {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
