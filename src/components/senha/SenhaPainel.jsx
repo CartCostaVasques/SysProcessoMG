@@ -152,7 +152,7 @@ export default function SenhaPainel() {
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 40, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace', lineHeight: 1 }}>{hora}</div>
@@ -199,7 +199,7 @@ export default function SenhaPainel() {
           {ultimaChamada?.guiche && (
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: '360px', background: '#2a2f3e', borderTop: '2px solid #374151', padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ fontSize: 14, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2, flexShrink: 0 }}>Atendente:</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
             </div>
           )}
         </div>
