@@ -6,12 +6,23 @@ const HOJE = () => new Date().toISOString().split('T')[0];
 
 // ── Seletor de cor igual ao da tela de Configurações ─────────────────────────
 const FUNDOS_PRESET = [
-  { id: 'dark-blue',  label: 'Azul Escuro',   valor: '#0d1117' },
-  { id: 'dark-gray',  label: 'Cinza Escuro',   valor: '#111827' },
-  { id: 'dark-slate', label: 'Slate Escuro',   valor: '#0f172a' },
-  { id: 'dark-green', label: 'Verde Escuro',   valor: '#052e16' },
-  { id: 'dark-purple',label: 'Roxo Escuro',    valor: '#1a0533' },
-  { id: 'dark-brown', label: 'Marrom Escuro',  valor: '#1c0a00' },
+  { id: 'dark-blue',   label: 'Azul Escuro',    valor: '#0d1117' },
+  { id: 'dark-gray',   label: 'Cinza Escuro',   valor: '#111827' },
+  { id: 'dark-slate',  label: 'Slate Escuro',   valor: '#0f172a' },
+  { id: 'dark-green',  label: 'Verde Escuro',   valor: '#052e16' },
+  { id: 'dark-purple', label: 'Roxo Escuro',    valor: '#1a0533' },
+  { id: 'dark-brown',  label: 'Marrom Escuro',  valor: '#1c0a00' },
+  { id: 'mid-blue',    label: 'Azul Médio',     valor: '#1e3a5f' },
+  { id: 'mid-gray',    label: 'Cinza Médio',    valor: '#374151' },
+  { id: 'mid-green',   label: 'Verde Médio',    valor: '#14532d' },
+  { id: 'mid-teal',    label: 'Teal Médio',     valor: '#134e4a' },
+  { id: 'mid-purple',  label: 'Roxo Médio',     valor: '#3b1f6e' },
+  { id: 'light-gray',  label: 'Cinza Claro',    valor: '#d1d5db' },
+  { id: 'light-blue',  label: 'Azul Claro',     valor: '#bfdbfe' },
+  { id: 'light-green', label: 'Verde Claro',    valor: '#bbf7d0' },
+  { id: 'light-teal',  label: 'Teal Claro',     valor: '#99f6e4' },
+  { id: 'light-sky',   label: 'Azul Céu',       valor: '#e0f2fe' },
+  { id: 'white',       label: 'Branco',          valor: '#ffffff' },
 ];
 
 const CORES_PRESET = [
