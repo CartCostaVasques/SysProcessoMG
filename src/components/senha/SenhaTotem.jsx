@@ -17,14 +17,26 @@ function gerarZPL(setor, numero, tipo) {
 
 async function imprimirZebra(zpl) {
   try {
-    const res = await fetch('http://localhost:9100/write', {
-      method: 'POST',
-      body: JSON.stringify({ device: { connection: 'network' }, data: zpl }),
+    // Passo 1: descobre a impressora padrão
+    const resDisc = await fetch('http://localhost:9100/available', {
+      method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
-    if (res.ok) return true;
-  } catch {}
-  return false;
+    if (!resDisc.ok) return false;
+    const dispData = await resDisc.json();
+    const printer = dispData?.printer;
+    if (!printer) return false;
+
+    // Passo 2: envia o ZPL para a impressora
+    const resSend = await fetch('http://localhost:9100/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device: printer, data: zpl }),
+    });
+    return resSend.ok;
+  } catch {
+    return false;
+  }
 }
 
 function TelaSetores({ setores, onEscolher }) {
