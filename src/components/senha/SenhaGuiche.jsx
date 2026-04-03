@@ -4,9 +4,11 @@ import { useApp } from '../../context/AppContext.jsx';
 const HOJE = () => new Date().toISOString().split('T')[0];
 
 export default function SenhaGuiche() {
-  const { supabaseClient: sb, addToast } = useApp();
+  const { supabaseClient: sb, addToast, usuarios } = useApp();
   const [setores, setSetores]       = useState([]);
   const [senhas, setSenhas]         = useState([]);
+  const [historico, setHistorico]   = useState([]);
+  const [aba, setAba]               = useState('fila'); // fila | historico
   const [filtroSetor, setFiltroSetor] = useState('');
   const [guiche, setGuiche]         = useState(localStorage.getItem('guiche_nome') || '');
   const [editGuiche, setEditGuiche] = useState(!guiche);
@@ -34,9 +36,16 @@ export default function SenhaGuiche() {
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'aguardando')
       .gte('criado_em', HOJE() + 'T00:00:00-03:00')
-      .order('tipo', { ascending: false }) // preferencial primeiro
+      .order('tipo', { ascending: false })
       .order('criado_em', { ascending: true });
     setSenhas(senhasData || []);
+
+    const { data: histData } = await sb.from('senhas')
+      .select('*, senha_setores(nome, prefixo)')
+      .eq('status', 'chamada')
+      .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+      .order('chamado_em', { ascending: false });
+    setHistorico(histData || []);
   };
 
   const getCod = (s) => {
@@ -117,6 +126,20 @@ export default function SenhaGuiche() {
   const totalPref = senhasFiltradas.filter(s => s.tipo === 'preferencial').length;
   const totalNorm = senhasFiltradas.filter(s => s.tipo === 'normal').length;
 
+  // Agrupa histórico por guichê
+  const historicoPorGuiche = useMemo(() => {
+    const mapa = {};
+    for (const s of historico) {
+      const key = s.guiche || '(sem guichê)';
+      if (!mapa[key]) mapa[key] = { guiche: key, total: 0, porSetor: {} };
+      mapa[key].total++;
+      const nomeSetor = s.senha_setores?.nome || 'Desconhecido';
+      if (!mapa[key].porSetor[nomeSetor]) mapa[key].porSetor[nomeSetor] = [];
+      mapa[key].porSetor[nomeSetor].push(s);
+    }
+    return Object.values(mapa).sort((a, b) => b.total - a.total);
+  }, [historico]);
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -144,7 +167,69 @@ export default function SenhaGuiche() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+      <div className="tabs" style={{ marginBottom: 16, borderBottom: '1px solid var(--color-border)' }}>
+        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia']].map(([id, label]) => (
+          <button key={id} onClick={() => setAba(id)}
+            className={`tab-btn ${aba === id ? 'active' : ''}`}>
+            {label}
+            {id === 'fila' && senhasFiltradas.length > 0 && (
+              <span style={{ marginLeft: 6, fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--color-accent)', color: '#fff', fontWeight: 700 }}>{senhasFiltradas.length}</span>
+            )}
+            {id === 'historico' && historico.length > 0 && (
+              <span style={{ marginLeft: 6, fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', fontWeight: 700 }}>{historico.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'historico' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {historicoPorGuiche.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-faint)' }}>
+              Nenhuma senha chamada hoje ainda.
+            </div>
+          ) : historicoPorGuiche.map(({ guiche: gc, total, porSetor }) => (
+            <div key={gc} className="card">
+              {/* Cabeçalho do guichê */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', margin: '-16px -16px 16px -16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                    {gc.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{gc}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{total} senha(s) chamada(s)</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-accent)' }}>{total}</div>
+              </div>
+
+              {/* Por setor */}
+              {Object.entries(porSetor).map(([nomeSetor, senhasSetor]) => (
+                <div key={nomeSetor} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{nomeSetor}</span>
+                    <span style={{ padding: '1px 8px', borderRadius: 10, background: 'var(--color-surface-2)', fontSize: 11 }}>{senhasSetor.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {senhasSetor.map(s => {
+                      const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(3,'0')}`;
+                      const isPref = s.tipo === 'preferencial';
+                      return (
+                        <div key={s.id} style={{ padding: '4px 12px', borderRadius: 8, background: isPref ? 'color-mix(in srgb, var(--color-warning) 12%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${isPref ? 'color-mix(in srgb, var(--color-warning) 30%, transparent)' : 'var(--color-border)'}`, fontSize: 14, fontWeight: 700, color: isPref ? 'var(--color-warning)' : 'var(--color-text)', fontFamily: 'var(--font-mono)' }}>
+                          {isPref && '⭐'} {cod}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {aba === 'fila' && (
 
         {/* Coluna principal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -279,6 +364,7 @@ export default function SenhaGuiche() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
