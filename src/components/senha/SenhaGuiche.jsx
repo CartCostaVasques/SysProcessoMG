@@ -107,6 +107,8 @@ export default function SenhaGuiche() {
       setChamando(false);
     }
   };
+
+  const salvarGuiche = () => {
     setGuiche(guicheTemp);
     localStorage.setItem('guiche_nome', guicheTemp);
     setEditGuiche(false);
