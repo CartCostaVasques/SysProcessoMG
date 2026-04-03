@@ -39,17 +39,17 @@ async function imprimirZebra(zpl) {
   }
 }
 
-function TelaSetores({ setores, onEscolher, nomeCartorio }) {
+function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
   const [hora, setHora] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
   useEffect(() => {
     const t = setInterval(() => setHora(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })), 1000);
     return () => clearInterval(t);
   }, []);
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: '#1e293b', padding: 'clamp(16px,3vw,24px) clamp(20px,5vw,40px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155' }}>
         <div>
-          <div style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: '#f59e0b' }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
           <div style={{ fontSize: 'clamp(14px, 2vw, 18px)', color: '#64748b', marginTop: 4 }}>Toque para retirar sua senha</div>
         </div>
         <div style={{ fontSize: 'clamp(32px,5vw,52px)', fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
@@ -60,8 +60,8 @@ function TelaSetores({ setores, onEscolher, nomeCartorio }) {
             style={{ padding: 'clamp(24px,4vw,40px) clamp(16px,3vw,24px)', background: '#1e293b', border: '2px solid #334155', borderRadius: 20, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px,2vw,16px)', transition: 'all .15s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: '#fff' }}>{setor.prefixo}</div>
-            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 700, color: '#1e40af', textAlign: 'center' }}>{setor.nome}</div>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: '#fff' }}>{setor.prefixo}</div>
+            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center' }}>{setor.nome}</div>
           </button>
         ))}
       </div>
@@ -132,17 +132,20 @@ export default function SenhaTotem() {
   const [emissao, setEmissao]           = useState(null);
   const [loading, setLoading]           = useState(false);
   const [nomeCartorio, setNomeCartorio] = useState('Cartório');
+  const [config, setConfig]             = useState({});
 
   useEffect(() => { carregarDados(); }, []);
 
   const carregarDados = async () => {
-    const [{ data: cartData }, { data: setData }] = await Promise.all([
+    const [{ data: cartData }, { data: setData }, { data: cfgData }] = await Promise.all([
       sb.from('cartorio').select('nome, nome_simples').limit(1),
       sb.from('senha_setores').select('*').eq('ativo', true).order('ordem'),
+      sb.from('senha_config').select('chave, valor'),
     ]);
     const cart = cartData?.[0];
     if (cart) setNomeCartorio(cart.nome_simples || cart.nome || 'Cartório');
     setSetores(setData || []);
+    if (cfgData) setConfig(Object.fromEntries(cfgData.map(r => [r.chave, r.valor])));
   };
 
   const escolherSetor = (setor) => { setSetorSel(setor); setEtapa('tipo'); };
@@ -177,5 +180,5 @@ export default function SenhaTotem() {
 
   if (etapa === 'tipo')        return <TelaTipo setor={setorSel} onEscolher={escolherTipo} onVoltar={voltar} loading={loading} />;
   if (etapa === 'confirmacao') return <TelaConfirmacao {...emissao} onVoltar={voltar} />;
-  return <TelaSetores setores={setores} onEscolher={escolherSetor} nomeCartorio={nomeCartorio} />;
+  return <TelaSetores setores={setores} onEscolher={escolherSetor} nomeCartorio={nomeCartorio} config={config} />;
 }
