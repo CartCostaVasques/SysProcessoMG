@@ -107,81 +107,95 @@ export default function SenhaPainel() {
   const getNomeSetor = (s) => s.senha_setores?.nome || setores[s.setor_id]?.nome || '—';
 
   return (
-    <div style={{ height: '100vh', background: '#020617', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ height: '100vh', background: '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
 
-      {/* Header */}
-      <div style={{ background: '#0f172a', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1e3a5f' }}>
-        <div style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9' }}>Cartório Costa Vasques</div>
+      {/* Header — cinza escuro com logo e nome âmbar */}
+      <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Logo */}
+          <div style={{ width: 52, height: 52, borderRadius: 12, background: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 900, color: '#1a1a1a', flexShrink: 0 }}>C</div>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5 }}>Cartório Costa Vasques</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>Sistema de Atendimento</div>
+          </div>
+        </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 36, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
-          <div style={{ fontSize: 13, color: '#64748b', textTransform: 'capitalize' }}>{data}</div>
+          <div style={{ fontSize: 40, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace', lineHeight: 1 }}>{hora}</div>
+          <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4, textTransform: 'capitalize' }}>{data}</div>
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 340px', gap: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, overflow: 'hidden' }}>
 
-        {/* Senha atual — destaque */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#020617' }}>
+        {/* Senha atual — área principal em cinza médio */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#252b3a' }}>
           {ultimaChamada ? (
             <>
-              <div style={{ fontSize: 22, color: '#64748b', textTransform: 'uppercase', letterSpacing: 4, marginBottom: 8 }}>Senha chamada</div>
-              <div style={{ fontSize: 22, color: '#94a3b8', marginBottom: 12 }}>{getNomeSetor(ultimaChamada)}</div>
+              <div style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 12 }}>Senha Chamada</div>
+              {/* Setor em destaque */}
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#f8fafc', marginBottom: 20, textTransform: 'uppercase', letterSpacing: 3, background: '#374151', padding: '6px 28px', borderRadius: 10 }}>
+                {getNomeSetor(ultimaChamada)}
+              </div>
+              {/* Código com borda âmbar */}
               <div style={{
                 fontSize: 180, fontWeight: 900, lineHeight: 1,
                 color: ultimaChamada.tipo === 'preferencial' ? '#f59e0b' : '#38bdf8',
                 letterSpacing: -8,
                 textShadow: ultimaChamada.tipo === 'preferencial'
-                  ? '0 0 60px rgba(245,158,11,0.4)'
-                  : '0 0 60px rgba(56,189,248,0.4)',
+                  ? '0 0 80px rgba(245,158,11,0.5)'
+                  : '0 0 80px rgba(56,189,248,0.4)',
+                WebkitTextStroke: `3px ${ultimaChamada.tipo === 'preferencial' ? 'rgba(245,158,11,0.6)' : 'rgba(245,158,11,0.5)'}`,
               }}>
                 {getCod(ultimaChamada)}
               </div>
               {ultimaChamada.tipo === 'preferencial' && (
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b', border: '3px solid #f59e0b', padding: '6px 24px', borderRadius: 12, marginTop: 8 }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: '#f59e0b', border: '3px solid #f59e0b', padding: '6px 24px', borderRadius: 12, marginTop: 16 }}>
                   ⭐ PREFERENCIAL
-                </div>
-              )}
-              {ultimaChamada.guiche && (
-                <div style={{ fontSize: 24, color: '#94a3b8', marginTop: 16 }}>
-                  Guichê <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{ultimaChamada.guiche}</span>
                 </div>
               )}
             </>
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 80, marginBottom: 16, opacity: 0.3 }}>🎫</div>
-              <div style={{ fontSize: 24, color: '#334155' }}>Aguardando senhas...</div>
+              <div style={{ fontSize: 72, marginBottom: 16, opacity: 0.2 }}>🎫</div>
+              <div style={{ fontSize: 22, color: '#4b5563' }}>Aguardando senhas...</div>
             </div>
           )}
         </div>
 
-        {/* Histórico lateral */}
-        <div style={{ background: '#0f172a', borderLeft: '2px solid #1e293b', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #1e293b', fontSize: 13, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 2 }}>
-            Últimas chamadas
+        {/* Histórico lateral — cinza escuro */}
+        <div style={{ background: '#2a2f3e', borderLeft: '2px solid #374151', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '2px solid #374151', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 3 }}>
+            Últimas Chamadas
           </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historico.map((s, i) => {
               const cod = getCod(s);
               const nomeSetor = getNomeSetor(s);
               const isPref = s.tipo === 'preferencial';
               const isFirst = i === 0;
+              const bgColor = isFirst ? '#374151' : i % 2 === 0 ? '#2f3547' : '#252b3a';
               return (
                 <div key={s.id} style={{
-                  padding: '14px 20px',
-                  borderBottom: '1px solid #1e293b',
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  background: isFirst ? '#1e293b' : 'transparent',
-                  opacity: isFirst ? 1 : 0.5 + (0.5 * (1 - i / historico.length)),
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: bgColor,
+                  border: isFirst ? '1px solid #4b5563' : '1px solid transparent',
+                  display: 'flex', flexDirection: 'column', gap: 2,
+                  opacity: isFirst ? 1 : Math.max(0.45, 1 - i * 0.08),
+                  transition: 'all .3s',
                 }}>
-                  <div style={{
-                    fontSize: isFirst ? 36 : 28, fontWeight: 900,
-                    color: isPref ? '#f59e0b' : '#38bdf8', minWidth: 80,
-                  }}>{cod}</div>
-                  <div>
-                    <div style={{ fontSize: 12, color: '#94a3b8' }}>{nomeSetor}</div>
-                    {isPref && <div style={{ fontSize: 10, color: '#f59e0b' }}>⭐ Preferencial</div>}
-                    {s.guiche && <div style={{ fontSize: 11, color: '#64748b' }}>Guichê {s.guiche}</div>}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <div style={{
+                      fontSize: isFirst ? 34 : 28,
+                      fontWeight: 900,
+                      color: isPref ? '#f59e0b' : '#38bdf8',
+                      letterSpacing: -1,
+                      lineHeight: 1,
+                    }}>{cod}</div>
+                    {isPref && <span style={{ fontSize: 12, color: '#f59e0b' }}>⭐</span>}
+                  </div>
+                  <div style={{ fontSize: isFirst ? 13 : 12, color: isFirst ? '#d1d5db' : '#9ca3af', fontWeight: isFirst ? 600 : 400 }}>
+                    {nomeSetor}
                   </div>
                 </div>
               );
