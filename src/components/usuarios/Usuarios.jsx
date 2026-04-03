@@ -22,6 +22,7 @@ const MODULOS = [
   { id: 'usuarios',    label: 'Usuários' },
   { id: 'configuracoes', label: 'Configurações' },
   { id: 'logs',        label: 'Logs de Acesso' },
+  { id: 'senha_aparencia', label: 'Senhas — Aparência' },
 ];
 
 const TODOS_MODULOS = MODULOS.map(m => m.id);
