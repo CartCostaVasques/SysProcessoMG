@@ -230,6 +230,7 @@ export default function SenhaGuiche() {
       )}
 
       {aba === 'fila' && (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
 
         {/* Coluna principal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
