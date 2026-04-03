@@ -56,8 +56,8 @@ export default function SenhaPainel() {
     // Realtime
     const canal = sb.channel('painel-senhas')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senha_config' }, () => {
-        setTimeout(() => sb.from('senha_config').select('chave, valor').then(({ data }) => {
-          if (data) setCfg(Object.fromEntries(data.map(r => [r.chave, r.valor])));
+        setTimeout(() => sb.from('senha_config').select('chave, valor').then(({ data: cfgRows }) => {
+          if (cfgRows) setCfg(Object.fromEntries(cfgRows.map(r => [r.chave, r.valor])));
         }), 400);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, payload => {
