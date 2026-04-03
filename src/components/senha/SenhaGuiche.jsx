@@ -295,7 +295,7 @@ export default function SenhaGuiche() {
             className={`tab-btn ${aba === id ? 'active' : ''}`}>
             {label}
             {id === 'fila' && senhasFiltradas.length > 0 && (
-              <span style={{ marginLeft: 6, fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--color-accent)', color: '#fff', fontWeight: 700 }}>{senhasFiltradas.length}</span>
+              <span style={{ marginLeft: 6, fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--color-accent)', color: 'var(--color-bg)', fontWeight: 700 }}>{senhasFiltradas.length}</span>
             )}
             {id === 'historico' && historico.length > 0 && (
               <span style={{ marginLeft: 6, fontSize: 11, padding: '1px 7px', borderRadius: 10, background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', fontWeight: 700 }}>{historico.length}</span>
@@ -349,7 +349,7 @@ export default function SenhaGuiche() {
                 {/* Cabeçalho do responsável */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', margin: '-16px -16px 16px -16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: 'var(--color-bg)' }}>
                       {resp.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -412,7 +412,7 @@ export default function SenhaGuiche() {
               style={{
                 flex: 1, padding: '20px', fontSize: 20, fontWeight: 700,
                 background: senhasFiltradas.length > 0 ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                color: senhasFiltradas.length > 0 ? '#fff' : 'var(--color-text-faint)',
+                color: senhasFiltradas.length > 0 ? 'var(--color-bg)' : 'var(--color-text-faint)',
                 border: 'none', borderRadius: 'var(--radius-md)', cursor: senhasFiltradas.length > 0 ? 'pointer' : 'not-allowed',
                 transition: 'all .15s',
               }}>
@@ -507,7 +507,7 @@ export default function SenhaGuiche() {
                 return (
                   <div key={setor.id} onClick={() => setFiltroSetor(filtroSetor === setor.id ? '' : setor.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: filtroSetor === setor.id ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${filtroSetor === setor.id ? 'var(--color-accent)' : 'transparent'}` }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-bg)', flexShrink: 0 }}>{setor.prefixo}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, color: 'var(--color-text)', fontWeight: 500 }}>{setor.nome}</div>
                       {pref > 0 && <div style={{ fontSize: 10, color: 'var(--color-warning)' }}>⭐ {pref} preferencial</div>}
@@ -584,7 +584,7 @@ export default function SenhaGuiche() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-secondary" onClick={() => setConfigEdit({ ...config })}>↩ Descartar</button>
             <button onClick={salvarConfig} disabled={salvandoConfig}
-              style={{ padding: '10px 24px', background: 'var(--color-accent)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
+              style={{ padding: '10px 24px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
               {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar Configurações'}
             </button>
           </div>
