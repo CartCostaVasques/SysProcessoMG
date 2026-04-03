@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const SUPA_URL = 'https://rriienkhlofjlvsxdkur.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyaWllbmtobG9mamx2c3hka3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NzU5NzIsImV4cCI6MjA4ODE1MTk3Mn0.D-5XDx63GXzC1mUo-PQs2aLgLWLZY2PG9oBbk4PRZYc';
-const sb = createClient(SUPA_URL, SUPA_KEY);
+import { sbPublic as sb } from '../../lib/supabasePublic.js';
 
 const HOJE = () => new Date().toISOString().split('T')[0];
 
