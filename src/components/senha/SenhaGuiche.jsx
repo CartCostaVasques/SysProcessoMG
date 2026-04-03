@@ -3,6 +3,59 @@ import { useApp } from '../../context/AppContext.jsx';
 
 const HOJE = () => new Date().toISOString().split('T')[0];
 
+
+// ── Seletor de cor igual ao da tela de Configurações ─────────────────────────
+const FUNDOS_PRESET = [
+  { id: 'dark-blue',  label: 'Azul Escuro',   valor: '#0d1117' },
+  { id: 'dark-gray',  label: 'Cinza Escuro',   valor: '#111827' },
+  { id: 'dark-slate', label: 'Slate Escuro',   valor: '#0f172a' },
+  { id: 'dark-green', label: 'Verde Escuro',   valor: '#052e16' },
+  { id: 'dark-purple',label: 'Roxo Escuro',    valor: '#1a0533' },
+  { id: 'dark-brown', label: 'Marrom Escuro',  valor: '#1c0a00' },
+];
+
+const CORES_PRESET = [
+  { label: 'Âmbar',        valor: '#f59e0b' },
+  { label: 'Azul Celeste', valor: '#38bdf8' },
+  { label: 'Azul Médio',   valor: '#60a5fa' },
+  { label: 'Azul Royal',   valor: '#3b82f6' },
+  { label: 'Verde',        valor: '#4ade80' },
+  { label: 'Verde Menta',  valor: '#6ee7b7' },
+  { label: 'Verde Claro',  valor: '#86efac' },
+  { label: 'Laranja',      valor: '#fb923c' },
+  { label: 'Rosa',         valor: '#f472b6' },
+  { label: 'Lilás',        valor: '#c084fc' },
+  { label: 'Branco Puro',  valor: '#ffffff' },
+  { label: 'Cinza Claro',  valor: '#e0e0e6' },
+];
+
+function SeletorCor({ label, chave, valor, onChange, tipo = 'cor' }) {
+  const preset = tipo === 'fundo' ? FUNDOS_PRESET : CORES_PRESET;
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+        {preset.map(c => (
+          <button key={c.id || c.valor} onClick={() => onChange(chave, c.valor)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: 'var(--color-surface-2)', border: `2px solid ${valor === c.valor ? c.valor : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 12, color: valor === c.valor ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: valor === c.valor ? 700 : 400 }}>
+            <div style={{ width: 16, height: 16, borderRadius: 3, background: c.valor, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+            {c.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>Personalizada:</div>
+        <input type="color" value={valor || '#000000'} onChange={e => onChange(chave, e.target.value)}
+          style={{ width: 40, height: 32, border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', padding: 2, background: 'var(--color-surface-2)' }} />
+        <input className="form-input" value={valor || ''} onChange={e => onChange(chave, e.target.value)}
+          style={{ width: 110, fontFamily: 'var(--font-mono)', fontSize: 13 }} />
+        <div style={{ width: 28, height: 28, borderRadius: 6, background: valor || '#000', border: '1px solid rgba(255,255,255,0.15)' }} />
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function SenhaGuiche() {
   const { supabaseClient: sb, addToast, usuarios, temPermissao } = useApp();
   const [setores, setSetores]       = useState([]);
@@ -396,73 +449,44 @@ export default function SenhaGuiche() {
       </div>
       )}
       {aba === 'aparencia' && temPermissao('senha_aparencia') && (
-        <div style={{ maxWidth: 680 }}>
+        <div style={{ maxWidth: 760 }}>
+
+          {/* ── TOTEM ── */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header"><div className="card-title">🖥 Totem (Tablet)</div></div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '8px 0' }}>
-              {[
-                ['totem_cor_fundo',          'Cor de fundo'],
-                ['totem_cor_nome_cartorio',  'Nome do cartório'],
-                ['totem_cor_prefixo_bg',     'Fundo do prefixo (letra)'],
-                ['totem_cor_nome_setor',     'Nome do setor'],
-              ].map(([chave, label]) => (
-                <div key={chave} className="form-group">
-                  <label className="form-label">{label}</label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="color" value={configEdit[chave] || '#000000'}
-                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
-                      style={{ width: 44, height: 36, border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
-                    <input className="form-input" value={configEdit[chave] || ''}
-                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
-                      style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SeletorCor label="Cor de fundo" chave="totem_cor_fundo" valor={configEdit['totem_cor_fundo']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} tipo="fundo" />
+            <SeletorCor label="Nome do cartório" chave="totem_cor_nome_cartorio" valor={configEdit['totem_cor_nome_cartorio']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
+            <SeletorCor label="Fundo do prefixo (letra do setor)" chave="totem_cor_prefixo_bg" valor={configEdit['totem_cor_prefixo_bg']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
+            <SeletorCor label="Nome do setor" chave="totem_cor_nome_setor" valor={configEdit['totem_cor_nome_setor']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
           </div>
 
+          {/* ── PAINEL TV ── */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header"><div className="card-title">📺 Painel (TV)</div></div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: '8px 0' }}>
-              {[
-                ['painel_cor_fundo',          'Cor de fundo'],
-                ['painel_cor_nome_cartorio',  'Nome do cartório'],
-                ['painel_cor_senha_normal',   'Senha normal'],
-                ['painel_cor_senha_pref',     'Senha preferencial'],
-              ].map(([chave, label]) => (
-                <div key={chave} className="form-group">
-                  <label className="form-label">{label}</label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input type="color" value={configEdit[chave] || '#000000'}
-                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
-                      style={{ width: 44, height: 36, border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer', padding: 2 }} />
-                    <input className="form-input" value={configEdit[chave] || ''}
-                      onChange={e => setConfigEdit(p => ({ ...p, [chave]: e.target.value }))}
-                      style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SeletorCor label="Cor de fundo" chave="painel_cor_fundo" valor={configEdit['painel_cor_fundo']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} tipo="fundo" />
+            <SeletorCor label="Nome do cartório" chave="painel_cor_nome_cartorio" valor={configEdit['painel_cor_nome_cartorio']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
+            <SeletorCor label="Senha normal" chave="painel_cor_senha_normal" valor={configEdit['painel_cor_senha_normal']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
+            <SeletorCor label="Senha preferencial" chave="painel_cor_senha_pref" valor={configEdit['painel_cor_senha_pref']} onChange={(k,v) => setConfigEdit(p => ({...p,[k]:v}))} />
           </div>
 
-          {/* Preview rápido */}
+          {/* ── PREVIEW ── */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-header"><div className="card-title">👁 Preview</div></div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1, background: configEdit['totem_cor_fundo'] || '#0f172a', borderRadius: 10, padding: '14px 18px', minHeight: 90 }}>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>TOTEM</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: configEdit['totem_cor_nome_cartorio'] || '#f59e0b', marginBottom: 8 }}>Cartório</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: configEdit['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff' }}>A</div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: configEdit['totem_cor_nome_setor'] || '#4ade80' }}>Escritura</span>
+              <div style={{ flex: 1, background: configEdit['totem_cor_fundo'] || '#0f172a', borderRadius: 10, padding: '16px 20px' }}>
+                <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Totem</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: configEdit['totem_cor_nome_cartorio'] || '#f59e0b', marginBottom: 12 }}>Cartório</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: configEdit['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#fff' }}>A</div>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: configEdit['totem_cor_nome_setor'] || '#4ade80' }}>Escritura</span>
                 </div>
               </div>
-              <div style={{ flex: 1, background: configEdit['painel_cor_fundo'] || '#0f172a', borderRadius: 10, padding: '14px 18px', minHeight: 90 }}>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>PAINEL TV</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: configEdit['painel_cor_nome_cartorio'] || '#f59e0b', marginBottom: 8 }}>Cartório</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: configEdit['painel_cor_senha_normal'] || '#38bdf8' }}>A001</span>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: configEdit['painel_cor_senha_pref'] || '#f59e0b' }}>B002⭐</span>
+              <div style={{ flex: 1, background: configEdit['painel_cor_fundo'] || '#1e2433', borderRadius: 10, padding: '16px 20px' }}>
+                <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Painel TV</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: configEdit['painel_cor_nome_cartorio'] || '#f59e0b', marginBottom: 12 }}>Cartório</div>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: configEdit['painel_cor_senha_normal'] || '#38bdf8' }}>A001</span>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: configEdit['painel_cor_senha_pref'] || '#f59e0b' }}>B002 ⭐</span>
                 </div>
               </div>
             </div>
