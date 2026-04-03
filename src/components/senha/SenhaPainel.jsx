@@ -90,7 +90,8 @@ export default function SenhaPainel() {
     (setsData || []).forEach(s => { mapa[s.id] = s; });
     setSetores(mapa);
 
-    const { data: cart } = await sb.from('cartorio').select('nome, logo_url').eq('id', 1).single();
+    const { data: cartData } = await sb.from('cartorio').select('nome, logo_url').limit(1);
+    const cart = cartData?.[0];
     if (cart) {
       if (cart.nome) setNomeCartorio(cart.nome);
       if (cart.logo_url) setLogoUrl(cart.logo_url);
