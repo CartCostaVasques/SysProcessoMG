@@ -43,6 +43,7 @@ export default function SenhaPainel() {
   const [nomeCartorio, setNomeCartorio] = useState('Cartório');
   const [cfg, setCfg]                   = useState({});
   const ultimaRef = useRef(null);
+  const [ativado, setAtivado] = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -84,6 +85,14 @@ export default function SenhaPainel() {
     return () => { clearInterval(t); sb.removeChannel(canal); };
   }, []);
 
+  const ativarAudio = () => {
+    // Um speak() silencioso garante a ativação do contexto de áudio pelo browser
+    const msg = new SpeechSynthesisUtterance(' ');
+    msg.volume = 0;
+    window.speechSynthesis.speak(msg);
+    setAtivado(true);
+  };
+
   const carregarDados = async () => {
     const { data: setsData } = await sb.from('senha_setores').select('*').eq('ativo', true);
     const mapa = {};
@@ -119,7 +128,16 @@ export default function SenhaPainel() {
   const getNomeSetor = (s) => s.senha_setores?.nome || setores[s.setor_id]?.nome || '—';
 
   return (
-    <div style={{ height: '100vh', background: cfg['painel_cor_fundo'] || '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
+    <>
+    {!ativado && (
+      <div onClick={ativarAudio} style={{ height: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 24 }}>
+        <div style={{ fontSize: 72 }}>📺</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b' }}>Painel de Atendimento</div>
+        <div style={{ fontSize: 18, color: '#94a3b8' }}>Toque para iniciar o painel com áudio</div>
+        <div style={{ marginTop: 16, padding: '16px 48px', background: '#1e40af', borderRadius: 16, fontSize: 20, fontWeight: 700, color: '#fff' }}>▶ Iniciar</div>
+      </div>
+    )}
+    {ativado && <div style={{ height: '100vh', background: cfg['painel_cor_fundo'] || '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
 
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
@@ -210,6 +228,7 @@ export default function SenhaPainel() {
           </div>
         </div>
       </div>
-    </div>
+    </div>}
+    </>
   );
 }
