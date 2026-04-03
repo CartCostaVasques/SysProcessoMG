@@ -41,9 +41,10 @@ import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
 import RelatorioServicos from './components/relatorios/RelatorioServicos.jsx';
 import RelatorioConfig   from './components/relatorios/RelatorioConfig.jsx';
 import { Configuracoes, LogsAcesso } from './components/configuracoes/Config.jsx';
-import Chat from './components/chat/Chat.jsx';
-import ChatAlerta from './components/chat/ChatAlerta.jsx';
-import Estoque from './components/estoque/Estoque.jsx';
+import SenhaGuiche  from './components/senha/SenhaGuiche.jsx';
+import SenhaSetores from './components/senha/SenhaSetores.jsx';
+import SenhaTotem   from './components/senha/SenhaTotem.jsx';
+import SenhaPainel  from './components/senha/SenhaPainel.jsx';
 
 function AppShell() {
   const { usuario, tema } = useApp();
@@ -53,6 +54,11 @@ function AppShell() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', tema);
   }, [tema]);
+
+  // Rotas públicas — sem login, sem menu
+  const path = window.location.pathname;
+  if (path === '/senha/totem') return <SenhaTotem />;
+  if (path === '/senha/painel') return <SenhaPainel />;
 
   if (!usuario) return <LoginPage />;
 
@@ -73,10 +79,10 @@ function AppShell() {
       case 'setores':       return <Setores />;
       case 'relservicos':   return <RelatorioServicos />;
       case 'relconfig':     return <RelatorioConfig />;
-      case 'chat':          return <Chat />;
-      case 'estoque':       return <Estoque />;
       case 'configuracoes': return <Configuracoes />;
       case 'logs':          return <LogsAcesso />;
+      case 'senha_guiche':  return <SenhaGuiche />;
+      case 'senha_setores': return <SenhaSetores />;
       default:              return <Dashboard setPage={setPage} />;
     }
   };
@@ -93,7 +99,6 @@ function AppShell() {
         </main>
       </div>
       <ToastContainer />
-      <ChatAlerta onAbrirChat={(conv) => { setPage('chat'); }} />
     </div>
   );
 }
