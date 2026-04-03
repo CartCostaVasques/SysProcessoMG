@@ -3,15 +3,14 @@ import { sbPublic as sb } from '../../lib/supabasePublic.js';
 
 const HOJE = () => new Date().toISOString().split('T')[0];
 
-function falarSenha(cod, tipo, guiche) {
+function falarSenha(cod, nomeSetor) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
 
   const letras = cod.slice(0, 1);
   const nums   = cod.slice(1).split('').join(' ');
-  const pref   = tipo === 'preferencial' ? ', preferencial,' : '';
-  const gc     = guiche ? `, guichê ${guiche}` : '';
-  const texto  = `Senha ${letras} ${nums}${pref}${gc}, por favor.`;
+  const setor  = nomeSetor ? `, Setor ${nomeSetor}` : '';
+  const texto  = `Senha ${letras} ${nums}${setor}.`;
 
   const falar = () => {
     const msg  = new SpeechSynthesisUtterance(texto);
@@ -66,7 +65,7 @@ export default function SenhaPainel() {
             const setor = s[nova.setor_id];
             if (setor) {
               const cod = `${setor.prefixo}${String(nova.numero).padStart(3, '0')}`;
-              setTimeout(() => falarSenha(cod, nova.tipo, nova.guiche), 300);
+              setTimeout(() => falarSenha(cod, setor.nome), 300);
             }
             return s;
           });
