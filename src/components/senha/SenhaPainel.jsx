@@ -134,6 +134,21 @@ export default function SenhaPainel() {
     return h === 1 ? '1 hora atrás' : `${h} horas atrás`;
   };
 
+  const fundoCfg = cfg['painel_cor_fundo'] || '#1e2433';
+
+  // Cores derivadas do fundo — mais claras/escuras para criar hierarquia
+  const isLight = (hex) => {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return (r*299 + g*587 + b*114) / 1000 > 128;
+  };
+  const light = isLight(fundoCfg);
+  const fundoHeader  = light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.08)';
+  const fundoCentral = light ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.25)';
+  const fundoLateral = light ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.30)';
+  const bordaCor     = light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.08)';
+  const textoCor     = light ? '#1a1a1a' : '#f8fafc';
+  const textoMuted   = light ? 'rgba(0,0,0,0.5)' : '#6b7280';
+
   const getCod = (s) => {
     const setor = s.senha_setores || setores[s.setor_id];
     if (!setor) return '---';
@@ -155,7 +170,7 @@ export default function SenhaPainel() {
     {ativado && <div style={{ height: '100vh', background: cfg['painel_cor_fundo'] || '#1e2433', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Arial, sans-serif' }}>
 
       {/* Header — cinza escuro com logo e nome âmbar */}
-      <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
+      <div style={{ background: fundoHeader, padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `2px solid ${bordaCor}` }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ fontSize: 40, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
         </div>
@@ -168,12 +183,12 @@ export default function SenhaPainel() {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, overflow: 'hidden' }}>
 
         {/* Senha atual — área principal em cinza médio */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: '#252b3a', position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: fundoCentral, position: 'relative' }}>
           {ultimaChamada ? (
             <>
-              <div style={{ fontSize: 16, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 6, marginBottom: 12 }}>Senha Chamada</div>
+              <div style={{ fontSize: 16, color: textoMuted, textTransform: 'uppercase', letterSpacing: 6, marginBottom: 12 }}>Senha Chamada</div>
               {/* Setor em destaque */}
-              <div style={{ fontSize: 32, fontWeight: 800, color: '#f8fafc', marginBottom: 20, textTransform: 'uppercase', letterSpacing: 3, background: '#374151', padding: '6px 28px', borderRadius: 10 }}>
+              <div style={{ fontSize: 32, fontWeight: 800, color: textoCor, marginBottom: 20, textTransform: 'uppercase', letterSpacing: 3, background: fundoLateral, padding: '6px 28px', borderRadius: 10 }}>
                 {getNomeSetor(ultimaChamada)}
               </div>
               {/* Código com borda âmbar */}
@@ -202,16 +217,16 @@ export default function SenhaPainel() {
           )}
           {/* Faixa do atendente — mesma largura do header */}
           {ultimaChamada?.guiche && (
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: '360px', background: '#2a2f3e', borderTop: '2px solid #374151', padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ fontSize: 14, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2, flexShrink: 0 }}>Atendente:</div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: '360px', background: fundoHeader, borderTop: `2px solid ${bordaCor}`, padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 14, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, flexShrink: 0 }}>Atendente:</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
             </div>
           )}
         </div>
 
         {/* Histórico lateral — cinza escuro */}
-        <div style={{ background: '#2a2f3e', borderLeft: '2px solid #374151', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: '2px solid #374151', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 3 }}>
+        <div style={{ background: fundoLateral, borderLeft: `2px solid ${bordaCor}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: `2px solid ${bordaCor}`, fontSize: 12, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 3 }}>
             Últimas Chamadas
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -226,9 +241,9 @@ export default function SenhaPainel() {
 
               if (i === 1) {
                 return (
-                  <div key={s.id} style={{ borderRadius: 10, background: '#374151', border: '1px solid #4b5563', overflow: 'hidden', marginBottom: 4 }}>
+                  <div key={s.id} style={{ borderRadius: 10, background: fundoHeader, border: `1px solid ${bordaCor}`, overflow: 'hidden', marginBottom: 4 }}>
                     {/* Label topo */}
-                    <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: '1px solid #4b5563' }}>
+                    <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
                       Senha anterior
                     </div>
                     {/* Código */}
@@ -238,7 +253,7 @@ export default function SenhaPainel() {
                       </div>
                     </div>
                     {/* Setor */}
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#e5e7eb', textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderTop: '1px solid #4b5563', borderBottom: '1px solid #4b5563' }}>
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: textoCor, textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderTop: `1px solid ${bordaCor}`, borderBottom: `1px solid ${bordaCor}` }}>
                       {nomeSetor}
                     </div>
                     {/* Tempo */}
@@ -252,10 +267,10 @@ export default function SenhaPainel() {
               // demais — compactas
               const opacity = Math.max(0.35, 1 - (i - 1) * 0.1);
               return (
-                <div key={s.id} style={{ padding: '7px 12px', borderRadius: 8, background: i % 2 === 0 ? '#2f3547' : '#252b3a', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
+                <div key={s.id} style={{ padding: '7px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
                   <div style={{ fontSize: 22, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1, minWidth: 64 }}>{cod}</div>
                   {isPref && <span style={{ fontSize: 11, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
-                  <div style={{ fontSize: 11, color: '#9ca3af', flex: 1 }}>{nomeSetor}</div>
+                  <div style={{ fontSize: 11, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
                 </div>
               );
             })}
