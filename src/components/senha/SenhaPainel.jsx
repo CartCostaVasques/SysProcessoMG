@@ -119,6 +119,16 @@ export default function SenhaPainel() {
     if (chamadas?.length > 0) setUltime(chamadas[0]);
   };
 
+  const tempoRelativo = (iso) => {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return `${diff}s atrás`;
+    const m = Math.floor(diff / 60);
+    if (m < 60) return m === 1 ? '1 minuto atrás' : `${m} minutos atrás`;
+    const h = Math.floor(m / 60);
+    return h === 1 ? '1 hora atrás' : `${h} horas atrás`;
+  };
+
   const getCod = (s) => {
     const setor = s.senha_setores || setores[s.setor_id];
     if (!setor) return '---';
@@ -199,36 +209,48 @@ export default function SenhaPainel() {
           <div style={{ padding: '14px 20px', borderBottom: '2px solid #374151', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 3 }}>
             Últimas Chamadas
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historico.map((s, i) => {
               const cod = getCod(s);
               const nomeSetor = getNomeSetor(s);
               const isPref = s.tipo === 'preferencial';
-              const isFirst = i === 0;
-              const bgColor = isFirst ? '#374151' : i % 2 === 0 ? '#2f3547' : '#252b3a';
+              const corSenha = isPref ? (cfg['painel_cor_senha_pref'] || '#f59e0b') : (cfg['painel_cor_senha_normal'] || '#38bdf8');
+
+              // i===0 é a última (já na tela grande), i===1 é a penúltima — card expandido
+              if (i === 0) return null;
+
+              if (i === 1) {
+                return (
+                  <div key={s.id} style={{ borderRadius: 10, background: '#374151', border: '1px solid #4b5563', overflow: 'hidden', marginBottom: 4 }}>
+                    {/* Label topo */}
+                    <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: '1px solid #4b5563' }}>
+                      Senha anterior
+                    </div>
+                    {/* Código */}
+                    <div style={{ textAlign: 'center', padding: '10px 8px 4px' }}>
+                      <div style={{ fontSize: 52, fontWeight: 900, color: corSenha, letterSpacing: -2, lineHeight: 1 }}>
+                        {cod}{isPref && <span style={{ fontSize: 18, marginLeft: 4 }}>⭐</span>}
+                      </div>
+                    </div>
+                    {/* Setor */}
+                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#e5e7eb', textTransform: 'uppercase', letterSpacing: 1, padding: '4px 8px', borderTop: '1px solid #4b5563', borderBottom: '1px solid #4b5563' }}>
+                      {nomeSetor}
+                    </div>
+                    {/* Tempo */}
+                    <div style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', padding: '6px 8px 8px' }}>
+                      {tempoRelativo(s.chamado_em)}
+                    </div>
+                  </div>
+                );
+              }
+
+              // demais — compactas
+              const opacity = Math.max(0.35, 1 - (i - 1) * 0.1);
               return (
-                <div key={s.id} style={{
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  background: bgColor,
-                  border: isFirst ? '1px solid #4b5563' : '1px solid transparent',
-                  display: 'flex', flexDirection: 'column', gap: 2,
-                  opacity: isFirst ? 1 : Math.max(0.45, 1 - i * 0.08),
-                  transition: 'all .3s',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <div style={{
-                      fontSize: isFirst ? 34 : 28,
-                      fontWeight: 900,
-                      color: isPref ? (cfg['painel_cor_senha_pref'] || '#f59e0b') : (cfg['painel_cor_senha_normal'] || '#38bdf8'),
-                      letterSpacing: -1,
-                      lineHeight: 1,
-                    }}>{cod}</div>
-                    {isPref && <span style={{ fontSize: 12, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
-                  </div>
-                  <div style={{ fontSize: isFirst ? 13 : 12, color: isFirst ? '#d1d5db' : '#9ca3af', fontWeight: isFirst ? 600 : 400 }}>
-                    {nomeSetor}
-                  </div>
+                <div key={s.id} style={{ padding: '7px 12px', borderRadius: 8, background: i % 2 === 0 ? '#2f3547' : '#252b3a', display: 'flex', alignItems: 'center', gap: 10, opacity, transition: 'all .3s' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1, minWidth: 64 }}>{cod}</div>
+                  {isPref && <span style={{ fontSize: 11, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
+                  <div style={{ fontSize: 11, color: '#9ca3af', flex: 1 }}>{nomeSetor}</div>
                 </div>
               );
             })}
