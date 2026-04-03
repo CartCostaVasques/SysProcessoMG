@@ -6,20 +6,33 @@ const HOJE = () => new Date().toISOString().split('T')[0];
 function falarSenha(cod, tipo, guiche) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
+
   const letras = cod.slice(0, 1);
-  const nums = cod.slice(1).split('').join(' ');
-  const pref = tipo === 'preferencial' ? ', preferencial,' : '';
-  const gc = guiche ? `, guichê ${guiche}` : '';
-  const texto = `Senha ${letras} ${nums}${pref}${gc}, por favor.`;
-  const msg = new SpeechSynthesisUtterance(texto);
-  msg.lang = 'pt-BR';
-  msg.rate = 0.9;
-  msg.pitch = 1;
-  // Tenta usar voz PT-BR se disponível
+  const nums   = cod.slice(1).split('').join(' ');
+  const pref   = tipo === 'preferencial' ? ', preferencial,' : '';
+  const gc     = guiche ? `, guichê ${guiche}` : '';
+  const texto  = `Senha ${letras} ${nums}${pref}${gc}, por favor.`;
+
+  const falar = () => {
+    const msg  = new SpeechSynthesisUtterance(texto);
+    msg.lang   = 'pt-BR';
+    msg.rate   = 0.88;
+    msg.pitch  = 1;
+    const vozes = window.speechSynthesis.getVoices();
+    const voz   = vozes.find(v => v.lang === 'pt-BR')
+               || vozes.find(v => v.lang.startsWith('pt'))
+               || vozes[0];
+    if (voz) msg.voice = voz;
+    window.speechSynthesis.speak(msg);
+  };
+
+  // Vozes podem não ter carregado ainda
   const vozes = window.speechSynthesis.getVoices();
-  const voz = vozes.find(v => v.lang === 'pt-BR') || vozes.find(v => v.lang.startsWith('pt'));
-  if (voz) msg.voice = voz;
-  window.speechSynthesis.speak(msg);
+  if (vozes.length > 0) {
+    falar();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => { falar(); window.speechSynthesis.onvoiceschanged = null; };
+  }
 }
 
 export default function SenhaPainel() {
@@ -43,9 +56,12 @@ export default function SenhaPainel() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, payload => {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
-          setHistorico(h => [nova, ...h].slice(0, 8));
+          setHistorico(h => {
+            // Se for repetição, não duplica no histórico
+            const semDuplicata = h.filter(x => x.id !== nova.id);
+            return [nova, ...semDuplicata].slice(0, 8);
+          });
           setUltime(nova);
-          // Busca nome do setor e fala
           setSetores(s => {
             const setor = s[nova.setor_id];
             if (setor) {
