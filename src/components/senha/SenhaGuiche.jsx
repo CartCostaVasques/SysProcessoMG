@@ -93,7 +93,20 @@ export default function SenhaGuiche() {
     }
   };
 
-  const salvarGuiche = () => {
+  const repetirChamada = async () => {
+    if (!ultimaChamada || chamando) return;
+    setChamando(true);
+    try {
+      // Atualiza chamado_em para agora — dispara Realtime no painel e repete a voz
+      await sb.from('senhas').update({
+        chamado_em: new Date().toISOString(),
+      }).eq('id', ultimaChamada.id);
+    } catch (e) {
+      addToast('Erro ao repetir chamada', 'error');
+    } finally {
+      setChamando(false);
+    }
+  };
     setGuiche(guicheTemp);
     localStorage.setItem('guiche_nome', guicheTemp);
     setEditGuiche(false);
@@ -166,6 +179,12 @@ export default function SenhaGuiche() {
               </div>
               <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{ultimaChamada.senha_setores?.nome}</div>
               {ultimaChamada.tipo === 'preferencial' && <span style={{ fontSize: 11, color: 'var(--color-warning)' }}>⭐ Preferencial</span>}
+              <div style={{ marginLeft: 'auto' }}>
+                <button onClick={repetirChamada} disabled={chamando}
+                  style={{ padding: '8px 18px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: 13, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📢 Repetir chamada
+                </button>
+              </div>
             </div>
           )}
 
