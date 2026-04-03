@@ -40,8 +40,7 @@ export default function SenhaPainel() {
   const [historico, setHistorico]   = useState([]);
   const [hora, setHora]             = useState('');
   const [data, setData]             = useState('');
-  const [logoUrl, setLogoUrl]       = useState(null);
-  const [nomeCartorio, setNomeCartorio] = useState('Cartório Costa Vasques');
+  const [nomeCartorio, setNomeCartorio] = useState('Cartório');
   const ultimaRef = useRef(null);
 
   useEffect(() => {
@@ -90,11 +89,10 @@ export default function SenhaPainel() {
     (setsData || []).forEach(s => { mapa[s.id] = s; });
     setSetores(mapa);
 
-    const { data: cartData } = await sb.from('cartorio').select('nome, logo_url').limit(1);
+    const { data: cartData } = await sb.from('cartorio').select('nome, nome_simples, logo_url').limit(1);
     const cart = cartData?.[0];
     if (cart) {
-      if (cart.nome) setNomeCartorio(cart.nome);
-      if (cart.logo_url) setLogoUrl(cart.logo_url);
+      if (cart.nome_simples || cart.nome) setNomeCartorio(cart.nome_simples || cart.nome);
     }
 
     const { data: chamadas } = await sb.from('senhas')
@@ -120,18 +118,8 @@ export default function SenhaPainel() {
 
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: '#2a2f3e', padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #374151' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          {/* Logo */}
-          <div style={{ width: 60, height: 60, borderRadius: 12, background: logoUrl ? 'transparent' : '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            {logoUrl
-              ? <img src={logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              : <span style={{ fontSize: 28, fontWeight: 900, color: '#1a1a1a' }}>C</span>
-            }
-          </div>
-          <div>
-            <div style={{ fontSize: 34, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
-            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Sistema de Atendimento</div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ fontSize: 36, fontWeight: 800, color: '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace', lineHeight: 1 }}>{hora}</div>
