@@ -67,6 +67,9 @@ function SeletorCor({ label, chave, valor, onChange, tipo = 'cor' }) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+const abreviarSetor = (nome) =>
+  nome === 'Reconhecimento de Firma' ? 'Rec. de Firma' : nome;
+
 export default function SenhaGuiche() {
   const { supabaseClient: sb, addToast, usuarios, temPermissao, usuario } = useApp();
   const [setores, setSetores]       = useState([]);
@@ -335,7 +338,7 @@ export default function SenhaGuiche() {
                 <div style={{ color: 'var(--color-text-faint)', fontSize: 13 }}>Nenhum atendimento ainda.</div>
               ) : resumoPorSetor.map(([setor, qtd]) => (
                 <div key={setor} style={{ padding: '14px 16px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{setor}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{abreviarSetor(setor)}</div>
                   <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--color-accent)', lineHeight: 1 }}>{qtd}</div>
                   <div style={{ fontSize: 10, color: 'var(--color-text-faint)' }}>senha{qtd !== 1 ? 's' : ''} atendida{qtd !== 1 ? 's' : ''}</div>
                 </div>
@@ -518,7 +521,7 @@ export default function SenhaGuiche() {
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: filtroSetor === setor.id ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${filtroSetor === setor.id ? 'var(--color-accent)' : 'transparent'}` }}>
                     <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-bg)', flexShrink: 0 }}>{setor.prefixo}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: 'var(--color-text)', fontWeight: 500 }}>{setor.nome}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text)', fontWeight: 500 }}>{abreviarSetor(setor.nome)}</div>
                       {pref > 0 && <div style={{ fontSize: 10, color: 'var(--color-warning)' }}>⭐ {pref} preferencial</div>}
                     </div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: qtd > 0 ? 'var(--color-text)' : 'var(--color-text-faint)' }}>{qtd}</div>
