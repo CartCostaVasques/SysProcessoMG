@@ -302,7 +302,7 @@ export default function SenhaGuiche() {
       </div>
 
       <div className="tabs" style={{ marginBottom: 16, borderBottom: '1px solid var(--color-border)' }}>
-        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia'], ...(temPermissao('senha_aparencia') ? [['aparencia', '🎨 Aparência']] : [])].map(([id, label]) => (
+        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia'], ...(temPermissao('senha_aparencia') ? [['aparencia', '🎨 Aparência'], ['impressora', '🖨 Impressora']] : [])].map(([id, label]) => (
           <button key={id} onClick={() => setAba(id)}
             className={`tab-btn ${aba === id ? 'active' : ''}`}>
             {label}
@@ -591,6 +591,87 @@ export default function SenhaGuiche() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-secondary" onClick={() => setConfigEdit({ ...config })}>↩ Descartar</button>
+            <button onClick={salvarConfig} disabled={salvandoConfig}
+              style={{ padding: '10px 24px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
+              {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar Configurações'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {aba === 'impressora' && temPermissao('senha_aparencia') && (
+        <div style={{ maxWidth: 560 }}>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header"><div className="card-title">🖨 Configuração da Impressora</div></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+
+              <div className="form-group">
+                <label className="form-label">IP da Impressora</label>
+                <input className="form-input" value={configEdit['imp_ip'] || ''}
+                  onChange={e => setConfigEdit(p => ({...p, imp_ip: e.target.value}))}
+                  placeholder="ex: 192.168.10.173" style={{ fontFamily: 'var(--font-mono)' }} />
+                <div className="form-hint">IP fixo da impressora na rede local</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Porta</label>
+                <input className="form-input" value={configEdit['imp_porta'] || '9100'}
+                  onChange={e => setConfigEdit(p => ({...p, imp_porta: e.target.value}))}
+                  placeholder="9100" style={{ fontFamily: 'var(--font-mono)', width: 140 }} />
+                <div className="form-hint">Porta TCP da impressora (padrão: 9100)</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Porta do Proxy Local (RawBT/Termux)</label>
+                <input className="form-input" value={configEdit['imp_proxy_porta'] || '8080'}
+                  onChange={e => setConfigEdit(p => ({...p, imp_proxy_porta: e.target.value}))}
+                  placeholder="8080" style={{ fontFamily: 'var(--font-mono)', width: 140 }} />
+                <div className="form-hint">Porta do servidor local no tablet (padrão: 8080)</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Largura do papel</label>
+                <select className="form-select" style={{ width: 200 }}
+                  value={configEdit['imp_largura'] || '80'}
+                  onChange={e => setConfigEdit(p => ({...p, imp_largura: e.target.value}))}>
+                  <option value="58">58mm</option>
+                  <option value="80">80mm</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Teste de conexão */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card-header"><div className="card-title">🔌 Teste de Conexão</div></div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
+              Envia uma impressão de teste para verificar se a comunicação está funcionando.
+              O tablet com o Totem deve estar ligado e o Termux rodando.
+            </div>
+            <button onClick={async () => {
+              const ip    = configEdit['imp_ip'] || '';
+              const porta = configEdit['imp_proxy_porta'] || '8080';
+              if (!ip) { alert('Configure o IP da impressora primeiro.'); return; }
+              try {
+                const res = await fetch(`http://localhost:${porta}/imprimir`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ texto: '--- TESTE DE IMPRESSAO ---\nSistema de Senhas\nConexao OK!\n\n\n' }),
+                });
+                if (res.ok) alert('✅ Impressão enviada com sucesso!');
+                else alert('❌ Erro na resposta do proxy: ' + res.status);
+              } catch(e) {
+                alert('❌ Não foi possível conectar ao proxy local.\nVerifique se o Termux está rodando.');
+              }
+            }}
+              className="btn btn-secondary">
+              🖨 Enviar Impressão de Teste
+            </button>
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
