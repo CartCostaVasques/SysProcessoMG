@@ -6,38 +6,61 @@ const HOJE = () => {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
-function gerarZPL(setor, numero, tipo) {
-  const cod     = `${setor.prefixo}${String(numero).padStart(3, '0')}`;
-  const hora    = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const data    = new Date().toLocaleDateString('pt-BR');
-  const isPref  = tipo === 'preferencial';
-  const linhaPref = isPref ? `^FO40,255^A0N,30,30^FD*** PREFERENCIAL ***^FS` : '';
-  return `^XA\n^PW576\n^LL520\n^FO40,30^A0N,28,28^FDCartorio Costa Vasques^FS\n^FO40,70^GB496,2,2^FS\n^FO40,90^A0N,28,28^FD${setor.nome}^FS\n^FO40,145^A0N,110,110^FD${cod}^FS\n${linhaPref}\n^FO40,300^GB496,2,2^FS\n^FO40,320^A0N,26,26^FD${data}   ${hora}^FS\n^FO40,365^A0N,22,22^FDAguarde ser chamado^FS\n^XZ`;
+// ── Impressão Bematech via proxy local (Termux) ──────────────────────────────
+function gerarTextoBematech(nomeCartorio, setor, cod, tipo) {
+  const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const isPref = tipo === 'preferencial';
+
+  // ESC/POS Bematech — comandos básicos
+  const ESC  = '\x1B';
+  const GS   = '\x1D';
+  const LF   = '\n';
+
+  const centralizar  = ESC + 'a' + '\x01';
+  const esquerda     = ESC + 'a' + '\x00';
+  const negritoOn    = ESC + 'E' + '\x01';
+  const negritoOff   = ESC + 'E' + '\x00';
+  const fonteGrande  = GS  + '!' + '\x11'; // dupla altura + largura
+  const fonteMedio   = GS  + '!' + '\x01'; // dupla altura
+  const fonteNormal  = GS  + '!' + '\x00';
+  const corteParcial = ESC + 'i';
+
+  return (
+    centralizar +
+    fonteNormal + negritoOn +
+    nomeCartorio + LF +
+    negritoOff +
+    '--------------------------------' + LF +
+    fonteNormal +
+    setor.nome + LF +
+    '--------------------------------' + LF +
+    fonteGrande + negritoOn +
+    cod + LF +
+    fonteNormal + negritoOff +
+    '--------------------------------' + LF +
+    (isPref ? (negritoOn + '*** PREFERENCIAL ***' + LF + negritoOff) : '') +
+    fonteNormal +
+    hora + LF +
+    '--------------------------------' + LF +
+    'Seja Bem-Vindo!' + LF +
+    LF + LF + LF +
+    corteParcial
+  );
 }
 
-async function imprimirZebra(zpl) {
+async function imprimirBematech(texto, proxyPorta = '8080') {
   try {
-    // Passo 1: descobre a impressora padrão
-    const resDisc = await fetch('http://localhost:9100/available', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!resDisc.ok) return false;
-    const dispData = await resDisc.json();
-    const printer = dispData?.printer;
-    if (!printer) return false;
-
-    // Passo 2: envia o ZPL para a impressora
-    const resSend = await fetch('http://localhost:9100/write', {
+    const res = await fetch(`http://localhost:${proxyPorta}/imprimir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device: printer, data: zpl }),
+      body: JSON.stringify({ texto }),
     });
-    return resSend.ok;
+    return res.ok;
   } catch {
-    return false;
+    return false; // falha silenciosa — não impede emissão da senha
   }
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
 function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
   const [hora, setHora] = useState(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
@@ -178,7 +201,8 @@ export default function SenhaTotem() {
       const { error } = await sb.from('senhas').insert({ setor_id: setorSel.id, numero, tipo, status: 'aguardando' });
       if (error) throw error;
 
-      await imprimirZebra(gerarZPL(setorSel, numero, tipo));
+      const proxyPorta = config['imp_proxy_porta'] || '8080';
+      await imprimirBematech(gerarTextoBematech(nomeCartorio, setorSel, cod, tipo), proxyPorta);
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
     } catch (e) {
