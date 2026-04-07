@@ -46,22 +46,24 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
     return () => clearInterval(t);
   }, []);
   return (
-    <div style={{ minHeight: '100vh', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: '#1e293b', padding: 'clamp(16px,3vw,24px) clamp(20px,5vw,40px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155' }}>
+    <div style={{ height: '100vh', width: '100vw', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header compacto para tablet */}
+      <div style={{ background: '#1e293b', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
         <div>
-          <div style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
-          <div style={{ fontSize: 'clamp(14px, 2vw, 18px)', color: '#64748b', marginTop: 4 }}>Toque para retirar sua senha</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b', lineHeight: 1.2 }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Toque para retirar sua senha</div>
         </div>
-        <div style={{ fontSize: 'clamp(32px,5vw,52px)', fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
       </div>
-      <div style={{ flex: 1, padding: 'clamp(16px,3vw,40px)', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(12px,2vw,24px)', alignContent: 'start' }}>
+      {/* Grid de setores — ocupa todo o espaço restante */}
+      <div style={{ flex: 1, padding: 10, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: '1fr', gap: 10 }}>
         {setores.map(setor => (
           <button key={setor.id} onClick={() => onEscolher(setor)}
-            style={{ padding: 'clamp(24px,4vw,40px) clamp(16px,3vw,24px)', background: '#1e293b', border: '2px solid #334155', borderRadius: 20, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(10px,2vw,16px)', transition: 'all .15s' }}
+            style={{ background: '#1e293b', border: '2px solid #334155', borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s', width: '100%', height: '100%' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 900, color: '#fff' }}>{setor.prefixo}</div>
-            <div style={{ fontSize: 'clamp(18px,2.5vw,26px)', fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center' }}>{setor.nome}</div>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center', padding: '0 8px', lineHeight: 1.2 }}>{setor.nome}</div>
           </button>
         ))}
       </div>
@@ -71,33 +73,33 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
 
 function TelaTipo({ setor, onEscolher, onVoltar, loading }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: '#1e293b', padding: '24px 40px', display: 'flex', alignItems: 'center', gap: 20, borderBottom: '2px solid #334155' }}>
-        <button onClick={onVoltar} style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontSize: 20 }}>← Voltar</button>
+    <div style={{ height: '100vh', width: '100vw', background: '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ background: '#1e293b', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '2px solid #334155', flexShrink: 0 }}>
+        <button onClick={onVoltar} style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 16 }}>← Voltar</button>
         <div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#f1f5f9' }}>{setor.nome}</div>
-          <div style={{ fontSize: 16, color: '#64748b' }}>Escolha o tipo de atendimento</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>{setor.nome}</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Escolha o tipo de atendimento</div>
         </div>
       </div>
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, padding: '60px 40px', alignContent: 'center' }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '12px', alignContent: 'center' }}>
         <button onClick={() => onEscolher('normal')} disabled={loading}
-          style={{ padding: '60px 20px', background: '#1e40af', border: '3px solid #3b82f6', borderRadius: 24, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, opacity: loading ? 0.6 : 1 }}
+          style={{ padding: '20px 12px', background: '#1e40af', border: '3px solid #3b82f6', borderRadius: 16, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, opacity: loading ? 0.6 : 1 }}
           onMouseEnter={e => !loading && (e.currentTarget.style.background = '#1d4ed8')}
           onMouseLeave={e => (e.currentTarget.style.background = '#1e40af')}>
-          <span style={{ fontSize: 64 }}>🎫</span>
-          <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>Normal</span>
-          <span style={{ fontSize: 16, color: '#93c5fd' }}>Atendimento geral</span>
+          <span style={{ fontSize: 40 }}>🎫</span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>Normal</span>
+          <span style={{ fontSize: 13, color: '#93c5fd' }}>Atendimento geral</span>
         </button>
         <button onClick={() => onEscolher('preferencial')} disabled={loading}
-          style={{ padding: '60px 20px', background: '#78350f', border: '3px solid #f59e0b', borderRadius: 24, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, opacity: loading ? 0.6 : 1 }}
+          style={{ padding: '20px 12px', background: '#78350f', border: '3px solid #f59e0b', borderRadius: 16, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, opacity: loading ? 0.6 : 1 }}
           onMouseEnter={e => !loading && (e.currentTarget.style.background = '#92400e')}
           onMouseLeave={e => (e.currentTarget.style.background = '#78350f')}>
-          <span style={{ fontSize: 64 }}>⭐</span>
-          <span style={{ fontSize: 32, fontWeight: 800, color: '#fbbf24' }}>Preferencial</span>
-          <span style={{ fontSize: 16, color: '#fcd34d' }}>Idosos · Gestantes · PCD</span>
+          <span style={{ fontSize: 40 }}>⭐</span>
+          <span style={{ fontSize: 22, fontWeight: 800, color: '#fbbf24' }}>Preferencial</span>
+          <span style={{ fontSize: 13, color: '#fcd34d' }}>Idosos · Gestantes · PCD</span>
         </button>
       </div>
-      {loading && <div style={{ textAlign: 'center', color: '#64748b', paddingBottom: 32, fontSize: 18 }}>⏳ Gerando senha...</div>}
+      {loading && <div style={{ textAlign: 'center', color: '#64748b', paddingBottom: 16, fontSize: 14 }}>⏳ Gerando senha...</div>}
     </div>
   );
 }
@@ -108,16 +110,16 @@ function TelaConfirmacao({ cod, tipo, setor, onVoltar }) {
     return () => clearTimeout(t);
   }, []);
   return (
-    <div style={{ height: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-      <div style={{ fontSize: 22, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 4 }}>{setor.nome}</div>
-      <div style={{ fontSize: 160, fontWeight: 900, lineHeight: 1, letterSpacing: -6, color: tipo === 'preferencial' ? '#f59e0b' : '#38bdf8', textShadow: tipo === 'preferencial' ? '0 0 80px rgba(245,158,11,.4)' : '0 0 80px rgba(56,189,248,.4)' }}>
+    <div style={{ height: '100vh', width: '100vw', background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, overflow: 'hidden' }}>
+      <div style={{ fontSize: 16, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 3 }}>{setor.nome}</div>
+      <div style={{ fontSize: 110, fontWeight: 900, lineHeight: 1, letterSpacing: -4, color: tipo === 'preferencial' ? '#f59e0b' : '#38bdf8', textShadow: tipo === 'preferencial' ? '0 0 60px rgba(245,158,11,.4)' : '0 0 60px rgba(56,189,248,.4)' }}>
         {cod}
       </div>
       {tipo === 'preferencial' && (
         <div style={{ fontSize: 26, fontWeight: 700, color: '#f59e0b', border: '3px solid #f59e0b', padding: '8px 28px', borderRadius: 14 }}>⭐ PREFERENCIAL</div>
       )}
-      <div style={{ fontSize: 22, color: '#64748b', marginTop: 8 }}>Aguarde ser chamado</div>
-      <div style={{ width: 260, height: 6, background: '#1e293b', borderRadius: 3, overflow: 'hidden', marginTop: 12 }}>
+      <div style={{ fontSize: 16, color: '#64748b', marginTop: 4 }}>Aguarde ser chamado</div>
+      <div style={{ width: 200, height: 5, background: '#1e293b', borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
         <div style={{ height: '100%', background: '#38bdf8', borderRadius: 3, animation: 'encolher 6s linear forwards' }} />
       </div>
       <style>{`@keyframes encolher { from{width:100%} to{width:0} }`}</style>
