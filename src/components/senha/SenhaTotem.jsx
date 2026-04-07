@@ -7,54 +7,34 @@ const HOJE = () => {
 };
 
 // ── Impressão Bematech via proxy local (Termux) ──────────────────────────────
-function gerarTextoBematech(nomeCartorio, setor, cod, tipo, cfg) {
+function gerarDadosImpressao(nomeCartorio, setor, cod, tipo, cfg) {
   const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const isPref = tipo === 'preferencial';
-
-  const ESC = '\x1B';
-  const GS  = '\x1D';
-  const LF  = '\n';
-
-  const centro     = ESC + 'a\x01';
-  const negritoOn  = ESC + 'E\x01';
-  const negritoOff = ESC + 'E\x00';
-  const corte      = ESC + 'i';
-  const sep        = '--------------------------------';
-
-  const getTam = (chave) => {
-    const v = (cfg && cfg[chave]) || 'normal';
-    if (v === 'grande') return GS + '!\x11';
-    if (v === 'medio')  return GS + '!\x01';
-    return GS + '!\x00';
+  const getTam = (chave) => (cfg && cfg[chave]) || 'normal';
+  return {
+    cartorio:  nomeCartorio,
+    setor:     setor.nome,
+    senha:     cod,
+    hora,
+    preferencial: tipo === 'preferencial',
+    tam_cartorio: getTam('imp_tam_cartorio'),
+    tam_setor:    getTam('imp_tam_setor'),
+    tam_senha:    getTam('imp_tam_senha'),
+    tam_hora:     getTam('imp_tam_hora'),
+    rodape:    (cfg && cfg['imp_rodape']) || 'Seja Bem-Vindo!',
+    info:      (cfg && cfg['imp_info'])   || '',
   };
-
-  const rodape = (cfg && cfg['imp_rodape']) || 'Seja Bem-Vindo!';
-  const info   = (cfg && cfg['imp_info'])   || '';
-
-  return (
-    centro +
-    getTam('imp_tam_cartorio') + negritoOn + nomeCartorio + negritoOff + LF + sep + LF +
-    getTam('imp_tam_setor') + setor.nome + LF + sep + LF +
-    getTam('imp_tam_senha') + negritoOn + cod + negritoOff + LF + sep + LF +
-    (isPref ? GS + '!\x00' + negritoOn + '*** PREFERENCIAL ***' + negritoOff + LF + sep + LF : '') +
-    getTam('imp_tam_hora') + hora + LF + sep + LF +
-    GS + '!\x00' + rodape + LF +
-    (info ? info + LF : '') +
-    LF + LF + LF +
-    corte
-  );
 }
 
-async function imprimirBematech(texto, proxyPorta = '8080') {
+async function imprimirBematech(dados, proxyPorta = '8080') {
   try {
     const res = await fetch(`http://localhost:${proxyPorta}/imprimir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto }),
+      body: JSON.stringify(dados),
     });
     return res.ok;
   } catch {
-    return false; // falha silenciosa — não impede emissão da senha
+    return false;
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,7 +179,7 @@ export default function SenhaTotem() {
       if (error) throw error;
 
       const proxyPorta = config['imp_proxy_porta'] || '8080';
-      await imprimirBematech(gerarTextoBematech(nomeCartorio, setorSel, cod, tipo, config), proxyPorta);
+      await imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta);
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
     } catch (e) {
