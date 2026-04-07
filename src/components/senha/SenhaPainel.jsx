@@ -72,7 +72,7 @@ export default function SenhaPainel() {
           setSetores(s => {
             const setor = s[nova.setor_id];
             if (setor) {
-              const cod = `${setor.prefixo}${String(nova.numero).padStart(3, '0')}`;
+              const cod = `${setor.prefixo}${String(nova.numero).padStart(2, '0')}`;
               setTimeout(() => falarSenha(cod, setor.nome), 300);
             }
             return s;
@@ -152,7 +152,7 @@ export default function SenhaPainel() {
   const getCod = (s) => {
     const setor = s.senha_setores || setores[s.setor_id];
     if (!setor) return '---';
-    return `${setor.prefixo}${String(s.numero).padStart(3, '0')}`;
+    return `${setor.prefixo}${String(s.numero).padStart(2, '0')}`;
   };
 
   const getNomeSetor = (s) => s.senha_setores?.nome || setores[s.setor_id]?.nome || '—';
