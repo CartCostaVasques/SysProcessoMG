@@ -13,13 +13,12 @@ const EMPTY = {
 
 function gerarNumeroOficio(oficios, mesAno, numeroInicial = 0) {
   const ano = mesAno.split('/')[1];
-  const doMes = oficios.filter(o => o.mes_ano === mesAno);
-  // Extrai o maior número já registrado no mês/ano
-  const maiorRegistrado = doMes.reduce((max, o) => {
+  // Sequencial global por ANO — filtra todos os ofícios do mesmo ano
+  const doAno = oficios.filter(o => (o.mes_ano || '').endsWith('/' + ano));
+  const maiorRegistrado = doAno.reduce((max, o) => {
     const num = parseInt((o.numero || '').split('/')[0], 10) || 0;
     return Math.max(max, num);
   }, 0);
-  // Próximo = maior entre (numeroInicial e maiorRegistrado) + 1
   const proximo = Math.max(numeroInicial, maiorRegistrado) + 1;
   return String(proximo).padStart(4, '0') + '/' + ano;
 }
@@ -59,11 +58,19 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, nu
             <div className="form-group">
               <label className="form-label">Mês/Ano de Referência</label>
               <input className="form-input" value={form.mes_ano} onChange={e => handleMesAno(e.target.value)} placeholder="MM/AAAA" maxLength={7} />
-              <div className="form-hint">Numeração é automática por mês</div>
+              <div className="form-hint">Numeração sequencial por ano</div>
             </div>
             <div className="form-group">
               <label className="form-label">Número do Ofício</label>
-              <input className="form-input" value={form.numero} readOnly style={{ opacity: 0.7, cursor: 'not-allowed' }} />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input className="form-input" value={form.numero}
+                  onChange={e => set('numero', e.target.value)}
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }} />
+                <button type="button" className="btn btn-secondary btn-sm"
+                  onClick={() => set('numero', gerarNumeroOficio(oficios, form.mes_ano, numeroInicial))}
+                  title="Recalcular número automaticamente">↺</button>
+              </div>
+              <div className="form-hint">Editável — clique em ↺ para recalcular automaticamente</div>
             </div>
             <div className="form-group">
               <label className="form-label">Data do Ofício</label>
