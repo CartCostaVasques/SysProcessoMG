@@ -50,14 +50,14 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
 
       {/* Header — nome + horário */}
       <div style={{ background: '#1e293b', padding: '10px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
+        <div style={{ fontSize: 32, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
         <div style={{ fontSize: 32, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
       </div>
 
       {/* Título */}
       <div style={{ textAlign: 'center', padding: '10px 16px 6px', flexShrink: 0 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>Painel de Senhas</div>
-        <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 3 }}>Retire aqui a Senha para o seu Serviço</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: '#f1f5f9' }}>Painel de Senhas</div>
+        <div style={{ fontSize: 19, color: '#94a3b8', marginTop: 3 }}>Retire aqui a Senha para o seu Serviço</div>
       </div>
 
       {/* Grid fixo: 2 colunas × 4 linhas */}
@@ -90,7 +90,7 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
-            <div style={{ fontSize: 19, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'left', lineHeight: 1.2 }}>{setor.nome}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'left', lineHeight: 1.2 }}>{setor.nome}</div>
           </button>
         ))}
       </div>
