@@ -47,33 +47,33 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
   }, []);
   const nSetores = setores.length;
   const linhas = Math.ceil(nSetores / 2);
+  const nSetores = setores.length;
+  const colunas = nSetores <= 4 ? 2 : nSetores <= 6 ? 3 : 4;
   return (
     <div style={{ height: '100vh', width: '100vw', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ background: '#1e293b', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
-        <div style={{ fontSize: 19, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
-        <div style={{ fontSize: 26, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
+      <div style={{ background: '#1e293b', padding: '8px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
+        <div style={{ fontSize: 26, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b' }}>{nomeCartorio}</div>
+        <div style={{ fontSize: 30, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
       </div>
 
-      {/* Título central */}
-      <div style={{ textAlign: 'center', padding: '14px 16px 6px', flexShrink: 0 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>Painel de Senha</div>
-        <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Selecione o setor que deseja atendimento</div>
+      {/* Título */}
+      <div style={{ textAlign: 'center', padding: '8px 16px 4px', flexShrink: 0 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9' }}>Painel de Senha</div>
+        <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>Selecione o setor que deseja atendimento</div>
       </div>
 
-      {/* Grid de setores — compacto, centralizado */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 16px 16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, width: '100%', maxWidth: 520 }}>
-          {setores.map(setor => (
-            <button key={setor.id} onClick={() => onEscolher(setor)}
-              style={{ padding: '14px 10px', background: '#1e293b', border: '2px solid #334155', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, transition: 'all .15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
-              <div style={{ width: 46, height: 46, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center', lineHeight: 1.2 }}>{setor.nome}</div>
-            </button>
-          ))}
-        </div>
+      {/* Grid — ocupa o espaço restante igualmente */}
+      <div style={{ flex: 1, padding: '6px 12px 10px', display: 'grid', gridTemplateColumns: `repeat(${colunas}, 1fr)`, gap: 8, minHeight: 0 }}>
+        {setores.map(setor => (
+          <button key={setor.id} onClick={() => onEscolher(setor)}
+            style={{ background: '#1e293b', border: '2px solid #334155', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, transition: 'all .15s', minHeight: 0, padding: '0 16px' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'left', lineHeight: 1.2 }}>{setor.nome}</div>
+          </button>
+        ))}
       </div>
     </div>
   );
