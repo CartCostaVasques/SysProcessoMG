@@ -71,7 +71,7 @@ const abreviarSetor = (nome) =>
   nome === 'Reconhecimento de Firma' ? 'Rec. de Firma' : nome;
 
 export default function SenhaGuiche() {
-  const { supabaseClient: sb, addToast, usuarios, temPermissao, usuario } = useApp();
+  const { supabaseClient: sb, addToast, usuarios, temPermissao, usuario, cartorio } = useApp();
   const [setores, setSetores]       = useState([]);
   const [senhas, setSenhas]         = useState([]);
   const [historico, setHistorico]   = useState([]);
@@ -701,7 +701,7 @@ export default function SenhaGuiche() {
                 const info   = configEdit['imp_info'] || '';
                 const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 const texto  = centro +
-                  getTam(configEdit,'imp_tam_cartorio') + negOn + (cartorio?.nome_simples || 'Cartório') + negOff + LF + sep + LF +
+                  getTam(configEdit,'imp_tam_cartorio') + negOn + ((cartorio && cartorio.nome_simples) || 'Cartório') + negOff + LF + sep + LF +
                   getTam(configEdit,'imp_tam_setor') + 'Escritura' + LF + sep + LF +
                   getTam(configEdit,'imp_tam_senha') + negOn + 'A001' + negOff + LF + sep + LF +
                   getTam(configEdit,'imp_tam_hora') + hora + LF + sep + LF +
@@ -738,7 +738,7 @@ export default function SenhaGuiche() {
                 const info   = configEdit['imp_info'] || '';
                 return (
                   <div style={{ textAlign: 'center' }}>
-                    <div style={tam('imp_tam_cartorio')}>{cartorio?.nome_simples || 'Cartório'}</div>
+                    <div style={tam('imp_tam_cartorio')}>{(cartorio && cartorio.nome_simples) || 'Cartório'}</div>
                     {sep}
                     <div style={tam('imp_tam_setor')}>Escritura</div>
                     {sep}
