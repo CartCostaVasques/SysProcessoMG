@@ -154,7 +154,7 @@ export default function SenhaGuiche() {
   const getCod = (s) => {
     const setor = s.senha_setores;
     if (!setor) return '---';
-    return `${setor.prefixo}${String(s.numero).padStart(3, '0')}`;
+    return `${setor.prefixo}${String(s.numero).padStart(2, '0')}`;
   };
 
   // Separa preferencial e normal, filtra por setor se houver
@@ -392,7 +392,7 @@ export default function SenhaGuiche() {
                         {aberto && (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 14px' }}>
                             {senhasSetor.map(s => {
-                              const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(3,'0')}`;
+                              const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(2,'0')}`;
                               const isPref = s.tipo === 'preferencial';
                               return (
                                 <div key={s.id} style={{ padding: '4px 12px', borderRadius: 8, background: isPref ? 'color-mix(in srgb, var(--color-warning) 12%, transparent)' : 'var(--color-surface-2)', border: `1px solid ${isPref ? 'color-mix(in srgb, var(--color-warning) 30%, transparent)' : 'var(--color-border)'}`, fontSize: 14, fontWeight: 700, color: isPref ? 'var(--color-warning)' : 'var(--color-text)', fontFamily: 'var(--font-mono)' }}>
