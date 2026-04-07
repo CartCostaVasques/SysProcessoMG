@@ -45,25 +45,27 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
     const t = setInterval(() => setHora(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })), 1000);
     return () => clearInterval(t);
   }, []);
+  const nSetores = setores.length;
+  const linhas = Math.ceil(nSetores / 2);
   return (
     <div style={{ height: '100vh', width: '100vw', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* Header compacto para tablet */}
-      <div style={{ background: '#1e293b', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
+      {/* Header compacto */}
+      <div style={{ background: '#1e293b', padding: '8px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #334155', flexShrink: 0 }}>
         <div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b', lineHeight: 1.2 }}>{nomeCartorio}</div>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Toque para retirar sua senha</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: config['totem_cor_nome_cartorio'] || '#f59e0b', lineHeight: 1.2 }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>Toque para retirar sua senha</div>
         </div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
+        <div style={{ fontSize: 24, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace' }}>{hora}</div>
       </div>
-      {/* Grid de setores — ocupa todo o espaço restante */}
-      <div style={{ flex: 1, padding: 10, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: '1fr', gap: 10 }}>
+      {/* Grid de setores */}
+      <div style={{ flex: 1, padding: 8, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: `repeat(${linhas}, 1fr)`, gap: 8, minHeight: 0 }}>
         {setores.map(setor => (
           <button key={setor.id} onClick={() => onEscolher(setor)}
-            style={{ background: '#1e293b', border: '2px solid #334155', borderRadius: 14, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .15s', width: '100%', height: '100%' }}
+            style={{ background: '#1e293b', border: '2px solid #334155', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all .15s', minHeight: 0, overflow: 'hidden' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center', padding: '0 8px', lineHeight: 1.2 }}>{setor.nome}</div>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
+            <div style={{ fontSize: 'clamp(18px, 3vw, 28px)', fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'center', padding: '0 6px', lineHeight: 1.2 }}>{setor.nome}</div>
           </button>
         ))}
       </div>
@@ -175,7 +177,7 @@ export default function SenhaTotem() {
         .order('numero', { ascending: false }).limit(1);
 
       const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
-      const cod    = `${setorSel.prefixo}${String(numero).padStart(3, '0')}`;
+      const cod    = `${setorSel.prefixo}${String(numero).padStart(2, '0')}`;
 
       const { error } = await sb.from('senhas').insert({ setor_id: setorSel.id, numero, tipo, status: 'aguardando' });
       if (error) throw error;
