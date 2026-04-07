@@ -604,83 +604,157 @@ export default function SenhaGuiche() {
       )}
 
       {aba === 'impressora' && temPermissao('senha_aparencia') && (
-        <div style={{ maxWidth: 560 }}>
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="card-header"><div className="card-title">🖨 Configuração da Impressora</div></div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '8px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
 
-              <div className="form-group">
-                <label className="form-label">IP da Impressora</label>
-                <input className="form-input" value={configEdit['imp_ip'] || ''}
-                  onChange={e => setConfigEdit(p => ({...p, imp_ip: e.target.value}))}
-                  placeholder="ex: 192.168.10.173" style={{ fontFamily: 'var(--font-mono)' }} />
-                <div className="form-hint">IP fixo da impressora na rede local</div>
+          {/* ── Coluna esquerda: configurações ── */}
+          <div>
+            {/* Rede */}
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="card-header"><div className="card-title">🔌 Conexão</div></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
+                <div className="form-group">
+                  <label className="form-label">IP da Impressora</label>
+                  <input className="form-input" value={configEdit['imp_ip'] || ''}
+                    onChange={e => setConfigEdit(p => ({...p, imp_ip: e.target.value}))}
+                    placeholder="ex: 192.168.10.173" style={{ fontFamily: 'var(--font-mono)' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Porta impressora</label>
+                    <input className="form-input" value={configEdit['imp_porta'] || '9100'}
+                      onChange={e => setConfigEdit(p => ({...p, imp_porta: e.target.value}))}
+                      style={{ fontFamily: 'var(--font-mono)' }} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Porta proxy (Termux)</label>
+                    <input className="form-input" value={configEdit['imp_proxy_porta'] || '8080'}
+                      onChange={e => setConfigEdit(p => ({...p, imp_proxy_porta: e.target.value}))}
+                      style={{ fontFamily: 'var(--font-mono)' }} />
+                  </div>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label className="form-label">Papel</label>
+                    <select className="form-select" value={configEdit['imp_largura'] || '80'}
+                      onChange={e => setConfigEdit(p => ({...p, imp_largura: e.target.value}))}>
+                      <option value="58">58mm</option>
+                      <option value="80">80mm</option>
+                    </select>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Porta</label>
-                <input className="form-input" value={configEdit['imp_porta'] || '9100'}
-                  onChange={e => setConfigEdit(p => ({...p, imp_porta: e.target.value}))}
-                  placeholder="9100" style={{ fontFamily: 'var(--font-mono)', width: 140 }} />
-                <div className="form-hint">Porta TCP da impressora (padrão: 9100)</div>
+            {/* Layout do ticket */}
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="card-header"><div className="card-title">🎫 Layout do Ticket</div></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '8px 0' }}>
+                {[
+                  { chave: 'imp_tam_cartorio', label: 'Nome do cartório' },
+                  { chave: 'imp_tam_setor',    label: 'Setor' },
+                  { chave: 'imp_tam_senha',    label: 'Código da senha' },
+                  { chave: 'imp_tam_hora',     label: 'Horário' },
+                ].map(({ chave, label }) => (
+                  <div key={chave} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-muted)', width: 160, flexShrink: 0 }}>{label}</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[['normal', 'Normal'], ['medio', 'Médio'], ['grande', 'Grande']].map(([v, l]) => (
+                        <button key={v} onClick={() => setConfigEdit(p => ({...p, [chave]: v}))}
+                          style={{ padding: '4px 12px', fontSize: 12, borderRadius: 'var(--radius-md)', cursor: 'pointer', border: `1px solid ${(configEdit[chave] || 'normal') === v ? 'var(--color-accent)' : 'var(--color-border)'}`, background: (configEdit[chave] || 'normal') === v ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-surface-2)', color: (configEdit[chave] || 'normal') === v ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: (configEdit[chave] || 'normal') === v ? 700 : 400 }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="form-group" style={{ marginTop: 6 }}>
+                  <label className="form-label">Texto do rodapé</label>
+                  <input className="form-input" value={configEdit['imp_rodape'] || 'Seja Bem-Vindo!'}
+                    onChange={e => setConfigEdit(p => ({...p, imp_rodape: e.target.value}))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Texto informativo (opcional)</label>
+                  <input className="form-input" value={configEdit['imp_info'] || ''}
+                    onChange={e => setConfigEdit(p => ({...p, imp_info: e.target.value}))}
+                    placeholder="ex: Atendemos das 08h às 17h" />
+                </div>
               </div>
+            </div>
 
-              <div className="form-group">
-                <label className="form-label">Porta do Proxy Local (RawBT/Termux)</label>
-                <input className="form-input" value={configEdit['imp_proxy_porta'] || '8080'}
-                  onChange={e => setConfigEdit(p => ({...p, imp_proxy_porta: e.target.value}))}
-                  placeholder="8080" style={{ fontFamily: 'var(--font-mono)', width: 140 }} />
-                <div className="form-hint">Porta do servidor local no tablet (padrão: 8080)</div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Largura do papel</label>
-                <select className="form-select" style={{ width: 200 }}
-                  value={configEdit['imp_largura'] || '80'}
-                  onChange={e => setConfigEdit(p => ({...p, imp_largura: e.target.value}))}>
-                  <option value="58">58mm</option>
-                  <option value="80">80mm</option>
-                </select>
-              </div>
-
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary" onClick={() => setConfigEdit({ ...config })}>↩ Descartar</button>
+              <button onClick={salvarConfig} disabled={salvandoConfig}
+                style={{ padding: '10px 24px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
+                {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar'}
+              </button>
+              <button onClick={async () => {
+                const porta = configEdit['imp_proxy_porta'] || '8080';
+                const ESC = '\x1B'; const GS = '\x1D'; const LF = '\n';
+                const centro = ESC + 'a\x01';
+                const getTam = (cfg, chave) => {
+                  const v = cfg[chave] || 'normal';
+                  if (v === 'grande') return GS + '!\x11';
+                  if (v === 'medio')  return GS + '!\x01';
+                  return GS + '!\x00';
+                };
+                const negOn = ESC + 'E\x01'; const negOff = ESC + 'E\x00';
+                const sep = '--------------------------------';
+                const rodape = configEdit['imp_rodape'] || 'Seja Bem-Vindo!';
+                const info   = configEdit['imp_info'] || '';
+                const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const texto  = centro +
+                  getTam(configEdit,'imp_tam_cartorio') + negOn + (cartorio?.nome_simples || 'Cartório') + negOff + LF + sep + LF +
+                  getTam(configEdit,'imp_tam_setor') + 'Escritura' + LF + sep + LF +
+                  getTam(configEdit,'imp_tam_senha') + negOn + 'A001' + negOff + LF + sep + LF +
+                  getTam(configEdit,'imp_tam_hora') + hora + LF + sep + LF +
+                  GS + '!\x00' + rodape + LF +
+                  (info ? info + LF : '') +
+                  LF + LF + LF + ESC + 'i';
+                try {
+                  const res = await fetch(`http://localhost:${porta}/imprimir`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto }),
+                  });
+                  if (res.ok) addToast('Teste enviado!', 'success');
+                  else addToast('Erro: ' + res.status, 'error');
+                } catch { addToast('Proxy não responde. Termux rodando?', 'error'); }
+              }}
+                className="btn btn-secondary">🖨 Imprimir Teste</button>
             </div>
           </div>
 
-          {/* Teste de conexão */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="card-header"><div className="card-title">🔌 Teste de Conexão</div></div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 12 }}>
-              Envia uma impressão de teste para verificar se a comunicação está funcionando.
-              O tablet com o Totem deve estar ligado e o Termux rodando.
+          {/* ── Coluna direita: preview visual ── */}
+          <div style={{ position: 'sticky', top: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Preview do Ticket</div>
+            <div style={{ background: '#fff', borderRadius: 8, padding: '16px 12px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)', fontFamily: 'monospace', color: '#111', minWidth: 220, border: '1px solid #e5e7eb' }}>
+              {(() => {
+                const tam = (chave) => {
+                  const v = configEdit[chave] || 'normal';
+                  if (v === 'grande') return { fontSize: 22, fontWeight: 700 };
+                  if (v === 'medio')  return { fontSize: 17, fontWeight: 600 };
+                  return { fontSize: 13, fontWeight: 400 };
+                };
+                const sep = <div style={{ borderTop: '1px dashed #ccc', margin: '6px 0' }} />;
+                const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const rodape = configEdit['imp_rodape'] || 'Seja Bem-Vindo!';
+                const info   = configEdit['imp_info'] || '';
+                return (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={tam('imp_tam_cartorio')}>{cartorio?.nome_simples || 'Cartório'}</div>
+                    {sep}
+                    <div style={tam('imp_tam_setor')}>Escritura</div>
+                    {sep}
+                    <div style={{ ...tam('imp_tam_senha'), letterSpacing: 2 }}>A001</div>
+                    {sep}
+                    <div style={tam('imp_tam_hora')}>{hora}</div>
+                    {sep}
+                    <div style={{ fontSize: 13 }}>{rodape}</div>
+                    {info && <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{info}</div>}
+                    <div style={{ marginTop: 12, borderTop: '2px dashed #ccc', paddingTop: 4, fontSize: 10, color: '#aaa' }}>✂ corte</div>
+                  </div>
+                );
+              })()}
             </div>
-            <button onClick={async () => {
-              const ip    = configEdit['imp_ip'] || '';
-              const porta = configEdit['imp_proxy_porta'] || '8080';
-              if (!ip) { alert('Configure o IP da impressora primeiro.'); return; }
-              try {
-                const res = await fetch(`http://localhost:${porta}/imprimir`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ texto: '--- TESTE DE IMPRESSAO ---\nSistema de Senhas\nConexao OK!\n\n\n' }),
-                });
-                if (res.ok) alert('✅ Impressão enviada com sucesso!');
-                else alert('❌ Erro na resposta do proxy: ' + res.status);
-              } catch(e) {
-                alert('❌ Não foi possível conectar ao proxy local.\nVerifique se o Termux está rodando.');
-              }
-            }}
-              className="btn btn-secondary">
-              🖨 Enviar Impressão de Teste
-            </button>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setConfigEdit({ ...config })}>↩ Descartar</button>
-            <button onClick={salvarConfig} disabled={salvandoConfig}
-              style={{ padding: '10px 24px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
-              {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar Configurações'}
-            </button>
-          </div>
         </div>
       )}
 
