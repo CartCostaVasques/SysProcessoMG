@@ -46,8 +46,6 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
     return () => clearInterval(t);
   }, []);
   const nSetores = setores.length;
-  const linhas = Math.ceil(nSetores / 2);
-  const nSetores = setores.length;
   const colunas = nSetores <= 4 ? 2 : nSetores <= 6 ? 3 : 4;
   return (
     <div style={{ height: '100vh', width: '100vw', background: config['totem_cor_fundo'] || '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
