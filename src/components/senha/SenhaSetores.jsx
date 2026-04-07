@@ -7,7 +7,7 @@ export default function SenhaSetores() {
   const [form, setForm]       = useState(null); // null | {} | {id,...}
   const [salvando, setSalvando] = useState(false);
 
-  const PREFIXOS_DISPONIVEIS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 
   useEffect(() => { carregar(); }, []);
 
@@ -122,20 +122,14 @@ export default function SenhaSetores() {
                 <input className="form-input" value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Escritura" />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Prefixo (letra) *</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {PREFIXOS_DISPONIVEIS.map(p => {
-                    const usado = prefixosUsados.includes(p);
-                    const sel = form.prefixo === p;
-                    return (
-                      <button key={p} onClick={() => !usado && set('prefixo', p)} disabled={usado}
-                        style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${sel ? 'var(--color-accent)' : usado ? 'var(--color-border)' : 'var(--color-border)'}`, background: sel ? 'var(--color-accent)' : usado ? 'var(--color-surface-2)' : 'var(--color-surface-2)', color: sel ? '#fff' : usado ? 'var(--color-text-faint)' : 'var(--color-text)', fontWeight: 700, fontSize: 14, cursor: usado ? 'not-allowed' : 'pointer', opacity: usado ? 0.4 : 1 }}>
-                        {p}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>Letras cinzas já estão em uso</div>
+                <label className="form-label">Prefixo (2 letras) *</label>
+                <input className="form-input"
+                  value={form.prefixo}
+                  onChange={e => set('prefixo', e.target.value.toUpperCase().slice(0, 2))}
+                  placeholder="Ex: ES, PR, RC"
+                  maxLength={2}
+                  style={{ width: 80, fontWeight: 700, fontSize: 18, textAlign: 'center', fontFamily: 'var(--font-mono)', letterSpacing: 4 }} />
+                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>2 letras maiúsculas — ex: ES para Escritura</div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Ordem de exibição</label>
