@@ -89,7 +89,7 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
             }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', textAlign: 'left', lineHeight: 1.2 }}>{setor.nome}</div>
           </button>
         ))}
