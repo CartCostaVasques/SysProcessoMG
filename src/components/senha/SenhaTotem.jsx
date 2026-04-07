@@ -7,7 +7,7 @@ const HOJE = () => {
 };
 
 // ── Impressão Bematech via proxy local (Termux) ──────────────────────────────
-function gerarTextoBematech(nomeCartorio, setor, cod, tipo) {
+function gerarTextoBematech(nomeCartorio, setor, cod, tipo, cfg) {
   const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const isPref = tipo === 'preferencial';
 
@@ -15,35 +15,31 @@ function gerarTextoBematech(nomeCartorio, setor, cod, tipo) {
   const GS  = '\x1D';
   const LF  = '\n';
 
-  // Alinhamento
-  const centro   = ESC + 'a\x01';
-  // Tamanhos — GS ! n: bits 0-3 = altura, bits 4-7 = largura
-  const tam12    = GS + '!\x00';          // normal (aprox 12)
-  const tam14    = GS + '!\x01';          // dupla altura (aprox 14)
-  const tam16    = GS + '!\x11';          // dupla altura + largura (aprox 16)
+  const centro     = ESC + 'a\x01';
   const negritoOn  = ESC + 'E\x01';
   const negritoOff = ESC + 'E\x00';
-  const corte    = ESC + 'i';
-  const sep      = '--------------------------------';
+  const corte      = ESC + 'i';
+  const sep        = '--------------------------------';
+
+  const getTam = (chave) => {
+    const v = (cfg && cfg[chave]) || 'normal';
+    if (v === 'grande') return GS + '!\x11';
+    if (v === 'medio')  return GS + '!\x01';
+    return GS + '!\x00';
+  };
+
+  const rodape = (cfg && cfg['imp_rodape']) || 'Seja Bem-Vindo!';
+  const info   = (cfg && cfg['imp_info'])   || '';
 
   return (
     centro +
-    // Nome do cartório — tamanho 12, negrito
-    tam12 + negritoOn + nomeCartorio + negritoOff + LF +
-    sep + LF +
-    // Setor — tamanho 14
-    tam14 + setor.nome + LF +
-    sep + LF +
-    // Código — tamanho 16, negrito
-    tam16 + negritoOn + cod + negritoOff + LF +
-    sep + LF +
-    // Preferencial
-    (isPref ? tam12 + negritoOn + '*** PREFERENCIAL ***' + negritoOff + LF + sep + LF : '') +
-    // Horário — tamanho 12
-    tam12 + hora + LF +
-    sep + LF +
-    // Boas vindas
-    tam12 + 'Seja Bem-Vindo!' + LF +
+    getTam('imp_tam_cartorio') + negritoOn + nomeCartorio + negritoOff + LF + sep + LF +
+    getTam('imp_tam_setor') + setor.nome + LF + sep + LF +
+    getTam('imp_tam_senha') + negritoOn + cod + negritoOff + LF + sep + LF +
+    (isPref ? GS + '!\x00' + negritoOn + '*** PREFERENCIAL ***' + negritoOff + LF + sep + LF : '') +
+    getTam('imp_tam_hora') + hora + LF + sep + LF +
+    GS + '!\x00' + rodape + LF +
+    (info ? info + LF : '') +
     LF + LF + LF +
     corte
   );
@@ -203,7 +199,7 @@ export default function SenhaTotem() {
       if (error) throw error;
 
       const proxyPorta = config['imp_proxy_porta'] || '8080';
-      await imprimirBematech(gerarTextoBematech(nomeCartorio, setorSel, cod, tipo), proxyPorta);
+      await imprimirBematech(gerarTextoBematech(nomeCartorio, setorSel, cod, tipo, config), proxyPorta);
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
     } catch (e) {
