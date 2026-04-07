@@ -11,40 +11,41 @@ function gerarTextoBematech(nomeCartorio, setor, cod, tipo) {
   const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const isPref = tipo === 'preferencial';
 
-  // ESC/POS Bematech — comandos básicos
-  const ESC  = '\x1B';
-  const GS   = '\x1D';
-  const LF   = '\n';
+  const ESC = '\x1B';
+  const GS  = '\x1D';
+  const LF  = '\n';
 
-  const centralizar  = ESC + 'a' + '\x01';
-  const esquerda     = ESC + 'a' + '\x00';
-  const negritoOn    = ESC + 'E' + '\x01';
-  const negritoOff   = ESC + 'E' + '\x00';
-  const fonteGrande  = GS  + '!' + '\x11'; // dupla altura + largura
-  const fonteMedio   = GS  + '!' + '\x01'; // dupla altura
-  const fonteNormal  = GS  + '!' + '\x00';
-  const corteParcial = ESC + 'i';
+  // Alinhamento
+  const centro   = ESC + 'a\x01';
+  // Tamanhos — GS ! n: bits 0-3 = altura, bits 4-7 = largura
+  const tam12    = GS + '!\x00';          // normal (aprox 12)
+  const tam14    = GS + '!\x01';          // dupla altura (aprox 14)
+  const tam16    = GS + '!\x11';          // dupla altura + largura (aprox 16)
+  const negritoOn  = ESC + 'E\x01';
+  const negritoOff = ESC + 'E\x00';
+  const corte    = ESC + 'i';
+  const sep      = '--------------------------------';
 
   return (
-    centralizar +
-    fonteNormal + negritoOn +
-    nomeCartorio + LF +
-    negritoOff +
-    '--------------------------------' + LF +
-    fonteNormal +
-    setor.nome + LF +
-    '--------------------------------' + LF +
-    fonteGrande + negritoOn +
-    cod + LF +
-    fonteNormal + negritoOff +
-    '--------------------------------' + LF +
-    (isPref ? (negritoOn + '*** PREFERENCIAL ***' + LF + negritoOff) : '') +
-    fonteNormal +
-    hora + LF +
-    '--------------------------------' + LF +
-    'Seja Bem-Vindo!' + LF +
+    centro +
+    // Nome do cartório — tamanho 12, negrito
+    tam12 + negritoOn + nomeCartorio + negritoOff + LF +
+    sep + LF +
+    // Setor — tamanho 14
+    tam14 + setor.nome + LF +
+    sep + LF +
+    // Código — tamanho 16, negrito
+    tam16 + negritoOn + cod + negritoOff + LF +
+    sep + LF +
+    // Preferencial
+    (isPref ? tam12 + negritoOn + '*** PREFERENCIAL ***' + negritoOff + LF + sep + LF : '') +
+    // Horário — tamanho 12
+    tam12 + hora + LF +
+    sep + LF +
+    // Boas vindas
+    tam12 + 'Seja Bem-Vindo!' + LF +
     LF + LF + LF +
-    corteParcial
+    corte
   );
 }
 
