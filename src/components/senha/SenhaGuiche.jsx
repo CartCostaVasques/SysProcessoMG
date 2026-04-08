@@ -744,37 +744,25 @@ export default function SenhaGuiche() {
                 style={{ padding: '10px 24px', background: 'var(--color-accent)', color: 'var(--color-bg)', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 700, cursor: salvandoConfig ? 'not-allowed' : 'pointer', opacity: salvandoConfig ? 0.7 : 1 }}>
                 {salvandoConfig ? '⏳ Salvando...' : '✓ Salvar'}
               </button>
-              <button onClick={async () => {
+              <button onClick={() => {
                 const porta = configEdit['imp_proxy_porta'] || '8080';
-                const ESC = '\x1B'; const GS = '\x1D'; const LF = '\n';
-                const centro = ESC + 'a\x01';
-                const getTam = (cfg, chave) => {
-                  const v = cfg[chave] || 'normal';
-                  if (v === 'grande') return GS + '!\x11';
-                  if (v === 'medio')  return GS + '!\x01';
-                  return GS + '!\x00';
-                };
-                const negOn = ESC + 'E\x01'; const negOff = ESC + 'E\x00';
-                const sep = '--------------------------------';
-                const rodape = configEdit['imp_rodape'] || 'Seja Bem-Vindo!';
-                const info   = configEdit['imp_info'] || '';
-                const hora   = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                const texto  = centro +
-                  getTam(configEdit,'imp_tam_cartorio') + negOn + ((cartorio && cartorio.nome_simples) || 'Cartório') + negOff + LF + sep + LF +
-                  getTam(configEdit,'imp_tam_setor') + 'Escritura' + LF + sep + LF +
-                  getTam(configEdit,'imp_tam_senha') + negOn + 'A001' + negOff + LF + sep + LF +
-                  getTam(configEdit,'imp_tam_hora') + hora + LF + sep + LF +
-                  GS + '!\x00' + rodape + LF +
-                  (info ? info + LF : '') +
-                  LF + LF + LF + ESC + 'i';
-                try {
-                  const res = await fetch(`http://localhost:${porta}/imprimir`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ texto }),
-                  });
-                  if (res.ok) addToast('Teste enviado!', 'success');
-                  else addToast('Erro: ' + res.status, 'error');
-                } catch { addToast('Proxy não responde. Termux rodando?', 'error'); }
+                const host  = configEdit['imp_proxy_host']  || 'localhost';
+                const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                fetch(`http://${host}:${porta}/imprimir`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    cartorio: (cartorio && cartorio.nome_simples) || 'Cartório',
+                    setor: 'Escritura', senha: 'ES01', hora,
+                    preferencial: false,
+                    tam_cartorio: configEdit['imp_tam_cartorio'] || 'normal',
+                    tam_setor:    configEdit['imp_tam_setor']    || 'medio',
+                    tam_senha:    configEdit['imp_tam_senha']    || 'grande',
+                    tam_hora:     configEdit['imp_tam_hora']     || 'normal',
+                    rodape:       configEdit['imp_rodape']       || 'Seja Bem-Vindo!',
+                    info:         configEdit['imp_info']         || '',
+                  }),
+                }).then(r => { if (r.ok) addToast('Teste enviado!', 'success'); else addToast('Erro: ' + r.status, 'error'); })
+                  .catch(() => addToast('Proxy não responde. Termux rodando?', 'error'));
               }}
                 className="btn btn-secondary">🖨 Imprimir Teste</button>
             </div>
