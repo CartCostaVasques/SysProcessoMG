@@ -25,11 +25,11 @@ export default function SenhaSetores() {
     setSalvando(true);
     try {
       if (form.id) {
-        const { error } = await sb.from('senha_setores').update({ nome: form.nome, prefixo: form.prefixo, ativo: form.ativo, ordem: form.ordem }).eq('id', form.id);
+        const { error } = await sb.from('senha_setores').update({ nome: form.nome, prefixo: form.prefixo, ativo: form.ativo, ordem: form.ordem, descricao: form.descricao || null }).eq('id', form.id);
         if (error) throw error;
         addToast('Setor atualizado!', 'success');
       } else {
-        const { error } = await sb.from('senha_setores').insert({ nome: form.nome, prefixo: form.prefixo, ativo: form.ativo, ordem: form.ordem });
+        const { error } = await sb.from('senha_setores').insert({ nome: form.nome, prefixo: form.prefixo, ativo: form.ativo, ordem: form.ordem, descricao: form.descricao || null });
         if (error) throw error;
         addToast('Setor criado!', 'success');
       }
@@ -131,6 +131,19 @@ export default function SenhaSetores() {
                   style={{ width: 80, fontWeight: 700, fontSize: 18, textAlign: 'center', fontFamily: 'var(--font-mono)', letterSpacing: 4 }} />
                 <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>2 letras maiúsculas — ex: ES para Escritura</div>
               </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Informações do Setor (até 3 linhas)</label>
+                <textarea className="form-input" rows={3}
+                  value={form.descricao || ''}
+                  onChange={e => {
+                    const linhas = e.target.value.split('\n');
+                    set('descricao', linhas.slice(0, 3).join('\n'));
+                  }}
+                  placeholder={"Ex:\nNascimento\nCasamento\nÓbito"}
+                  style={{ resize: 'none', fontSize: 13, lineHeight: 1.5 }} />
+                <div className="form-hint">Aparece no totem abaixo do nome do setor — máx. 3 linhas</div>
+              </div>
+
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Ordem de exibição</label>
                 <input className="form-input" type="number" value={form.ordem} onChange={e => set('ordem', Number(e.target.value))} style={{ maxWidth: 100 }} />
