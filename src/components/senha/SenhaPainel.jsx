@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { sbPublic as sb } from '../../lib/supabasePublic.js';
 
-const HOJE = () => new Date().toISOString().split('T')[0];
+const HOJE = () => {
+  // Data atual no horário de Cuiabá (UTC-4)
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
 
 function falarSenha(cod, nomeSetor, repetir = false) {
   if (!window.speechSynthesis) return;
@@ -120,7 +124,7 @@ export default function SenhaPainel() {
     const { data: chamadas } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
-      .gte('criado_em', HOJE() + 'T03:00:00Z')
+      .gte('criado_em', HOJE() + 'T04:00:00Z')
       .order('chamado_em', { ascending: false })
       .limit(8);
     setHistorico(chamadas || []);
