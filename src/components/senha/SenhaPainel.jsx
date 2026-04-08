@@ -98,7 +98,9 @@ export default function SenhaPainel() {
   }, []);
 
   const ativarAudio = () => {
-    // Um speak() silencioso garante a ativação do contexto de áudio pelo browser
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
     const msg = new SpeechSynthesisUtterance(' ');
     msg.volume = 0;
     window.speechSynthesis.speak(msg);
