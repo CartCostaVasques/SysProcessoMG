@@ -136,7 +136,7 @@ export default function SenhaGuiche() {
     const { data: senhasData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'aguardando')
-      .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+      .gte('criado_em', HOJE() + 'T03:00:00Z')
       .order('tipo', { ascending: false })
       .order('criado_em', { ascending: true });
     setSenhas(senhasData || []);
@@ -150,7 +150,7 @@ export default function SenhaGuiche() {
     const { data: histData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
-      .gte('criado_em', inicio + 'T00:00:00-03:00')
+      .gte('criado_em', inicio + 'T03:00:00Z')
       .order('chamado_em', { ascending: false });
     setHistorico(histData || []);
     setSetoresAbertos({});
@@ -283,7 +283,7 @@ export default function SenhaGuiche() {
       const setor = setores.find(s => s.id === gerarSetorSel);
       const { data: ultimas } = await sb.from('senhas').select('numero')
         .eq('setor_id', gerarSetorSel)
-        .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+        .gte('criado_em', HOJE() + 'T03:00:00Z')
         .order('numero', { ascending: false }).limit(1);
       const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
       const cod    = `${setor.prefixo}${String(numero).padStart(2, '0')}`;
