@@ -87,6 +87,11 @@ export default function SenhaGuiche() {
   const [config, setConfig]         = useState({});
   const [configEdit, setConfigEdit] = useState({});
   const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [modalGerarSenha, setModalGerarSenha] = useState(false);
+  const [gerarSetorSel, setGerarSetorSel]     = useState('');
+  const [gerarTipo, setGerarTipo]             = useState('normal');
+  const [gerandoSenha, setGerandoSenha]       = useState(false);
+  const [gerarConfirm, setGerarConfirm]       = useState(null); // { cod, setor }
 
   useEffect(() => {
     carregarDados();
@@ -271,6 +276,48 @@ export default function SenhaGuiche() {
 
   const toggleSetor = (key) => setSetoresAbertos(p => ({ ...p, [key]: !p[key] }));
 
+  const gerarSenhaParaCliente = async () => {
+    if (!gerarSetorSel) { addToast('Selecione o setor', 'error'); return; }
+    setGerandoSenha(true);
+    try {
+      const setor = setores.find(s => s.id === gerarSetorSel);
+      const { data: ultimas } = await sb.from('senhas').select('numero')
+        .eq('setor_id', gerarSetorSel)
+        .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+        .order('numero', { ascending: false }).limit(1);
+      const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
+      const cod    = `${setor.prefixo}${String(numero).padStart(2, '0')}`;
+      const { error } = await sb.from('senhas').insert({
+        setor_id: gerarSetorSel, numero, tipo: gerarTipo, status: 'aguardando'
+      });
+      if (error) throw error;
+      const proxyHost  = config['imp_proxy_host']  || '192.168.10.129';
+      const proxyPorta = config['imp_proxy_porta']  || '8080';
+      const nomeCart   = cartorio?.nome_simples || cartorio?.nome || 'Cartório';
+      fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartorio: nomeCart, setor: setor.nome, senha: cod,
+          hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          preferencial: gerarTipo === 'preferencial',
+          tam_cartorio: config['imp_tam_cartorio'] || 'normal',
+          tam_setor:    config['imp_tam_setor']    || 'medio',
+          tam_senha:    config['imp_tam_senha']    || 'grande',
+          tam_hora:     config['imp_tam_hora']     || 'normal',
+          rodape:       config['imp_rodape']       || 'Seja Bem-Vindo!',
+          info:         config['imp_info']         || '',
+        }),
+      }).catch(() => {});
+      setGerarConfirm({ cod, setor: setor.nome, tipo: gerarTipo });
+      await carregarDados();
+    } catch (e) {
+      addToast('Erro ao gerar senha: ' + e.message, 'error');
+    } finally {
+      setGerandoSenha(false);
+    }
+  };
+
   useEffect(() => { carregarDados(); }, [filtroPeriodo]);
 
 
@@ -282,6 +329,10 @@ export default function SenhaGuiche() {
           <div className="page-sub">{senhasFiltradas.length} senha(s) aguardando · {totalPref} preferencial · {totalNorm} normal</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => { setModalGerarSenha(true); setGerarConfirm(null); setGerarSetorSel(''); setGerarTipo('normal'); }}
+            className="btn btn-primary">
+            🎫 Gerar Senha para Cliente
+          </button>
           {/* Identificação do guichê */}
           {editGuiche ? (
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -618,6 +669,14 @@ export default function SenhaGuiche() {
                     onChange={e => setConfigEdit(p => ({...p, imp_ip: e.target.value}))}
                     placeholder="ex: 192.168.10.173" style={{ fontFamily: 'var(--font-mono)' }} />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">IP do Proxy (Tablet)</label>
+                  <input className="form-input" value={configEdit['imp_proxy_host'] || 'localhost'}
+                    onChange={e => setConfigEdit(p => ({...p, imp_proxy_host: e.target.value}))}
+                    placeholder="ex: 192.168.10.129 ou localhost"
+                    style={{ fontFamily: 'var(--font-mono)' }} />
+                  <div className="form-hint">Use "localhost" no tablet · IP do tablet (192.168.10.129) para imprimir do PC</div>
+                </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label className="form-label">Porta impressora</label>
@@ -755,6 +814,66 @@ export default function SenhaGuiche() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ── Modal Gerar Senha para Cliente ── */}
+      {modalGerarSenha && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !gerandoSenha && setModalGerarSenha(false)}>
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-header">
+              <span className="modal-title">🎫 Gerar Senha para Cliente</span>
+              <button className="btn-icon" onClick={() => !gerandoSenha && setModalGerarSenha(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {gerarConfirm ? (
+                /* Confirmação */
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: 13, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{gerarConfirm.setor}</div>
+                  <div style={{ fontSize: 80, fontWeight: 900, color: gerarConfirm.tipo === 'preferencial' ? 'var(--color-warning)' : 'var(--color-accent)', letterSpacing: -2, lineHeight: 1 }}>{gerarConfirm.cod}</div>
+                  {gerarConfirm.tipo === 'preferencial' && <div style={{ fontSize: 14, color: 'var(--color-warning)', marginTop: 8 }}>⭐ Preferencial</div>}
+                  <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 12 }}>Senha gerada e enviada para impressão!</div>
+                </div>
+              ) : (
+                /* Formulário */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div className="form-group">
+                    <label className="form-label">Setor</label>
+                    <select className="form-select" value={gerarSetorSel} onChange={e => setGerarSetorSel(e.target.value)}>
+                      <option value="">Selecione o setor</option>
+                      {setores.map(s => <option key={s.id} value={s.id}>{s.prefixo} — {s.nome}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Tipo de Atendimento</label>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {[['normal','🎫 Normal'], ['preferencial','⭐ Preferencial']].map(([v, l]) => (
+                        <button key={v} onClick={() => setGerarTipo(v)}
+                          style={{ flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', border: `2px solid ${gerarTipo === v ? 'var(--color-accent)' : 'var(--color-border)'}`, background: gerarTipo === v ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-surface-2)', color: gerarTipo === v ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: gerarTipo === v ? 700 : 400, cursor: 'pointer', fontSize: 14 }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {gerarConfirm ? (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setModalGerarSenha(false)}>Fechar</button>
+                  <button className="btn btn-primary" onClick={() => { setGerarConfirm(null); setGerarSetorSel(''); setGerarTipo('normal'); }}>+ Nova Senha</button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setModalGerarSenha(false)}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={gerarSenhaParaCliente} disabled={gerandoSenha || !gerarSetorSel}>
+                    {gerandoSenha ? '⏳ Gerando...' : '🖨 Gerar e Imprimir'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
