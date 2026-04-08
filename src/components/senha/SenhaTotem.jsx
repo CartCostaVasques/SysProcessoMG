@@ -214,16 +214,25 @@ export default function SenhaTotem() {
 
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
-      // Impressão separada — erro nunca bloqueia a emissão da senha
-      const proxyPorta = config['imp_proxy_porta'] || '8080';
-      const proxyHost  = config['imp_proxy_host']  || 'localhost';
-      imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta, proxyHost).catch(() => {});
     } catch (e) {
       alert('Erro ao gerar senha: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Impressão dispara via useEffect — completamente separado do fluxo de senha
+  useEffect(() => {
+    if (!emissao) return;
+    const proxyPorta = config['imp_proxy_porta'] || '8080';
+    const proxyHost  = config['imp_proxy_host']  || 'localhost';
+    const dados = gerarDadosImpressao(nomeCartorio, emissao.setor, emissao.cod, emissao.tipo, config);
+    fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    }).catch(() => {});
+  }, [emissao]);
 
   const voltar = () => { setEtapa('setores'); setSetorSel(null); setEmissao(null); };
 
