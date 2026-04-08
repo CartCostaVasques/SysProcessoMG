@@ -100,6 +100,8 @@ export default function SenhaGuiche() {
   const [modalTransferir, setModalTransferir] = useState(null); // senha object
   const [transferirResp, setTransferirResp]   = useState('');
   const [transferindo, setTransferindo]       = useState(false);
+  const [filtroAtendidas, setFiltroAtendidas] = useState('hoje');
+  const [atendidasFiltradas, setAtendidasFiltradas] = useState([]);
 
   useEffect(() => {
     carregarDados();
@@ -350,6 +352,34 @@ export default function SenhaGuiche() {
   };
 
   useEffect(() => { carregarDados(); }, [filtroPeriodo]);
+
+  useEffect(() => {
+    const buscarAtendidas = async () => {
+      const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
+      let inicio;
+      if (filtroAtendidas === 'hoje') {
+        inicio = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else if (filtroAtendidas === 'ontem') {
+        d.setDate(d.getDate() - 1);
+        inicio = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else if (filtroAtendidas === 'semana') {
+        d.setDate(d.getDate() - 6);
+        inicio = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else if (filtroAtendidas === 'quinzena') {
+        d.setDate(d.getDate() - 14);
+        inicio = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } else if (filtroAtendidas === 'mes') {
+        inicio = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+      }
+      const { data } = await sb.from('senhas')
+        .select('*, senha_setores(nome, prefixo)')
+        .eq('status', 'chamada')
+        .gte('criado_em', inicio + 'T04:00:00Z')
+        .order('chamado_em', { ascending: false });
+      setAtendidasFiltradas(data || []);
+    };
+    buscarAtendidas();
+  }, [filtroAtendidas]);
 
 
   return (
@@ -660,6 +690,37 @@ export default function SenhaGuiche() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Quadro — Atendidas por Setor */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div className="card-title" style={{ fontSize: 13 }}>✅ Atendidas</div>
+              <select style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                value={filtroAtendidas} onChange={e => setFiltroAtendidas(e.target.value)}>
+                <option value="hoje">Hoje</option>
+                <option value="ontem">Ontem</option>
+                <option value="semana">7 dias</option>
+                <option value="quinzena">15 dias</option>
+                <option value="mes">Este mês</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {setores.map(setor => {
+                const qtdAt = atendidasFiltradas.filter(s => s.setor_id === setor.id).length;
+                return (
+                  <div key={setor.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--radius-md)', background: 'var(--color-surface-2)' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: qtdAt > 0 ? 'color-mix(in srgb, var(--color-success) 80%, transparent)' : 'var(--color-surface-2)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: qtdAt > 0 ? '#fff' : 'var(--color-text-faint)', flexShrink: 0 }}>{setor.prefixo}</div>
+                    <div style={{ flex: 1, fontSize: 12, color: 'var(--color-text)', fontWeight: 500 }}>{abreviarSetor(setor.nome)}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: qtdAt > 0 ? 'var(--color-success)' : 'var(--color-text-faint)' }}>{qtdAt}</div>
+                  </div>
+                );
+              })}
+              <div style={{ paddingTop: 6, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Total</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{atendidasFiltradas.length}</span>
+              </div>
             </div>
           </div>
 
