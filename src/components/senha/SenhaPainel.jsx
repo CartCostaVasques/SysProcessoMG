@@ -94,7 +94,15 @@ export default function SenhaPainel() {
     // Vozes carregam async
     window.speechSynthesis?.addEventListener?.('voiceschanged', () => {});
 
-    return () => { clearInterval(t); sb.removeChannel(canal); };
+    // Heartbeat — renova Realtime a cada 25s para evitar timeout de inatividade
+    const heartbeat = setInterval(() => {
+      sb.from('senha_config').select('chave').limit(1).then(() => {});
+    }, 25000);
+
+    // Polling de fallback a cada 60s
+    const poll = setInterval(() => carregarDados(), 60000);
+
+    return () => { clearInterval(t); clearInterval(heartbeat); clearInterval(poll); sb.removeChannel(canal); };
   }, []);
 
   const ativarAudio = () => {
