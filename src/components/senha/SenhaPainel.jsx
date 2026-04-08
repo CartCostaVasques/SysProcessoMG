@@ -3,14 +3,15 @@ import { sbPublic as sb } from '../../lib/supabasePublic.js';
 
 const HOJE = () => new Date().toISOString().split('T')[0];
 
-function falarSenha(cod, nomeSetor) {
+function falarSenha(cod, nomeSetor, repetir = false) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
 
-  const letras = cod.slice(0, 1);
-  const nums   = cod.slice(1).split('').join(' ');
+  const letras = cod.slice(0, 2).split('').join(' ');
+  const nums   = cod.slice(2).split('').join(' ');
   const setor  = nomeSetor ? `, Setor ${nomeSetor}` : '';
-  const texto  = `Senha ${letras} ${nums}${setor}.`;
+  const prefixo = repetir ? 'Atenção. ' : '';
+  const texto  = `${prefixo}Senha ${letras} ${nums}${setor}.`;
 
   const falar = () => {
     const msg  = new SpeechSynthesisUtterance(texto);
@@ -64,19 +65,21 @@ export default function SenhaPainel() {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
           setHistorico(h => {
-            // Se for repetição, não duplica no histórico
+            const eRepeticao = h.some(x => x.id === nova.id);
             const semDuplicata = h.filter(x => x.id !== nova.id);
-            return [nova, ...semDuplicata].slice(0, 8);
+            const novoHistorico = [nova, ...semDuplicata].slice(0, 8);
+            // Falar com indicação de repetição se já estava no histórico
+            setSetores(s => {
+              const setor = s[nova.setor_id];
+              if (setor) {
+                const cod = `${setor.prefixo}${String(nova.numero).padStart(2, '0')}`;
+                setTimeout(() => falarSenha(cod, setor.nome, eRepeticao), 300);
+              }
+              return s;
+            });
+            return novoHistorico;
           });
           setUltime(nova);
-          setSetores(s => {
-            const setor = s[nova.setor_id];
-            if (setor) {
-              const cod = `${setor.prefixo}${String(nova.numero).padStart(2, '0')}`;
-              setTimeout(() => falarSenha(cod, setor.nome), 300);
-            }
-            return s;
-          });
         }
         if (payload.eventType === 'INSERT') {
           carregarDados();
