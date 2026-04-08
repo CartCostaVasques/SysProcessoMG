@@ -214,30 +214,25 @@ export default function SenhaTotem() {
 
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
+      // Impressão — nunca bloqueia
+      setTimeout(() => {
+        try {
+          const proxyPorta = config['imp_proxy_porta'] || '8080';
+          const proxyHost  = config['imp_proxy_host']  || 'localhost';
+          const dados = gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config);
+          fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados),
+          }).catch(() => {});
+        } catch (_) {}
+      }, 100);
     } catch (e) {
       alert('Erro ao gerar senha: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
-
-  // Impressão dispara via useEffect — completamente separado do fluxo de senha
-  useEffect(() => {
-    if (!emissao) return;
-    try {
-      const proxyPorta = config['imp_proxy_porta'] || '8080';
-      const proxyHost  = config['imp_proxy_host']  || 'localhost';
-      const dados = gerarDadosImpressao(nomeCartorio, emissao.setor, emissao.cod, emissao.tipo, config);
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 3000);
-      fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados),
-        signal: ctrl.signal,
-      }).then(() => clearTimeout(t)).catch(() => clearTimeout(t));
-    } catch (_) {}
-  }, [emissao]);
 
   const voltar = () => { setEtapa('setores'); setSetorSel(null); setEmissao(null); };
 
