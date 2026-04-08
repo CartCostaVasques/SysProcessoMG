@@ -90,16 +90,14 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
             onMouseEnter={e => { e.currentTarget.style.borderColor = '#38bdf8'; e.currentTarget.style.background = '#1e3a5f'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.background = '#1e293b'; }}>
             <div style={{ width: 54, height: 54, borderRadius: '50%', background: config['totem_cor_prefixo_bg'] || '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#fff', flexShrink: 0 }}>{setor.prefixo}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', lineHeight: 1.2 }}>{setor.nome}</div>
-              {setor.descricao && (
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 3 }}>
-                  {setor.descricao.split('\n').filter(Boolean).map((linha, i) => (
-                    <span key={i} style={{ fontSize: 12, color: 'rgba(251,191,36,0.55)', fontWeight: 500, letterSpacing: 0.2 }}>{linha}</span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: config['totem_cor_nome_setor'] || '#1e40af', lineHeight: 1.2 }}>{setor.nome}</div>
+            {setor.descricao && (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignSelf: 'stretch', borderLeft: '1px solid rgba(251,191,36,0.2)', paddingLeft: 14, marginLeft: 4 }}>
+                {setor.descricao.split('\n').filter(Boolean).map((linha, i) => (
+                  <span key={i} style={{ fontSize: 13, color: 'rgba(251,191,36,0.6)', fontWeight: 500, letterSpacing: 0.2, lineHeight: 1.2 }}>{linha}</span>
+                ))}
+              </div>
+            )}
           </button>
         ))}
       </div>
