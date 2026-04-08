@@ -131,11 +131,15 @@ export default function RelatorioConfig() {
       const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+      // Usar token JWT da sessão atual para respeitar RLS
+      const { data: { session } } = await sb.auth.getSession();
+      const token = session?.access_token || supabaseAnon;
+
       const resp = await fetch(`${supabaseUrl}/functions/v1/enviar-relatorio`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnon}`,
+          'Authorization': `Bearer ${token}`,
           'apikey': supabaseAnon,
         },
         body: JSON.stringify({ config_id: config.id }),
