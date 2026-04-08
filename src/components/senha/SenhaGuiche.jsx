@@ -573,7 +573,7 @@ export default function SenhaGuiche() {
       )}
 
       {aba === 'fila' && (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px 260px', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px 260px', gap: 16, alignItems: 'stretch' }}>
 
         {/* Coluna principal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -671,8 +671,8 @@ export default function SenhaGuiche() {
         </div>
 
         {/* Coluna — Por Setor */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
+          <div className="card" style={{ flex: 1 }}>
             <div className="card-header"><div className="card-title">Por Setor</div></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {setores.map(setor => {
@@ -696,9 +696,9 @@ export default function SenhaGuiche() {
         </div>
 
         {/* Coluna — Atendidas + Telas externas */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
           {/* Quadro — Atendidas por Setor */}
-          <div className="card">
+          <div className="card" style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div className="card-title" style={{ fontSize: 13 }}>✅ Atendidas</div>
               <select style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface-2)', color: 'var(--color-text-muted)', cursor: 'pointer' }}
