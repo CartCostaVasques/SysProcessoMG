@@ -215,10 +215,11 @@ export default function SenhaTotem() {
       const { error } = await sb.from('senhas').insert({ setor_id: setorSel.id, numero, tipo, status: 'aguardando' });
       if (error) throw error;
 
-      const proxyPorta = config['imp_proxy_porta'] || '8080';
-      await imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta);
       setEmissao({ cod, tipo, setor: setorSel });
       setEtapa('confirmacao');
+      // Impressão separada — erro nunca bloqueia a emissão da senha
+      const proxyPorta = config['imp_proxy_porta'] || '8080';
+      imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta).catch(() => {});
     } catch (e) {
       alert('Erro ao gerar senha: ' + e.message);
     } finally {
