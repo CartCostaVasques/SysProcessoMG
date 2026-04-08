@@ -120,7 +120,7 @@ export default function SenhaPainel() {
     const { data: chamadas } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
-      .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+      .gte('criado_em', HOJE() + 'T03:00:00Z')
       .order('chamado_em', { ascending: false })
       .limit(8);
     setHistorico(chamadas || []);
