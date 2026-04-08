@@ -194,7 +194,14 @@ export default function SenhaTotem() {
     if (cfgData) setConfig(Object.fromEntries(cfgData.map(r => [r.chave, r.valor])));
   };
 
-  const escolherSetor = (setor) => { setSetorSel(setor); setEtapa('tipo'); };
+  const escolherSetor = (setor) => {
+    // Tela cheia na primeira interação
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    setSetorSel(setor);
+    setEtapa('tipo');
+  };
 
   const escolherTipo = async (tipo) => {
     if (loading) return;
