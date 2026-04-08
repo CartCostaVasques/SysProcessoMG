@@ -573,7 +573,7 @@ export default function SenhaGuiche() {
       )}
 
       {aba === 'fila' && (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px 260px', gap: 16, alignItems: 'start' }}>
 
         {/* Coluna principal */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -670,7 +670,7 @@ export default function SenhaGuiche() {
           </div>
         </div>
 
-        {/* Coluna lateral — contadores por setor */}
+        {/* Coluna — Por Setor */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="card">
             <div className="card-header"><div className="card-title">Por Setor</div></div>
@@ -693,6 +693,10 @@ export default function SenhaGuiche() {
             </div>
           </div>
 
+        </div>
+
+        {/* Coluna — Atendidas + Telas externas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Quadro — Atendidas por Setor */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
