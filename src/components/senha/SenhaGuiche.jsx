@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
-const HOJE = () => new Date().toISOString().split('T')[0];
+const HOJE = () => {
+  // Data atual no horário de Cuiabá (UTC-4)
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
 
 
 // ── Seletor de cor igual ao da tela de Configurações ─────────────────────────
@@ -136,7 +140,7 @@ export default function SenhaGuiche() {
     const { data: senhasData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'aguardando')
-      .gte('criado_em', HOJE() + 'T03:00:00Z')
+      .gte('criado_em', HOJE() + 'T04:00:00Z')
       .order('tipo', { ascending: false })
       .order('criado_em', { ascending: true });
     setSenhas(senhasData || []);
@@ -150,7 +154,7 @@ export default function SenhaGuiche() {
     const { data: histData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
       .eq('status', 'chamada')
-      .gte('criado_em', inicio + 'T03:00:00Z')
+      .gte('criado_em', inicio + 'T04:00:00Z')
       .order('chamado_em', { ascending: false });
     setHistorico(histData || []);
     setSetoresAbertos({});
@@ -283,7 +287,7 @@ export default function SenhaGuiche() {
       const setor = setores.find(s => s.id === gerarSetorSel);
       const { data: ultimas } = await sb.from('senhas').select('numero')
         .eq('setor_id', gerarSetorSel)
-        .gte('criado_em', HOJE() + 'T03:00:00Z')
+        .gte('criado_em', HOJE() + 'T04:00:00Z')
         .order('numero', { ascending: false }).limit(1);
       const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
       const cod    = `${setor.prefixo}${String(numero).padStart(2, '0')}`;
