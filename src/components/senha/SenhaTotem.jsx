@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { sbPublic as sb } from '../../lib/supabasePublic.js';
 
 const HOJE = () => {
-  const d = new Date();
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
@@ -203,7 +203,7 @@ export default function SenhaTotem() {
       const { data: ultimas } = await sb
         .from('senhas').select('numero')
         .eq('setor_id', setorSel.id)
-        .gte('criado_em', HOJE() + 'T03:00:00Z')
+        .gte('criado_em', HOJE() + 'T04:00:00Z')
         .order('numero', { ascending: false }).limit(1);
 
       const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
