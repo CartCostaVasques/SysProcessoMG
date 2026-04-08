@@ -203,7 +203,7 @@ export default function SenhaTotem() {
       const { data: ultimas } = await sb
         .from('senhas').select('numero')
         .eq('setor_id', setorSel.id)
-        .gte('criado_em', HOJE() + 'T00:00:00-03:00')
+        .gte('criado_em', HOJE() + 'T03:00:00Z')
         .order('numero', { ascending: false }).limit(1);
 
       const numero = ultimas?.length > 0 ? ultimas[0].numero + 1 : 1;
@@ -224,14 +224,19 @@ export default function SenhaTotem() {
   // Impressão dispara via useEffect — completamente separado do fluxo de senha
   useEffect(() => {
     if (!emissao) return;
-    const proxyPorta = config['imp_proxy_porta'] || '8080';
-    const proxyHost  = config['imp_proxy_host']  || 'localhost';
-    const dados = gerarDadosImpressao(nomeCartorio, emissao.setor, emissao.cod, emissao.tipo, config);
-    fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dados),
-    }).catch(() => {});
+    try {
+      const proxyPorta = config['imp_proxy_porta'] || '8080';
+      const proxyHost  = config['imp_proxy_host']  || 'localhost';
+      const dados = gerarDadosImpressao(nomeCartorio, emissao.setor, emissao.cod, emissao.tipo, config);
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 3000);
+      fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dados),
+        signal: ctrl.signal,
+      }).then(() => clearTimeout(t)).catch(() => clearTimeout(t));
+    } catch (_) {}
   }, [emissao]);
 
   const voltar = () => { setEtapa('setores'); setSetorSel(null); setEmissao(null); };
