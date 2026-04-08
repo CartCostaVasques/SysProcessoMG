@@ -96,6 +96,10 @@ export default function SenhaGuiche() {
   const [gerarTipo, setGerarTipo]             = useState('normal');
   const [gerandoSenha, setGerandoSenha]       = useState(false);
   const [gerarConfirm, setGerarConfirm]       = useState(null); // { cod, setor }
+  const [atendidas, setAtendidas]             = useState([]);
+  const [modalTransferir, setModalTransferir] = useState(null); // senha object
+  const [transferirResp, setTransferirResp]   = useState('');
+  const [transferindo, setTransferindo]       = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -107,7 +111,10 @@ export default function SenhaGuiche() {
       })
       .subscribe();
 
-    return () => sb.removeChannel(canal);
+    // Polling de fallback — atualiza a cada 30s caso o Realtime caia
+    const poll = setInterval(() => carregarDados(), 30000);
+
+    return () => { sb.removeChannel(canal); clearInterval(poll); };
   }, []);
 
   const carregarConfig = async () => {
@@ -157,6 +164,7 @@ export default function SenhaGuiche() {
       .gte('criado_em', inicio + 'T04:00:00Z')
       .order('chamado_em', { ascending: false });
     setHistorico(histData || []);
+    setAtendidas(histData || []);
     setSetoresAbertos({});
   };
 
@@ -280,6 +288,25 @@ export default function SenhaGuiche() {
 
   const toggleSetor = (key) => setSetoresAbertos(p => ({ ...p, [key]: !p[key] }));
 
+  const transferirSenha = async () => {
+    if (!transferirResp || !modalTransferir) return;
+    setTransferindo(true);
+    try {
+      const { error } = await sb.from('senhas')
+        .update({ guiche: transferirResp })
+        .eq('id', modalTransferir.id);
+      if (error) throw error;
+      addToast('Senha transferida com sucesso!', 'success');
+      setModalTransferir(null);
+      setTransferirResp('');
+      await carregarDados();
+    } catch (e) {
+      addToast('Erro ao transferir: ' + e.message, 'error');
+    } finally {
+      setTransferindo(false);
+    }
+  };
+
   const gerarSenhaParaCliente = async () => {
     if (!gerarSetorSel) { addToast('Selecione o setor', 'error'); return; }
     setGerandoSenha(true);
@@ -357,7 +384,7 @@ export default function SenhaGuiche() {
       </div>
 
       <div className="tabs" style={{ marginBottom: 16, borderBottom: '1px solid var(--color-border)' }}>
-        {[['fila', '🎫 Fila de Espera'], ['historico', '📋 Histórico do Dia'], ...(temPermissao('senha_aparencia') ? [['aparencia', '🎨 Aparência'], ['impressora', '🖨 Impressora']] : [])].map(([id, label]) => (
+        {[['fila', '🎫 Fila de Espera'], ['atendidas', '✅ Senhas Atendidas'], ['historico', '📋 Histórico do Dia'], ...(temPermissao('senha_aparencia') ? [['aparencia', '🎨 Aparência'], ['impressora', '🖨 Impressora']] : [])].map(([id, label]) => (
           <button key={id} onClick={() => setAba(id)}
             className={`tab-btn ${aba === id ? 'active' : ''}`}>
             {label}
@@ -370,6 +397,54 @@ export default function SenhaGuiche() {
           </button>
         ))}
       </div>
+
+      {aba === 'atendidas' && (() => {
+        // Agrupar por setor
+        const porSetor = {};
+        for (const s of atendidas) {
+          const nome = s.senha_setores?.nome || 'Desconhecido';
+          if (!porSetor[nome]) porSetor[nome] = [];
+          porSetor[nome].push(s);
+        }
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Object.keys(porSetor).length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-faint)' }}>
+                Nenhuma senha atendida hoje ainda.
+              </div>
+            ) : Object.entries(porSetor).sort((a,b) => a[0].localeCompare(b[0])).map(([setor, senhasSetor]) => (
+              <div key={setor} className="card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', margin: '-16px -16px 12px -16px', borderBottom: '1px solid var(--color-border)' }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{setor}</div>
+                  <span style={{ fontSize: 12, padding: '2px 10px', borderRadius: 10, background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', color: 'var(--color-accent)', fontWeight: 700 }}>{senhasSetor.length}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {senhasSetor.map(s => {
+                    const cod = `${s.senha_setores?.prefixo}${String(s.numero).padStart(2,'0')}`;
+                    const isPref = s.tipo === 'preferencial';
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 4px', borderBottom: '1px solid var(--color-border)' }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: isPref ? 'var(--color-warning)' : 'var(--color-accent)', minWidth: 60, fontFamily: 'var(--font-mono)' }}>
+                          {isPref && '⭐'} {cod}
+                        </div>
+                        <div style={{ flex: 1, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                          {s.guiche || '—'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-faint)', minWidth: 50 }}>
+                          {s.chamado_em ? new Date(s.chamado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={() => { setModalTransferir(s); setTransferirResp(s.guiche || ''); }}>
+                          ↔ Transferir
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {aba === 'historico' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -540,6 +615,7 @@ export default function SenhaGuiche() {
                     <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{new Date(s.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
                     <button onClick={() => chamarSenhaEspecifica(s)} disabled={chamando}
                       className="btn btn-secondary btn-sm">📢 Chamar</button>
+                    <button onClick={() => { setModalTransferir(s); setTransferirResp(s.guiche || ''); }} className="btn btn-secondary btn-sm">↔</button>
                   </div>
                 ))}
 
@@ -556,6 +632,7 @@ export default function SenhaGuiche() {
                     <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{new Date(s.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
                     <button onClick={() => chamarSenhaEspecifica(s)} disabled={chamando}
                       className="btn btn-secondary btn-sm">📢 Chamar</button>
+                    <button onClick={() => { setModalTransferir(s); setTransferirResp(s.guiche || ''); }} className="btn btn-secondary btn-sm">↔</button>
                   </div>
                 ))}
               </div>
@@ -864,6 +941,46 @@ export default function SenhaGuiche() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Transferir Senha ── */}
+      {modalTransferir && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalTransferir(null)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <span className="modal-title">↔ Transferir Senha</span>
+              <button className="btn-icon" onClick={() => setModalTransferir(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 48, fontWeight: 900, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+                  {modalTransferir.senha_setores?.prefixo}{String(modalTransferir.numero).padStart(2,'0')}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{modalTransferir.senha_setores?.nome}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-faint)', marginTop: 4 }}>
+                  Responsável atual: <strong>{modalTransferir.guiche || '(sem responsável)'}</strong>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Transferir para</label>
+                <select className="form-select" value={transferirResp} onChange={e => setTransferirResp(e.target.value)}>
+                  <option value="">Selecione o responsável</option>
+                  {usuarios.filter(u => u.ativo).map(u => (
+                    <option key={u.id} value={u.nome_simples || u.nome_completo}>
+                      {u.nome_simples || u.nome_completo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalTransferir(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={transferirSenha} disabled={transferindo || !transferirResp}>
+                {transferindo ? '⏳ Transferindo...' : '↔ Transferir'}
+              </button>
             </div>
           </div>
         </div>
