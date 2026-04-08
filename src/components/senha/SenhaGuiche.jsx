@@ -146,10 +146,10 @@ export default function SenhaGuiche() {
     setSenhas(senhasData || []);
 
     const inicio = (() => {
-      const d = new Date();
+      const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
       if (filtroPeriodo === 'semana') d.setDate(d.getDate() - 6);
       else if (filtroPeriodo === 'mes') d.setDate(1);
-      return d.toISOString().split('T')[0];
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     })();
     const { data: histData } = await sb.from('senhas')
       .select('*, senha_setores(nome, prefixo)')
@@ -241,10 +241,10 @@ export default function SenhaGuiche() {
   // Agrupa histórico por guichê
   // ── Periodo helper ────────────────────────────────────────────────────────
   const inicioPeriodo = () => {
-    const d = new Date();
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Cuiaba' }));
     if (filtroPeriodo === 'semana') { d.setDate(d.getDate() - 6); }
     else if (filtroPeriodo === 'mes') { d.setDate(1); }
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   };
 
   // ── Resumo geral por setor (todos os responsaveis) ─────────────────────────
