@@ -25,17 +25,14 @@ function gerarDadosImpressao(nomeCartorio, setor, cod, tipo, cfg) {
   };
 }
 
-async function imprimirBematech(dados, proxyPorta = '8080') {
-  try {
-    const res = await fetch(`http://localhost:${proxyPorta}/imprimir`, {
+async function imprimirBematech(dados, proxyPorta = '8080', proxyHost = 'localhost') {
+  return new Promise((resolve) => {
+    fetch(`http://${proxyHost}:${proxyPorta}/imprimir`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+    }).then(r => resolve(r.ok)).catch(() => resolve(false));
+  });
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -219,7 +216,8 @@ export default function SenhaTotem() {
       setEtapa('confirmacao');
       // Impressão separada — erro nunca bloqueia a emissão da senha
       const proxyPorta = config['imp_proxy_porta'] || '8080';
-      imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta).catch(() => {});
+      const proxyHost  = config['imp_proxy_host']  || 'localhost';
+      imprimirBematech(gerarDadosImpressao(nomeCartorio, setorSel, cod, tipo, config), proxyPorta, proxyHost).catch(() => {});
     } catch (e) {
       alert('Erro ao gerar senha: ' + e.message);
     } finally {
