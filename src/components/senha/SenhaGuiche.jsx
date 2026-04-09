@@ -927,35 +927,6 @@ export default function SenhaGuiche() {
             </div>
           </div>
 
-          {/* ── Card: Nomes de impressão por setor ── */}
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <div className="card" style={{ marginBottom: 0 }}>
-              <div className="card-header"><div className="card-title">🏷 Nome na Etiqueta (por Setor)</div></div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>
-                Nome alternativo para impressão — deixe em branco para usar o nome padrão do setor.
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-                {setores.map(setor => (
-                  <div key={setor.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '8px 12px' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--color-bg)', flexShrink: 0 }}>{setor.prefixo}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 3 }}>{setor.nome}</div>
-                      <input className="form-input" style={{ padding: '4px 8px', fontSize: 13, height: 30 }}
-                        value={nomeImpressaoEdit[setor.id] ?? setor.nome_impressao ?? ''}
-                        placeholder={setor.nome}
-                        onChange={e => setNomeImpressaoEdit(p => ({ ...p, [setor.id]: e.target.value }))} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={salvarNomesImpressao}>💾 Salvar Nomes</button>
-              </div>
-            </div>
-          </div>
-          <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16, alignItems: 'start' }}>
-            <div style={{ display: 'none' }}></div>
           {/* ── Coluna direita: preview visual ── */}
           <div style={{ position: 'sticky', top: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Preview do Ticket</div>
@@ -1049,6 +1020,31 @@ export default function SenhaGuiche() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* ── Card: Nomes de impressão por setor ── */}
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card-header"><div className="card-title">🏷 Nome na Etiqueta (por Setor)</div></div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>
+            Nome alternativo para impressão — deixe em branco para usar o nome padrão do setor.
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+            {setores.map(setor => (
+              <div key={setor.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '8px 12px' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--color-bg)', flexShrink: 0 }}>{setor.prefixo}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 3 }}>{setor.nome}</div>
+                  <input className="form-input" style={{ padding: '4px 8px', fontSize: 13, height: 30 }}
+                    value={nomeImpressaoEdit[setor.id] ?? setor.nome_impressao ?? ''}
+                    placeholder={setor.nome}
+                    onChange={e => setNomeImpressaoEdit(p => ({ ...p, [setor.id]: e.target.value }))} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-primary btn-sm" onClick={salvarNomesImpressao}>💾 Salvar Nomes</button>
           </div>
         </div>
       )}
