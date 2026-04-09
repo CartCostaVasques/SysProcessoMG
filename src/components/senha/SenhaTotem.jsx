@@ -12,7 +12,7 @@ function gerarDadosImpressao(nomeCartorio, setor, cod, tipo, cfg) {
   const getTam = (chave) => (cfg && cfg[chave]) || 'normal';
   return {
     cartorio:  nomeCartorio,
-    setor:     setor.nome,
+    setor:     setor.nome_impressao || setor.nome,
     senha:     cod,
     hora,
     preferencial: tipo === 'preferencial',
