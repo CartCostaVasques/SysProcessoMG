@@ -317,7 +317,7 @@ export default function SenhaGuiche() {
       }
       await carregarDados();
       addToast('Nomes de impressão salvos!', 'success');
-    } catch(e: any) {
+    } catch(e) {
       addToast('Erro ao salvar: ' + e.message, 'error');
     }
   };
