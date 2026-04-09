@@ -189,7 +189,7 @@ export default function SenhaPainel() {
       {/* Header — cinza escuro com logo e nome âmbar */}
       <div style={{ background: fundoHeader, padding: '14px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `2px solid ${bordaCor}` }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ fontSize: 40, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
+          <div style={{ fontSize: 50, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', letterSpacing: 0.5, lineHeight: 1.1 }}>{nomeCartorio}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: 40, fontWeight: 700, color: '#38bdf8', fontFamily: 'monospace', lineHeight: 1 }}>{hora}</div>
@@ -197,7 +197,7 @@ export default function SenhaPainel() {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 360px', gap: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 480px', gap: 0, overflow: 'hidden' }}>
 
         {/* Senha atual — área principal em cinza médio */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, background: fundoCentral, position: 'relative' }}>
@@ -234,16 +234,16 @@ export default function SenhaPainel() {
           )}
           {/* Faixa do atendente — mesma largura do header */}
           {ultimaChamada?.guiche && (
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: '360px', background: fundoHeader, borderTop: `2px solid ${bordaCor}`, padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: '480px', background: fundoHeader, borderTop: `2px solid ${bordaCor}`, padding: '12px 40px', display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ fontSize: 14, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, flexShrink: 0 }}>Atendente:</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
+              <div style={{ fontSize: 35, fontWeight: 800, color: cfg['painel_cor_nome_cartorio'] || '#f59e0b', textTransform: 'uppercase', letterSpacing: 1 }}>{ultimaChamada.guiche}</div>
             </div>
           )}
         </div>
 
         {/* Histórico lateral — cinza escuro */}
         <div style={{ background: fundoLateral, borderLeft: `2px solid ${bordaCor}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: `2px solid ${bordaCor}`, fontSize: 12, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 3 }}>
+          <div style={{ padding: '14px 20px', borderBottom: `2px solid ${bordaCor}`, fontSize: 20, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 3 }}>
             Últimas Chamadas
           </div>
           <div style={{ flex: 1, overflowY: 'hidden', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -260,21 +260,21 @@ export default function SenhaPainel() {
                 return (
                   <div key={s.id} style={{ borderRadius: 10, background: fundoHeader, border: `1px solid ${bordaCor}`, overflow: 'hidden', marginBottom: 4 }}>
                     {/* Label topo */}
-                    <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
+                    <div style={{ textAlign: 'center', fontSize: 21, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
                       Senha anterior
                     </div>
                     {/* Código */}
                     <div style={{ textAlign: 'center', padding: '10px 8px 4px' }}>
-                      <div style={{ fontSize: 55, fontWeight: 900, color: corSenha, letterSpacing: -2, lineHeight: 1 }}>
+                      <div style={{ fontSize: 63, fontWeight: 900, color: corSenha, letterSpacing: -2, lineHeight: 1 }}>
                         {cod}{isPref && <span style={{ fontSize: 18, marginLeft: 4 }}>⭐</span>}
                       </div>
                     </div>
                     {/* Setor */}
-                    <div style={{ textAlign: 'center', fontSize: 16, fontWeight: 700, color: textoCor, textTransform: 'uppercase', letterSpacing: 1, padding: '6px 8px', borderTop: `1px solid ${bordaCor}`, borderBottom: `1px solid ${bordaCor}` }}>
+                    <div style={{ textAlign: 'center', fontSize: 24, fontWeight: 700, color: textoCor, textTransform: 'uppercase', letterSpacing: 1, padding: '6px 8px', borderTop: `1px solid ${bordaCor}`, borderBottom: `1px solid ${bordaCor}` }}>
                       {nomeSetor}
                     </div>
                     {/* Tempo */}
-                    <div style={{ textAlign: 'center', fontSize: 13, color: textoMuted, padding: '6px 8px 10px' }}>
+                    <div style={{ textAlign: 'center', fontSize: 21, color: textoMuted, padding: '6px 8px 10px' }}>
                       {tempoRelativo(s.chamado_em)}
                     </div>
                   </div>
@@ -287,15 +287,15 @@ export default function SenhaPainel() {
                 <div key={s.id} style={{ padding: '8px 12px', borderRadius: 8, background: i % 2 === 0 ? fundoHeader : 'transparent', display: 'flex', alignItems: 'center', gap: 0, opacity, transition: 'all .3s' }}>
                   {/* Coluna: código + tempo — largura fixa para alinhar tudo */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, width: 100, flexShrink: 0 }}>
-                    <div style={{ fontSize: 29, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1 }}>{cod}</div>
-                    <div style={{ fontSize: 11, color: textoMuted, opacity: 0.7 }}>{tempoRelativo(s.chamado_em)}</div>
+                    <div style={{ fontSize: 37, fontWeight: 900, color: corSenha, letterSpacing: -1, lineHeight: 1 }}>{cod}</div>
+                    <div style={{ fontSize: 19, color: textoMuted, opacity: 0.7 }}>{tempoRelativo(s.chamado_em)}</div>
                   </div>
                   {/* Estrela — largura fixa, centralizada, sempre ocupa o espaço */}
                   <div style={{ width: 22, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {isPref && <span style={{ fontSize: 14, color: cfg['painel_cor_senha_pref'] || '#f59e0b' }}>⭐</span>}
                   </div>
                   {/* Setor — alinhado após a estrela */}
-                  <div style={{ fontSize: 17, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
+                  <div style={{ fontSize: 25, color: textoMuted, flex: 1 }}>{nomeSetor}</div>
                 </div>
               );
             })}
