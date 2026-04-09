@@ -68,11 +68,10 @@ export default function SenhaPainel() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, payload => {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
+          // Verificar se é repetição antes de recarregar
           setHistorico(h => {
             const eRepeticao = h.some(x => x.id === nova.id);
-            const semDuplicata = h.filter(x => x.id !== nova.id);
-            const novoHistorico = [nova, ...semDuplicata].slice(0, 8);
-            // Falar com indicação de repetição se já estava no histórico
+            // Falar imediatamente com o setor do histórico existente
             setSetores(s => {
               const setor = s[nova.setor_id];
               if (setor) {
@@ -81,9 +80,10 @@ export default function SenhaPainel() {
               }
               return s;
             });
-            return novoHistorico;
+            return h;
           });
-          setUltime(nova);
+          // Recarregar do banco para garantir ordem e joins corretos
+          setTimeout(() => carregarDados(), 200);
         }
         if (payload.eventType === 'INSERT') {
           carregarDados();
