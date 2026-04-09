@@ -246,7 +246,7 @@ export default function SenhaPainel() {
           <div style={{ padding: '14px 20px', borderBottom: `2px solid ${bordaCor}`, fontSize: 20, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 3 }}>
             Últimas Chamadas
           </div>
-          <div style={{ flex: 1, overflowY: 'hidden', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historico.map((s, i) => {
               const cod = getCod(s);
               const nomeSetor = getNomeSetor(s);
@@ -258,7 +258,7 @@ export default function SenhaPainel() {
 
               if (i === 1) {
                 return (
-                  <div key={s.id} style={{ borderRadius: 10, background: fundoHeader, border: `1px solid ${bordaCor}`, overflow: 'hidden', marginBottom: 4 }}>
+                  <div key={s.id} style={{ borderRadius: 10, background: fundoHeader, border: `1px solid ${bordaCor}`, overflow: 'hidden', marginBottom: 4, flexShrink: 0 }}>
                     {/* Label topo */}
                     <div style={{ textAlign: 'center', fontSize: 21, fontWeight: 700, color: textoMuted, textTransform: 'uppercase', letterSpacing: 2, padding: '6px 0 4px', borderBottom: `1px solid ${bordaCor}` }}>
                       Senha anterior
