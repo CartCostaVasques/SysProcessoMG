@@ -69,36 +69,40 @@ export default function SenhaPainel() {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
 
-          // Atualizar imediatamente historico e ultima com os dados do payload
-          setHistorico(h => {
-            const eRepeticao = h.some(x => x.id === nova.id);
-            const semDuplicata = h.filter(x => x.id !== nova.id);
-            // Preservar senha_setores do item existente se o payload não trouxer
-            const itemExistente = h.find(x => x.id === nova.id);
+          // Atualizar imediatamente com dados do payload + setor do mapa local
+          setSetores(setoresAtual => {
+            const setor = setoresAtual[nova.setor_id];
             const novaComSetor = {
               ...nova,
-              senha_setores: nova.senha_setores || itemExistente?.senha_setores || null,
+              senha_setores: setor ? { nome: setor.nome, prefixo: setor.prefixo } : null,
             };
-            const novoHistorico = [novaComSetor, ...semDuplicata].slice(0, 8);
 
-            // Falar imediatamente
-            setSetores(s => {
-              const setor = s[nova.setor_id];
+            setHistorico(h => {
+              const eRepeticao = h.some(x => x.id === nova.id);
+              // Preservar senha_setores de item existente se setor não encontrado no mapa
+              const itemExistente = h.find(x => x.id === nova.id);
+              const novaFinal = {
+                ...novaComSetor,
+                senha_setores: novaComSetor.senha_setores || itemExistente?.senha_setores || null,
+              };
+              const semDuplicata = h.filter(x => x.id !== nova.id);
+              const novoHistorico = [novaFinal, ...semDuplicata].slice(0, 8);
+
+              // Falar
               if (setor) {
                 const cod = `${setor.prefixo}${String(nova.numero).padStart(2, '0')}`;
                 setTimeout(() => falarSenha(cod, setor.nome, eRepeticao), 300);
               }
-              return s;
+
+              // Atualizar ultima
+              setUltime(novaFinal);
+
+              return novoHistorico;
             });
 
-            // Atualizar ultima chamada diretamente
-            setUltime(novaComSetor);
-
-            return novoHistorico;
+            return setoresAtual;
           });
 
-          // Recarregar após 1s para garantir joins completos (não bloqueia a UI)
-          setTimeout(() => carregarDados(), 1000);
         }
         if (payload.eventType === 'INSERT') {
           carregarDados();
