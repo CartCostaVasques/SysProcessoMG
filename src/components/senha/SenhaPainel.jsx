@@ -68,10 +68,20 @@ export default function SenhaPainel() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'senhas' }, payload => {
         if (payload.eventType === 'UPDATE' && payload.new.status === 'chamada') {
           const nova = payload.new;
-          // Verificar se é repetição antes de recarregar
+
+          // Atualizar imediatamente historico e ultima com os dados do payload
           setHistorico(h => {
             const eRepeticao = h.some(x => x.id === nova.id);
-            // Falar imediatamente com o setor do histórico existente
+            const semDuplicata = h.filter(x => x.id !== nova.id);
+            // Preservar senha_setores do item existente se o payload não trouxer
+            const itemExistente = h.find(x => x.id === nova.id);
+            const novaComSetor = {
+              ...nova,
+              senha_setores: nova.senha_setores || itemExistente?.senha_setores || null,
+            };
+            const novoHistorico = [novaComSetor, ...semDuplicata].slice(0, 8);
+
+            // Falar imediatamente
             setSetores(s => {
               const setor = s[nova.setor_id];
               if (setor) {
@@ -80,10 +90,15 @@ export default function SenhaPainel() {
               }
               return s;
             });
-            return h;
+
+            // Atualizar ultima chamada diretamente
+            setUltime(novaComSetor);
+
+            return novoHistorico;
           });
-          // Recarregar do banco para garantir ordem e joins corretos
-          setTimeout(() => carregarDados(), 200);
+
+          // Recarregar após 1s para garantir joins completos (não bloqueia a UI)
+          setTimeout(() => carregarDados(), 1000);
         }
         if (payload.eventType === 'INSERT') {
           carregarDados();
