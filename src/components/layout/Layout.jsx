@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { id: 'oficios',        label: 'Ofícios',          icon: '✉',  section: 'Operacional' },
   { id: 'recibos',        label: 'Recibos',          icon: '🧾', section: 'Operacional' },
   { id: 'estoque',        label: 'Estoque',          icon: '📦', section: 'Operacional' },
+  { id: 'colaboradores',  label: 'Colaboradores',    icon: '👥', section: 'Cadastros' },
   { id: 'regcivil',       label: 'Registro Civil — Atos', icon: '⚖', section: 'Operacional' },
   { id: 'servicos',       label: 'Tipo de Serviços', icon: '⊞',  section: 'Cadastros' },
   { id: 'setores',        label: 'Setores',          icon: '▦',  section: 'Cadastros' },
