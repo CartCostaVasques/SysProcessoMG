@@ -36,6 +36,7 @@ import Oficios  from './components/oficios/Oficios.jsx';
 import Recibos     from './components/recibos/Recibos.jsx';
 import Estoque        from './components/estoque/Estoque.jsx';
 import Colaboradores  from './components/colaboradores/Colaboradores.jsx';
+import Chat           from './components/chat/Chat.jsx';
 import RegistroCivilAtos from './components/registrocivil/RegistroCivilAtos.jsx';
 import Panoramico   from './components/panoramico/Panoramico.jsx';
 import ImportacaoCSV from './components/importacao/ImportacaoCSV.jsx';
@@ -76,6 +77,7 @@ function AppShell() {
       case 'recibos':       return <Recibos />;
       case 'estoque':       return <Estoque />;
       case 'colaboradores':  return <Colaboradores />;
+      case 'chat':          return <Chat />;
       case 'regcivil':      return <RegistroCivilAtos />;
       case 'panoramico':    return <Panoramico />;
       case 'importacaocsv': return <ImportacaoCSV />;
