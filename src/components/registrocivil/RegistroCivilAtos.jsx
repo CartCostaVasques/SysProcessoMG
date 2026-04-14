@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useApp } from '../../context/AppContext.jsx';
 
 // ── Correção de acentos em nomes de cidades ───────────────────
 const ACENTOS = [
@@ -312,7 +313,321 @@ function gerarDivorcioMandado(corpo, origem, dataCom) {
 }
 
 // ── Componente Principal ──────────────────────────────────────
+// ── Componente de Casamentos ─────────────────────────────────
+function AbaCasamentos({ sb, addToast, usuarios, processos }) {
+  const [casamentos, setCasamentos] = useState([]);
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroPeriodo, setFiltroPeriodo] = useState('');
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({});
+  const [salvando, setSalvando] = useState(false);
+  const [buscaProcesso, setBuscaProcesso] = useState('');
+  const [processosFiltrados, setProcessosFiltrados] = useState([]);
+
+  useEffect(() => { carregar(); }, []);
+
+  const carregar = async () => {
+    const { data } = await sb.from('casamentos')
+      .select('*, processos(numero_interno, especie), usuarios(nome_simples)')
+      .order('dt_celebracao', { ascending: true });
+    setCasamentos(data || []);
+  };
+
+  const abrirNovo = () => {
+    setForm({ status: 'agendado', tipo: 'civil', local_tipo: 'serventia', dt_agendamento: new Date().toISOString().split('T')[0] });
+    setBuscaProcesso('');
+    setProcessosFiltrados([]);
+    setModal(true);
+  };
+
+  const abrirEditar = (c) => {
+    setForm({ ...c, processo_busca: c.processos?.numero_interno || '' });
+    setBuscaProcesso(c.processos?.numero_interno || '');
+    setModal(true);
+  };
+
+  const buscarProcesso = async (termo) => {
+    setBuscaProcesso(termo);
+    if (!termo || termo.length < 2) { setProcessosFiltrados([]); return; }
+    const { data } = await sb.from('processos').select('id, numero_interno, especie')
+      .ilike('numero_interno', `%${termo}%`).limit(8);
+    setProcessosFiltrados(data || []);
+  };
+
+  const salvar = async () => {
+    if (!form.noivo1?.trim() || !form.noivo2?.trim()) { addToast('Informe os nomes dos noivos', 'error'); return; }
+    setSalvando(true);
+    try {
+      const payload = {
+        noivo1: form.noivo1,
+        noivo2: form.noivo2,
+        dt_agendamento: form.dt_agendamento || new Date().toISOString().split('T')[0],
+        dt_celebracao: form.dt_celebracao || null,
+        local_tipo: form.local_tipo || 'serventia',
+        local_endereco: form.local_endereco || null,
+        tipo: form.tipo || 'civil',
+        responsavel_id: form.responsavel_id || null,
+        status: form.status || 'agendado',
+        observacao: form.observacao || null,
+        processo_id: form.processo_id || null,
+        atualizado_em: new Date().toISOString(),
+      };
+      if (form.id) {
+        await sb.from('casamentos').update(payload).eq('id', form.id);
+      } else {
+        await sb.from('casamentos').insert(payload);
+      }
+      addToast('Casamento salvo!', 'success');
+      setModal(false);
+      carregar();
+    } catch(e) { addToast('Erro: ' + e.message, 'error'); }
+    finally { setSalvando(false); }
+  };
+
+  const concluir = async (id) => {
+    await sb.from('casamentos').update({ status: 'realizado', atualizado_em: new Date().toISOString() }).eq('id', id);
+    carregar();
+    addToast('Casamento concluído!', 'success');
+  };
+
+  const cancelar = async (id) => {
+    if (!confirm('Cancelar este casamento?')) return;
+    await sb.from('casamentos').update({ status: 'cancelado', atualizado_em: new Date().toISOString() }).eq('id', id);
+    carregar();
+  };
+
+  const excluir = async (id) => {
+    if (!confirm('Excluir este casamento?')) return;
+    await sb.from('casamentos').delete().eq('id', id);
+    carregar();
+  };
+
+  const fmtDt = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+  const fmtDtHora = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+
+  const diasAte = (iso) => { if (!iso) return null; return Math.ceil((new Date(iso) - new Date()) / 86400000); };
+
+  const ST = {
+    agendado:  { label: 'Agendado',  bg: '#dbeafe', cor: '#1d4ed8' },
+    realizado: { label: 'Realizado', bg: '#dcfce7', cor: '#15803d' },
+    cancelado: { label: 'Cancelado', bg: '#fee2e2', cor: '#dc2626' },
+  };
+
+  const TIPO = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
+  const LOCAL = { serventia: '🏢 Serventia', externo: '📍 Externo' };
+
+  const proximos = casamentos.filter(c => c.status === 'agendado' && c.dt_celebracao && diasAte(c.dt_celebracao) !== null && diasAte(c.dt_celebracao) <= 7 && diasAte(c.dt_celebracao) >= 0);
+
+  const lista = casamentos.filter(c => {
+    if (filtroStatus !== 'todos' && c.status !== filtroStatus) return false;
+    if (filtroPeriodo && c.dt_celebracao && !c.dt_celebracao.startsWith(filtroPeriodo)) return false;
+    return true;
+  });
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* Alerta próximos 7 dias */}
+      {proximos.length > 0 && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 'var(--radius-md)', padding: '12px 16px' }}>
+          <div style={{ fontWeight: 700, color: '#b45309', marginBottom: 6 }}>💍 Casamentos nos próximos 7 dias ({proximos.length})</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {proximos.map(c => (
+              <span key={c.id} style={{ padding: '3px 12px', borderRadius: 20, background: '#fff', border: '1px solid #fbbf24', fontSize: 12, color: '#92400e' }}>
+                {c.noivo1} & {c.noivo2} — {fmtDtHora(c.dt_celebracao)} ({diasAte(c.dt_celebracao) === 0 ? 'Hoje!' : `${diasAte(c.dt_celebracao)} dias`})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filtros + botão */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        {['todos','agendado','realizado','cancelado'].map(s => (
+          <button key={s} onClick={() => setFiltroStatus(s)}
+            style={{ padding: '5px 14px', borderRadius: 20, border: `1px solid ${filtroStatus === s ? 'var(--color-accent)' : 'var(--color-border)'}`, background: filtroStatus === s ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-surface-2)', color: filtroStatus === s ? 'var(--color-accent)' : 'var(--color-text-muted)', fontSize: 12, fontWeight: filtroStatus === s ? 700 : 400, cursor: 'pointer' }}>
+            {s === 'todos' ? 'Todos' : ST[s]?.label}
+          </button>
+        ))}
+        <input type="month" className="form-input" value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} style={{ maxWidth: 160 }} />
+        <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={abrirNovo}>+ Novo Casamento</button>
+      </div>
+
+      {/* Tabela */}
+      <div className="card" style={{ overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-border)' }}>
+              {['Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status',''].map(h => (
+                <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lista.length === 0 ? (
+              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-faint)' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>💍</div>
+                Nenhum casamento encontrado.
+              </td></tr>
+            ) : lista.map((c, i) => {
+              const st = ST[c.status] || ST.agendado;
+              const dias = diasAte(c.dt_celebracao);
+              return (
+                <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ fontWeight: 600 }}>{c.noivo1}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>& {c.noivo2}</div>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div>{fmtDtHora(c.dt_celebracao)}</div>
+                    {c.status === 'agendado' && dias !== null && dias <= 7 && dias >= 0 && (
+                      <div style={{ fontSize: 11, color: '#b45309', fontWeight: 700 }}>{dias === 0 ? '⚡ Hoje!' : `⚡ ${dias} dias`}</div>
+                    )}
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: 12 }}>
+                    <div>{TIPO[c.tipo] || c.tipo}</div>
+                    <div style={{ color: 'var(--color-text-muted)' }}>{LOCAL[c.local_tipo] || c.local_tipo}</div>
+                    {c.local_tipo === 'externo' && c.local_endereco && <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{c.local_endereco}</div>}
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    {c.processos ? <span style={{ fontFamily: 'var(--font-mono)' }}>{c.processos.numero_interno}</span> : '—'}
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    {c.usuarios?.nome_simples || '—'}
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: st.bg, color: st.cor }}>{st.label}</span>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn-icon btn-sm" title="Editar" onClick={() => abrirEditar(c)}>✎</button>
+                      {c.status === 'agendado' && <button className="btn btn-secondary btn-sm" onClick={() => concluir(c.id)}>✓ Concluir</button>}
+                      {c.status === 'agendado' && <button className="btn-icon btn-sm" title="Cancelar" style={{ color: 'var(--color-warning)' }} onClick={() => cancelar(c.id)}>⊘</button>}
+                      <button className="btn-icon btn-sm" title="Excluir" style={{ color: 'var(--color-danger)' }} onClick={() => excluir(c.id)}>✕</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Resumo */}
+      <div style={{ display: 'flex', gap: 12 }}>
+        {[['agendado','Agendados','#dbeafe','#1d4ed8'],['realizado','Realizados','#dcfce7','#15803d'],['cancelado','Cancelados','#fee2e2','#dc2626']].map(([s, label, bg, cor]) => (
+          <div key={s} style={{ flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-md)', background: bg, textAlign: 'center' }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: cor }}>{casamentos.filter(c => c.status === s).length}</div>
+            <div style={{ fontSize: 12, color: cor, fontWeight: 600 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
+          <div className="modal" style={{ maxWidth: 580 }}>
+            <div className="modal-header">
+              <span className="modal-title">💍 {form.id ? 'Editar' : 'Novo'} Casamento</span>
+              <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">Noivo(a) 1 *</label>
+                  <input className="form-input" value={form.noivo1 || ''} onChange={e => set('noivo1', e.target.value)} placeholder="Nome completo" />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">Noivo(a) 2 *</label>
+                  <input className="form-input" value={form.noivo2 || ''} onChange={e => set('noivo2', e.target.value)} placeholder="Nome completo" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data do Agendamento</label>
+                  <input type="date" className="form-input" value={form.dt_agendamento || ''} onChange={e => set('dt_agendamento', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data/Hora da Celebração</label>
+                  <input type="datetime-local" className="form-input" value={form.dt_celebracao ? form.dt_celebracao.slice(0,16) : ''} onChange={e => set('dt_celebracao', e.target.value ? e.target.value + ':00-04:00' : null)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Tipo</label>
+                  <select className="form-select" value={form.tipo || 'civil'} onChange={e => set('tipo', e.target.value)}>
+                    <option value="civil">Civil</option>
+                    <option value="religioso">Religioso</option>
+                    <option value="civil_religioso">Civil e Religioso</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Local</label>
+                  <select className="form-select" value={form.local_tipo || 'serventia'} onChange={e => set('local_tipo', e.target.value)}>
+                    <option value="serventia">Serventia</option>
+                    <option value="externo">Externo</option>
+                  </select>
+                </div>
+                {form.local_tipo === 'externo' && (
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">Endereço do Local</label>
+                    <input className="form-input" value={form.local_endereco || ''} onChange={e => set('local_endereco', e.target.value)} placeholder="Rua, número, bairro..." />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Responsável</label>
+                  <select className="form-select" value={form.responsavel_id || ''} onChange={e => set('responsavel_id', e.target.value || null)}>
+                    <option value="">Selecione</option>
+                    {(usuarios || []).filter(u => u.ativo).map(u => (
+                      <option key={u.id} value={u.id}>{u.nome_simples || u.nome_completo}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select className="form-select" value={form.status || 'agendado'} onChange={e => set('status', e.target.value)}>
+                    <option value="agendado">Agendado</option>
+                    <option value="realizado">Realizado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1', position: 'relative' }}>
+                  <label className="form-label">Processo Vinculado</label>
+                  <input className="form-input" value={buscaProcesso} onChange={e => buscarProcesso(e.target.value)} placeholder="Digite o número do processo..." />
+                  {processosFiltrados.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
+                      {processosFiltrados.map(p => (
+                        <div key={p.id} onClick={() => { set('processo_id', p.id); setBuscaProcesso(p.numero_interno); setProcessosFiltrados([]); }}
+                          style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-border)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <strong>{p.numero_interno}</strong> — {p.especie}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {form.processo_id && <div className="form-hint">Processo selecionado ✓</div>}
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">Observações</label>
+                  <textarea className="form-input" rows={2} value={form.observacao || ''} onChange={e => set('observacao', e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? '⏳ Salvando...' : '✓ Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>}
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────
 export default function RegistroCivilAtos() {
+  const { supabaseClient: sb, addToast, usuarios } = useApp();
+  const [aba, setAba] = useState('atos');
   const [comunicacoes, setComunicacoes] = useState([]);
   const [abertos, setAbertos]           = useState({});
   const [copiado, setCopiado]           = useState(null);
@@ -345,17 +660,35 @@ export default function RegistroCivilAtos() {
   const textoCompleto = comunicacoes.map(c => c.averbacao).join('\n\n\n');
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 900 }}>
+    <div style={{ padding: '24px 28px', maxWidth: 960 }}>
 
       {/* Cabeçalho */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
           ⚖ Registro Civil — Atos
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-          Carregue o arquivo HTML do lote de comunicações para gerar os textos de averbação automaticamente.
-        </p>
       </div>
+
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)', marginBottom: 24 }}>
+        {[['atos','📋 Averbações'],['casamentos','💍 Casamentos']].map(([id, label]) => (
+          <button key={id} onClick={() => setAba(id)}
+            style={{ padding: '10px 24px', background: 'none', border: 'none', borderBottom: `3px solid ${aba === id ? 'var(--color-accent)' : 'transparent'}`, color: aba === id ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: aba === id ? 700 : 400, cursor: 'pointer', fontSize: 14, marginBottom: -2 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Aba Casamentos */}
+      {aba === 'casamentos' && (
+        <AbaCasamentos sb={sb} addToast={addToast} usuarios={usuarios} />
+      )}
+
+      {/* Aba Averbações */}
+      {aba === 'atos' && <div>
+      <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>
+        Carregue o arquivo HTML do lote de comunicações para gerar os textos de averbação automaticamente.
+      </p>
 
       {/* Upload */}
       <div
@@ -494,6 +827,7 @@ export default function RegistroCivilAtos() {
           Nenhuma comunicação carregada ainda.
         </div>
       )}
+    </div>}
     </div>
   );
 }
