@@ -620,7 +620,6 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
         </div>
       )}
     </div>
-      )}
   );
 }
 
@@ -685,7 +684,8 @@ export default function RegistroCivilAtos() {
       )}
 
       {/* Aba Averbações */}
-      {aba === 'atos' && (<div>
+      {aba === 'atos' && (
+      <div>
       <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>
         Carregue o arquivo HTML do lote de comunicações para gerar os textos de averbação automaticamente.
       </p>
@@ -827,6 +827,8 @@ export default function RegistroCivilAtos() {
           Nenhuma comunicação carregada ainda.
         </div>
       )}
-    </div>)}
+    </div>
+      )}
+    </div>
   );
 }
