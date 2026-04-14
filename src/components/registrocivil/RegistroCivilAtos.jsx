@@ -377,7 +377,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         noivo1: form.noivo1,
         noivo2: form.noivo2,
         dt_agendamento: form.dt_agendamento || new Date().toISOString().split('T')[0],
-        dt_celebracao: form.dt_celebracao || null,
+        dt_celebracao: form.dt_celebracao ? new Date(form.dt_celebracao).toISOString() : null,
         local_tipo: form.local_tipo || 'serventia',
         local_endereco: form.local_endereco || null,
         tipo: form.tipo || 'civil',
@@ -385,7 +385,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         status: form.status || 'agendado',
         observacao: form.observacao || null,
         juiz_paz: form.juiz_paz || null,
-        processo_id: form.processo_id || null,
+        processo_id: form.processo_id ? parseInt(form.processo_id) : null,
         atualizado_em: new Date().toISOString(),
       };
       if (form.id) {
