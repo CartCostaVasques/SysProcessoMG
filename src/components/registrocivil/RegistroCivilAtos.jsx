@@ -483,28 +483,29 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
 
     // Buscar ofícios do tipo "Comunicado de Casamentos" com status Rascunho
     const { data: oficiosDisponiveis } = await sb.from('oficios')
-      .select('id, numero, dt_oficio, responsavel')
-      .eq('tipo', 'Comunicado de Casamentos')
+      .select('id, numero, dt_oficio, responsavel, tipo, status')
       .eq('status', 'Rascunho')
       .order('dt_oficio', { ascending: false });
+    const oficiosCasamento = (oficiosDisponiveis || []).filter(o => o.tipo === 'Comunicado de Casamentos');
 
-    if (!oficiosDisponiveis?.length) {
+    if (!oficiosCasamento?.length) {
       alert('Nenhum oficio do tipo Comunicado de Casamentos com status Rascunho encontrado. Va em Oficios > Novo Oficio, selecione o tipo e status Rascunho para gerar o numero primeiro.');
       return;
     }
 
     // Se houver mais de um, pedir para escolher
-    let oficioSel = oficiosDisponiveis[0];
-    if (oficiosDisponiveis.length > 1) {
-      const opcoes = oficiosDisponiveis.map((o, i) => (i+1) + '. n' + o.numero).join(' | ');
-      const idx = parseInt(prompt('Oficios disponíveis: ' + opcoes + '. Digite o número (1-' + oficiosDisponiveis.length + '):')) - 1;
-      if (isNaN(idx) || idx < 0 || idx >= oficiosDisponiveis.length) return;
+    let oficioSel = oficiosCasamento[0];
+    if (oficiosCasamento.length > 1) {
+      const opcoes = oficiosCasamento.map((o, i) => (i+1) + '. n' + o.numero).join(' | ');
+      const idx = parseInt(prompt('Oficios disponíveis: ' + opcoes + '. Digite o número (1-' + oficiosCasamento.length + '):')) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= oficiosCasamento.length) return;
       oficioSel = oficiosDisponiveis[idx];
     }
 
     const hoje = new Date();
     const nomeCartorio = cartorio?.nome || 'Cartório Costa Vasques';
     const nomeResponsavel = cartorio?.responsavel || 'MAURO GEORGE VIANA MARQUES FELISBINO';
+    const cargoResponsavel = 'Tabelião Substituto';
     const nomejuiz = cartorio?.juiz_paz || 'PLÍNIO MARQUES ANDREA';
     const numOficio = oficioSel.numero;
 
