@@ -489,9 +489,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       .order('dt_oficio', { ascending: false });
 
     if (!oficiosDisponiveis?.length) {
-      alert('⚠️ Nenhum ofício do tipo "Comunicado de Casamentos" com status "Rascunho" encontrado.
-
-Vá em Ofícios → Novo Ofício, selecione o tipo "Comunicado de Casamentos" e status "Rascunho" para gerar o número primeiro.');
+      alert('Nenhum oficio do tipo Comunicado de Casamentos com status Rascunho encontrado. Va em Oficios > Novo Oficio, selecione o tipo e status Rascunho para gerar o numero primeiro.');
       return;
     }
 
