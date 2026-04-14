@@ -540,22 +540,109 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       })),
     };
 
-    // Chamar API backend para gerar docx
-    const resp = await fetch('/api/gerar-oficio-casamento', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dadosOficio),
-    }).catch(() => null);
+    // Gerar docx igual ao ModelosOficio — client-side
+    try {
+      const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, Header, AlignmentType, BorderStyle, WidthType, ShadingType, UnderlineType } = await import('docx');
 
-    if (resp && resp.ok) {
-      const blob = await resp.blob();
+      // Carregar imagem do cabeçalho igual ao ModelosOficio
+      const cabecalhoImgUrl = cartorio?.cabecalho_img_url || cartorio?.logo_url || null;
+      let headerChildren = [];
+      let headerHeightDXA = 1800;
+      const MAR_TOP_DOC = 2410, MAR_RIGHT_DOC = 991, MAR_BOT_DOC = 1134, MAR_LEFT_DOC = 1701, MAR_HEADER_DOC = 426;
+      const LARGURA_PX = Math.round((11906 - MAR_LEFT_DOC - MAR_RIGHT_DOC) / 20); // largura útil em pontos
+
+      if (cabecalhoImgUrl) {
+        try {
+          const imgResp = await fetch(cabecalhoImgUrl);
+          const imgBlob = await imgResp.blob();
+          const imgBuffer = await imgBlob.arrayBuffer();
+          const mime = imgBlob.type || 'image/jpeg';
+          const imgType = mime.includes('png') ? 'png' : 'jpg';
+          // Mesma proporção do modelo: largura útil, altura proporcional
+          const targetW = LARGURA_PX;
+          const targetH = Math.round(targetW * (1116965 / 5828306)); // proporção original
+          headerHeightDXA = Math.round((targetH / 72 * 2.54 / 2.54) * 1440) + 400;
+          headerChildren = [new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { before: 0, after: 0 },
+            children: [new ImageRun({ data: imgBuffer, transformation: { width: targetW, height: targetH }, type: imgType })],
+          })];
+        } catch(e) {
+          headerChildren = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] })];
+        }
+      } else {
+        headerChildren = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] })];
+      }
+
+      const wordHeader = new Header({ children: headerChildren });
+      const FONTE = 'Arial', TAM = 24;
+      const FIRST_LINE = 1701;
+
+      const t = (text, bold=false, underline=false) => new TextRun({ text, font: FONTE, size: TAM, bold, underline: underline ? {} : undefined });
+      const tW = (text, bold=false) => new TextRun({ text, font: FONTE, size: TAM, bold, color: 'FFFFFF' });
+      const p = (children, align=AlignmentType.JUSTIFIED, sp={}) => new Paragraph({ alignment: align, spacing: { line: 360, lineRule: 'auto', before: 120, after: 120, ...sp }, children: Array.isArray(children) ? children : [t(children)] });
+      const pR = (children, align=AlignmentType.JUSTIFIED, sp={}) => new Paragraph({ alignment: align, spacing: { line: 360, lineRule: 'auto', before: 120, after: 120, ...sp }, indent: { firstLine: FIRST_LINE }, children: Array.isArray(children) ? children : [t(children)] });
+      const pV = () => new Paragraph({ children: [t('')], spacing: { line: 240, before: 0, after: 0 } });
+
+      const LARG = 11906 - MAR_LEFT_DOC - MAR_RIGHT_DOC;
+      const C1=Math.round(LARG*0.45), C2=Math.round(LARG*0.30), C3=LARG-Math.round(LARG*0.45)-Math.round(LARG*0.30);
+      const brd={style:BorderStyle.SINGLE,size:4,color:'000000'}, brdAll={top:brd,bottom:brd,left:brd,right:brd}, mC={top:80,bottom:80,left:120,right:120};
+      const th = (text,w) => new TableCell({ width:{size:w,type:WidthType.DXA}, borders:brdAll, margins:mC, shading:{fill:'000000',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.CENTER,children:[tW(text,true)]})] });
+      const td = (text,w,i) => new TableCell({ width:{size:w,type:WidthType.DXA}, borders:brdAll, margins:mC, shading:{fill:i%2===0?'FFFFFF':'F5F5F5',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.CENTER,children:[t(text)]})] });
+      const tabela = new Table({
+        width:{size:LARG,type:WidthType.DXA}, columnWidths:[C1,C2,C3],
+        rows:[
+          new TableRow({tableHeader:true, children:[th('PRENOME DOS NUBENTES',C1),th('DATA AGENDADA',C2),th('HORÁRIO AGENDADO',C3)]}),
+          ...dadosOficio.casamentos.map((c,i)=>new TableRow({children:[td(c.prenomes,C1,i),td(c.data,C2,i),td(c.horario,C3,i)]})),
+        ],
+      });
+
+      const doc = new Document({
+        styles:{default:{document:{run:{font:FONTE,size:TAM}}}},
+        sections:[{
+          headers:{default:wordHeader},
+          properties:{page:{size:{width:11906,height:16838},margin:{top:headerHeightDXA,right:MAR_RIGHT_DOC,bottom:MAR_BOT_DOC,left:MAR_LEFT_DOC,header:MAR_HEADER_DOC,footer:567,gutter:0}}},
+          children:[
+            p([t(dadosOficio.dataExtenso)], AlignmentType.RIGHT, {before:0,after:0}),
+            pV(),
+            p([t('Ofício nº '+numOficio,true)], AlignmentType.LEFT, {before:0,after:0}),
+            pV(),
+            p([t('Assunto: '),t('COMUNICADO DE AGENDAMENTO DE CASAMENTOS',true,true),t('.')], AlignmentType.LEFT, {before:0,after:120}),
+            p([t('Exmo. Sr. Juiz de Paz,')], AlignmentType.LEFT, {before:0,after:120}),
+            pR([t('Venho por meio do presente, '),t('INFORMAR',true,true),t(' as datas e horários agendados para realização de casamentos nesta Serventia:')], AlignmentType.JUSTIFIED),
+            pV(),
+            p([t('CASAMENTOS AGENDADOS NO MÊS DE ',false,true),t(dadosOficio.mesCasamentos,true,true)], AlignmentType.CENTER, {before:0,after:120}),
+            tabela,
+            pV(),
+            pR([t('Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.')], AlignmentType.JUSTIFIED),
+            pV(),
+            pR([t('Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.')], AlignmentType.JUSTIFIED),
+            pV(),
+            pR([t('Atenciosamente,')], AlignmentType.LEFT),
+            pV(), pV(), pV(),
+            p([t('_'.repeat(50))], AlignmentType.CENTER, {line:240,before:0,after:0}),
+            p([t(dadosOficio.nomeSignatario,true)], AlignmentType.CENTER, {line:240,before:0,after:0}),
+            p([t(dadosOficio.cargoSignatario)], AlignmentType.CENTER, {line:240,before:0,after:0}),
+            pV(),
+            p([t('Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT')], AlignmentType.LEFT, {before:0,after:0}),
+            p([t(dadosOficio.nomejuiz,true,true)], AlignmentType.LEFT, {before:0,after:0}),
+            pV(),
+            p([t('Recebido em: ___________________________.') ], AlignmentType.LEFT, {before:0,after:0}),
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'Oficio_' + numOficio.replace('/', '_') + '_Casamentos.docx';
       a.click();
       URL.revokeObjectURL(url);
-    } else {
+    } catch(errDocx) {
+      console.error('Erro docx:', errDocx);
+      // Fallback HTML
+      {
       // Fallback: HTML para impressão
       const linhas = naoComunicados.map(c => '<tr><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0] + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtDataDoc(c.dt_celebracao) + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtHoraDoc(c.dt_celebracao) + '</td></tr>').join('');
       const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:12pt;margin:0;padding:40px 60px}@media print{body{padding:20px 40px}.no-print{display:none}@page{size:A4;margin:2cm}}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#000;color:#fff;padding:6px 12px;border:1px solid #000;text-align:center}.btn{margin-bottom:16px;padding:8px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer}</style></head><body><button class="btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button><p style="text-align:right">' + dataExtenso + '</p><p><strong>Ofício nº ' + numOficio + '</strong></p><blockquote><p>Assunto: <strong>COMUNICADO DE AGENDAMENTO DE CASAMENTOS</strong>.</p></blockquote><p>Exmo. Sr. Juiz de Paz,</p><p style="margin-left:3cm">Venho por meio do presente, <strong>INFORMAR</strong> as datas e horários agendados para realização de casamentos nesta Serventia:</p><p style="text-align:center"><u>CASAMENTOS AGENDADOS NO MÊS DE <strong>' + mesCasamentos + '</strong></u></p><table><thead><tr><th>PRENOME DOS NUBENTES</th><th>DATA AGENDADA</th><th>HORÁRIO AGENDADO</th></tr></thead><tbody>' + linhas + '</tbody></table><p style="margin-left:3cm">Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.</p><p style="margin-left:3cm">Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.</p><p style="margin-left:3cm">Atenciosamente,</p><br><br><div style="text-align:center"><p>' + '_'.repeat(50) + '</p><p><strong>' + nomeSig.toUpperCase() + '</strong></p><p>' + cargoSig + '</p></div><p style="margin-left:3cm">Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT - <strong>' + nomejuiz + '</strong></p><br><p style="margin-left:3cm">Recebido em: _____________________________.</p></body></html>';
