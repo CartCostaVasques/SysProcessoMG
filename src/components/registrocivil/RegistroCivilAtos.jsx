@@ -349,9 +349,23 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
   const buscarProcesso = async (termo) => {
     setBuscaProcesso(termo);
     if (!termo || termo.length < 2) { setProcessosFiltrados([]); return; }
-    const { data } = await sb.from('processos').select('id, numero_interno, especie')
+    const { data } = await sb.from('processos').select('id, numero_interno, especie, partes')
       .ilike('numero_interno', `%${termo}%`).limit(8);
     setProcessosFiltrados(data || []);
+  };
+
+  const selecionarProcesso = (p) => {
+    set('processo_id', p.id);
+    setBuscaProcesso(p.numero_interno);
+    setProcessosFiltrados([]);
+    // Puxar nomes pelo vínculo
+    try {
+      const partes = typeof p.partes === 'string' ? JSON.parse(p.partes) : (p.partes || []);
+      const outorgante = partes.find(x => x.vinculo === 'Outorgante');
+      const outorgado  = partes.find(x => x.vinculo === 'Outorgado');
+      if (outorgante?.nome) set('noivo1', outorgante.nome);
+      if (outorgado?.nome)  set('noivo2', outorgado.nome);
+    } catch {}
   };
 
   const salvar = async () => {
@@ -595,7 +609,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
                   {processosFiltrados.length > 0 && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
                       {processosFiltrados.map(p => (
-                        <div key={p.id} onClick={() => { set('processo_id', p.id); setBuscaProcesso(p.numero_interno); setProcessosFiltrados([]); }}
+                        <div key={p.id} onClick={() => selecionarProcesso(p)}
                           style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-border)' }}
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -604,7 +618,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
                       ))}
                     </div>
                   )}
-                  {form.processo_id && <div className="form-hint">Processo selecionado ✓</div>}
+                  {form.processo_id && <div className="form-hint">✓ Processo vinculado — nomes preenchidos automaticamente</div>}
                 </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="form-label">Observações</label>
@@ -626,7 +640,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
 // ── Componente principal ──────────────────────────────────────
 export default function RegistroCivilAtos() {
   const { supabaseClient: sb, addToast, usuarios } = useApp();
-  const [aba, setAba] = useState('atos');
+  const [aba, setAba] = useState('casamentos');
   const [comunicacoes, setComunicacoes] = useState([]);
   const [abertos, setAbertos]           = useState({});
   const [copiado, setCopiado]           = useState(null);
@@ -670,7 +684,7 @@ export default function RegistroCivilAtos() {
 
       {/* Abas */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)', marginBottom: 24 }}>
-        {[['atos','📋 Averbações'],['casamentos','💍 Casamentos']].map(([id, label]) => (
+        {[['casamentos','💍 Casamentos'],['atos','📋 Averbações']].map(([id, label]) => (
           <button key={id} onClick={() => setAba(id)}
             style={{ padding: '10px 24px', background: 'none', border: 'none', borderBottom: `3px solid ${aba === id ? 'var(--color-accent)' : 'transparent'}`, color: aba === id ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: aba === id ? 700 : 400, cursor: 'pointer', fontSize: 14, marginBottom: -2 }}>
             {label}
