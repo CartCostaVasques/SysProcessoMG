@@ -314,7 +314,7 @@ function gerarDivorcioMandado(corpo, origem, dataCom) {
 
 // ── Componente Principal ──────────────────────────────────────
 // ── Componente de Casamentos ─────────────────────────────────
-function AbaCasamentos({ sb, addToast, usuarios, processos }) {
+function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   const [casamentos, setCasamentos] = useState([]);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('');
@@ -473,6 +473,110 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
     w.document.close();
   };
 
+  const gerarOficioJuizPaz = async () => {
+    // Buscar casamentos agendados não comunicados
+    const naoComunicados = casamentos.filter(c => c.status === 'agendado' && !c.comunicado);
+    if (naoComunicados.length === 0) {
+      addToast('Nenhum casamento pendente de comunicação.', 'info');
+      return;
+    }
+
+    // Buscar próximo número de ofício
+    const hoje = new Date();
+    const mesAno = `${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+    const { data: numData } = await sb.rpc('proximo_numero_oficio', { p_mes_ano: mesAno });
+    const numOficio = numData || '0001/' + hoje.getFullYear();
+
+    const nomeCartorio = cartorio?.nome || 'Cartório Costa Vasques';
+    const nomeResponsavel = cartorio?.tabeliao || 'MAURO GEORGE VIANA MARQUES FELISBINO';
+    const cargoResponsavel = cartorio?.cargo_tabeliao || 'Tabelião Substituto';
+    const nomejuiz = 'PLÍNIO MARQUES ANDREA';
+
+    const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const dataExtenso = `Paranatinga/MT, ${hoje.getDate()} de ${meses[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
+    const mesCasamentos = meses[naoComunicados[0]?.dt_celebracao ? new Date(naoComunicados[0].dt_celebracao).getMonth() : hoje.getMonth()] + ' ' + hoje.getFullYear();
+
+    const fmtData = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR'); };
+    const fmtHora = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+
+    const linhas = naoComunicados.map(c => `
+      <tr>
+        <td style="padding:6px 12px;border:1px solid #000;text-align:center">${c.noivo1.split(' ')[0]} e ${c.noivo2.split(' ')[0]}</td>
+        <td style="padding:6px 12px;border:1px solid #000;text-align:center">${fmtData(c.dt_celebracao)}</td>
+        <td style="padding:6px 12px;border:1px solid #000;text-align:center">${fmtHora(c.dt_celebracao)}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12pt; color: #000; margin: 0; padding: 40px 60px; line-height: 1.5; }
+      @media print { body { padding: 20px 40px; } .no-print { display: none; } @page { size: A4; margin: 2cm; } }
+      .btn-print { margin-bottom: 20px; padding: 8px 20px; background: #1e40af; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+      th { background: #000; color: #fff; padding: 6px 12px; border: 1px solid #000; text-align: center; font-size: 11pt; }
+      .assinatura { margin-top: 48px; text-align: center; }
+      .linha { border-top: 1px solid #000; width: 60%; margin: 0 auto 6px; }
+      .recebimento { margin-top: 32px; border-top: 2px solid #000; padding-top: 16px; }
+      .campo { margin-bottom: 12px; }
+    </style>
+    </head><body>
+    <button class="btn-print no-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+
+    <p style="text-align:right">${dataExtenso}</p>
+    <p><strong><u>Ofício nº ${numOficio}.</u></strong></p>
+    <blockquote style="margin:0 0 0 40px"><p>Assunto: <strong><u>COMUNICADO DE AGENDAMENTO DE CASAMENTOS</u></strong>.</p></blockquote>
+    <p>Exmo. Sr. Juiz de Paz,</p>
+    <p>Venho por meio do presente, <strong><u>INFORMAR</u></strong> as datas e horários agendados para realização de casamentos nesta Serventia:</p>
+    <p style="text-align:center"><u>CASAMENTOS AGENDADOS NO MÊS DE <strong>${mesCasamentos.toUpperCase()}</strong></u></p>
+    <table>
+      <thead><tr>
+        <th>PRENOME DOS NUBENTES</th>
+        <th>DATA AGENDADA</th>
+        <th>HORÁRIO AGENDADO</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    <p>Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.</p>
+    <p>Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.</p>
+    <p>Atenciosamente,</p>
+    <div class="assinatura">
+      <div class="linha"></div>
+      <p><strong>${nomeResponsavel}</strong></p>
+      <p>${cargoResponsavel}</p>
+    </div>
+    <p>Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT - <strong><u>${nomejuiz}</u></strong></p>
+    <div class="recebimento">
+      <div class="campo"><strong>RECEBIDO EM: _______________________________________________.</strong></div>
+      <div class="campo"><strong>HORA DO RECEBIMENTO: ________________________________________.</strong></div>
+      <div class="campo"><strong>ASSINATURA: _________________________________________________.</strong></div>
+    </div>
+    </body></html>`;
+
+    // Abrir janela de impressão
+    const w = window.open('', '_blank', 'width=900,height=750');
+    w.document.write(html);
+    w.document.close();
+
+    // Confirmar e marcar como comunicados
+    const confirmar = window.confirm(
+      `Ofício gerado com ${naoComunicados.length} casamento(s).\n\nDeseja marcar estes casamentos como "comunicados" para não aparecerem no próximo ofício?`
+    );
+    if (confirmar) {
+      const ids = naoComunicados.map(c => c.id);
+      await sb.from('casamentos').update({ comunicado: true }).in('id', ids);
+      // Registrar ofício no sistema
+      await sb.from('oficios').insert({
+        numero: numOficio,
+        mes_ano: mesAno,
+        tipo: 'Comunicado de Casamentos',
+        assunto: 'Comunicado de Agendamento de Casamentos ao Juiz de Paz',
+        status: 'Expedido',
+        dt_oficio: hoje.toISOString().split('T')[0],
+      }).catch(() => {}); // silencioso se falhar
+      carregar();
+      addToast('Casamentos marcados como comunicados!', 'success');
+    }
+  };
+
   const cancelar = async (id) => {
     if (!confirm('Cancelar este casamento?')) return;
     await sb.from('casamentos').update({ status: 'cancelado', atualizado_em: new Date().toISOString() }).eq('id', id);
@@ -538,6 +642,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => gerarRelatorio('pendentes')}>📄 Rel. Pendentes</button>
           <button className="btn btn-secondary" onClick={() => gerarRelatorio('realizados')}>📄 Rel. Realizados</button>
+          <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>📨 Ofício Juiz de Paz</button>
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Casamento</button>
         </div>
       </div>
@@ -730,7 +835,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
 
 // ── Componente principal ──────────────────────────────────────
 export default function RegistroCivilAtos() {
-  const { supabaseClient: sb, addToast, usuarios } = useApp();
+  const { supabaseClient: sb, addToast, usuarios, cartorio } = useApp();
   const [aba, setAba] = useState('casamentos');
   const [comunicacoes, setComunicacoes] = useState([]);
   const [abertos, setAbertos]           = useState({});
@@ -785,7 +890,7 @@ export default function RegistroCivilAtos() {
 
       {/* Aba Casamentos */}
       {aba === 'casamentos' && (
-        <AbaCasamentos sb={sb} addToast={addToast} usuarios={usuarios} />
+        <AbaCasamentos sb={sb} addToast={addToast} usuarios={usuarios} cartorio={cartorio} />
       )}
 
       {/* Aba Averbações */}
