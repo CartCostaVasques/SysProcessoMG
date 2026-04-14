@@ -323,6 +323,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   const [salvando, setSalvando] = useState(false);
   const [buscaProcesso, setBuscaProcesso] = useState('');
   const [signatario, setSignatario] = useState('');
+  const [selecionados, setSelecionados] = useState(new Set());
   const [processosFiltrados, setProcessosFiltrados] = useState([]);
 
   useEffect(() => { carregar(); }, []);
@@ -476,10 +477,13 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   };
 
   const gerarOficioJuizPaz = async () => {
-    // Buscar casamentos agendados não comunicados
+    // Usar selecionados se houver, senão todos agendados não comunicados
     const naoComunicados = casamentos.filter(c => c.status === 'agendado' && !c.comunicado);
-    if (naoComunicados.length === 0) {
-      addToast('Nenhum casamento pendente de comunicação.', 'info');
+    const paraOficio = selecionados.size > 0
+      ? casamentos.filter(c => selecionados.has(c.id))
+      : naoComunicados;
+    if (paraOficio.length === 0) {
+      addToast('Nenhum casamento selecionado para comunicação.', 'info');
       return;
     }
 
@@ -508,12 +512,12 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     const nomeCartorio = cartorio?.nome || 'Cartório Costa Vasques';
     const nomeResponsavel = cartorio?.responsavel || 'MAURO GEORGE VIANA MARQUES FELISBINO';
     const cargoResponsavel = 'Tabelião Substituto';
-    const nomejuiz = naoComunicados.find(c => c.juiz_paz)?.juiz_paz || cartorio?.juiz_paz || 'PLÍNIO MARQUES ANDREA';
+    const nomejuiz = paraOficio.find(c => c.juiz_paz)?.juiz_paz || cartorio?.juiz_paz || 'PLÍNIO MARQUES ANDREA';
     const numOficio = oficioSel.numero;
 
     const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const dataExtenso = 'Paranatinga - MT, ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()].toLowerCase() + ' de ' + hoje.getFullYear() + '.';
-    const mesCasamentos = meses[naoComunicados[0]?.dt_celebracao ? new Date(naoComunicados[0].dt_celebracao).getMonth() : hoje.getMonth()].toUpperCase() + ' ' + hoje.getFullYear();
+    const mesCasamentos = meses[paraOficio[0]?.dt_celebracao ? new Date(paraOficio[0].dt_celebracao).getMonth() : hoje.getMonth()].toUpperCase() + ' ' + hoje.getFullYear();
 
     const fmtDataDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR'); };
     const fmtHoraDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
@@ -533,7 +537,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       cargoSignatario: cargoSig,
       nomejuiz,
       mesCasamentos,
-      casamentos: naoComunicados.map(c => ({
+      casamentos: paraOficio.map(c => ({
         prenomes: c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0],
         data: fmtDataDoc(c.dt_celebracao),
         horario: fmtHoraDoc(c.dt_celebracao),
@@ -651,14 +655,23 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       a.download = 'Oficio_' + numOficio.replace('/', '_') + '_Casamentos.docx';
       a.click();
       URL.revokeObjectURL(url);
+      // Marcar como comunicado e limpar seleção
+      await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
+      setSelecionados(new Set());
+      carregar();
+      addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     } catch(errDocx) {
       console.error('Erro docx:', errDocx);
       // Fallback: HTML para impressão
-      const linhas = naoComunicados.map(c => '<tr><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0] + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtDataDoc(c.dt_celebracao) + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtHoraDoc(c.dt_celebracao) + '</td></tr>').join('');
+      const linhas = paraOficio.map(c => '<tr><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0] + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtDataDoc(c.dt_celebracao) + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtHoraDoc(c.dt_celebracao) + '</td></tr>').join('');
       const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:12pt;margin:0;padding:40px 60px}@media print{body{padding:20px 40px}.no-print{display:none}@page{size:A4;margin:2cm}}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#000;color:#fff;padding:6px 12px;border:1px solid #000;text-align:center}.btn{margin-bottom:16px;padding:8px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer}</style></head><body><button class="btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button><p style="text-align:right">' + dataExtenso + '</p><p><strong>Ofício nº ' + numOficio + '</strong></p><blockquote><p>Assunto: <strong>COMUNICADO DE AGENDAMENTO DE CASAMENTOS</strong>.</p></blockquote><p>Exmo. Sr. Juiz de Paz,</p><p style="margin-left:3cm">Venho por meio do presente, <strong>INFORMAR</strong> as datas e horários agendados para realização de casamentos nesta Serventia:</p><p style="text-align:center"><u>CASAMENTOS AGENDADOS NO MÊS DE <strong>' + mesCasamentos + '</strong></u></p><table><thead><tr><th>PRENOME DOS NUBENTES</th><th>DATA AGENDADA</th><th>HORÁRIO AGENDADO</th></tr></thead><tbody>' + linhas + '</tbody></table><p style="margin-left:3cm">Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.</p><p style="margin-left:3cm">Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.</p><p style="margin-left:3cm">Atenciosamente,</p><br><br><div style="text-align:center"><p>' + '_'.repeat(50) + '</p><p><strong>' + nomeSig.toUpperCase() + '</strong></p><p>' + cargoSig + '</p></div><p style="margin-left:3cm">Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT - <strong>' + nomejuiz + '</strong></p><br><p style="margin-left:3cm">Recebido em: _____________________________.</p></body></html>';
       const w = window.open('', '_blank', 'width=900,height=750');
       w.document.write(html);
       w.document.close();
+      await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
+      setSelecionados(new Set());
+      carregar();
+      addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     }
   };
 
@@ -731,12 +744,17 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Signatário:</span>
             <select className="form-select" style={{ fontSize: 12, height: 32, minWidth: 160 }} value={signatario} onChange={e => setSignatario(e.target.value)}>
               <option value="">Padrão (Cartório)</option>
+              {cartorio?.responsavel && (
+                <option value={cartorio.responsavel}>{cartorio.responsavel} ({cartorio.cargo_tabeliao || 'Tabelião'})</option>
+              )}
               {(usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => (
                 <option key={u.id} value={u.nome_simples || u.nome_completo}>{u.nome_simples || u.nome_completo}{u.cargo ? ` (${u.cargo})` : ''}</option>
               ))}
             </select>
           </div>
-          <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>📨 Ofício Juiz de Paz</button>
+          <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>
+            📨 Ofício Juiz de Paz{selecionados.size > 0 ? ` (${selecionados.size})` : ''}
+          </button>
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Casamento</button>
         </div>
       </div>
@@ -746,14 +764,14 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-border)' }}>
-              {['Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status',''].map(h => (
+              {['','Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status',''].map(h => (
                 <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {lista.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-faint)' }}>
+              <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-faint)' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>💍</div>
                 Nenhum casamento encontrado.
               </td></tr>
@@ -762,6 +780,14 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
               const dias = diasAte(c.dt_celebracao);
               return (
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                  <td style={{ padding: '10px 8px', width: 32, textAlign: 'center' }}>
+                    {c.status === 'agendado' && !c.comunicado && (
+                      <input type="checkbox" checked={selecionados.has(c.id)}
+                        onChange={e => setSelecionados(prev => { const s = new Set(prev); e.target.checked ? s.add(c.id) : s.delete(c.id); return s; })}
+                        style={{ cursor: 'pointer', width: 15, height: 15 }} />
+                    )}
+                    {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
+                  </td>
                   <td style={{ padding: '10px 12px' }}>
                     <div style={{ fontWeight: 600 }}>{c.noivo1}</div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>& {c.noivo2}</div>
