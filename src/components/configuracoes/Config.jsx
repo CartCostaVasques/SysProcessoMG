@@ -101,6 +101,11 @@ export function Configuracoes() {
               <label className="form-label">Responsável / Tabelião</label>
               <input className="form-input" value={form.responsavel} onChange={e => set('responsavel', e.target.value)} />
             </div>
+            <div className="form-group">
+              <label className="form-label">Juiz de Paz</label>
+              <input className="form-input" value={form.juiz_paz || ''} onChange={e => set('juiz_paz', e.target.value)} placeholder="Nome completo do Juiz de Paz" />
+              <div className="form-hint">Usado na geração do ofício de comunicação de casamentos</div>
+            </div>
             <div className="form-group form-full">
               <label className="form-label">Endereço</label>
               <input className="form-input" value={form.endereco} onChange={e => set('endereco', e.target.value)} />
