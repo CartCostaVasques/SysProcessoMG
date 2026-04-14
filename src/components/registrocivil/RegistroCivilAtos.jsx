@@ -400,8 +400,77 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
 
   const concluir = async (id) => {
     await sb.from('casamentos').update({ status: 'realizado', atualizado_em: new Date().toISOString() }).eq('id', id);
+    // Verificar se tem processo vinculado
+    const cas = casamentos.find(c => c.id === id);
+    if (cas?.processo_id) {
+      const confirmar = window.confirm('Casamento concluído!\n\nDeseja concluir o processo vinculado também?');
+      if (confirmar) {
+        await sb.from('processos').update({ status: 'Concluído', dt_conclusao: new Date().toISOString().split('T')[0] }).eq('id', cas.processo_id);
+        addToast('Casamento e processo concluídos!', 'success');
+      } else {
+        addToast('Casamento concluído!', 'success');
+      }
+    } else {
+      addToast('Casamento concluído!', 'success');
+    }
     carregar();
-    addToast('Casamento concluído!', 'success');
+  };
+
+  const gerarRelatorio = (tipo) => {
+    const lista = tipo === 'pendentes'
+      ? casamentos.filter(c => c.status === 'agendado')
+      : casamentos.filter(c => c.status === 'realizado');
+
+    const fmtDtHora2 = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+    const TIPO2 = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
+    const LOCAL2 = { serventia: 'Serventia', externo: 'Externo' };
+    const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const titulo = tipo === 'pendentes' ? 'Casamentos Pendentes (Agendados)' : 'Casamentos Realizados';
+
+    const linhas = lista.map((c, i) => `
+      <tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${c.noivo1}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.noivo2}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap">${fmtDtHora2(c.dt_celebracao)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${TIPO2[c.tipo]||c.tipo}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${LOCAL2[c.local_tipo]||c.local_tipo}${c.local_tipo==='externo'&&c.local_endereco?'<br><small style="color:#6b7280">'+c.local_endereco+'</small>':''}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${c.processos?.numero_interno||'—'}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.usuarios?.nome_simples||'—'}</td>
+        ${tipo==='pendentes'?'':`<td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center"><span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">Realizado</span></td>`}
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; margin: 0; padding: 20px; }
+      @media print { body { padding: 10px; } .no-print { display: none; } }
+      h1 { font-size: 18px; margin-bottom: 4px; }
+      .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; }
+      th { background: #f1f5f9; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
+      .total { margin-top: 12px; font-size: 13px; color: #475569; }
+      .btn-print { margin-bottom: 16px; padding: 8px 20px; background: #1e40af; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    </style>
+    </head><body>
+    <button class="btn-print no-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+    <div style="background:#1e293b;color:#fff;padding:14px 20px;border-radius:6px;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700">Cartório Costa Vasques</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">Paranatinga - MT</div>
+    </div>
+    <h1>${titulo}</h1>
+    <div class="sub">Gerado em ${hoje} · Total: ${lista.length} casamento(s)</div>
+    <table>
+      <thead><tr>
+        <th>Noivo(a) 1</th><th>Noivo(a) 2</th><th>Data/Hora</th><th>Tipo</th><th>Local</th><th>Processo</th><th>Responsável</th>
+        ${tipo==='pendentes'?'':'<th>Status</th>'}
+      </tr></thead>
+      <tbody>${linhas||'<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Nenhum registro encontrado.</td></tr>'}</tbody>
+    </table>
+    <div class="total">Total: <strong>${lista.length}</strong> casamento(s)</div>
+    </body></html>`;
+
+    const w = window.open('', '_blank', 'width=900,height=700');
+    w.document.write(html);
+    w.document.close();
   };
 
   const cancelar = async (id) => {
@@ -466,7 +535,11 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
           </button>
         ))}
         <input type="month" className="form-input" value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} style={{ maxWidth: 160 }} />
-        <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={abrirNovo}>+ Novo Casamento</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary" onClick={() => gerarRelatorio('pendentes')}>📄 Rel. Pendentes</button>
+          <button className="btn btn-secondary" onClick={() => gerarRelatorio('realizados')}>📄 Rel. Realizados</button>
+          <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Casamento</button>
+        </div>
       </div>
 
       {/* Tabela */}
