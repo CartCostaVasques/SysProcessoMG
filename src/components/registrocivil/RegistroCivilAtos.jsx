@@ -549,6 +549,23 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
             </div>
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group" style={{ gridColumn: '1 / -1', position: 'relative' }}>
+                  <label className="form-label">Processo Vinculado</label>
+                  <input className="form-input" value={buscaProcesso} onChange={e => buscarProcesso(e.target.value)} placeholder="Digite o número do processo..." />
+                  {processosFiltrados.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
+                      {processosFiltrados.map(p => (
+                        <div key={p.id} onClick={() => selecionarProcesso(p)}
+                          style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-border)' }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <strong>{p.numero_interno}</strong> — {p.especie}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {form.processo_id && <div className="form-hint">✓ Processo vinculado — nomes preenchidos automaticamente</div>}
+                </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="form-label">Noivo(a) 1 *</label>
                   <input className="form-input" value={form.noivo1 || ''} onChange={e => set('noivo1', e.target.value)} placeholder="Nome completo" />
@@ -557,6 +574,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos }) {
                   <label className="form-label">Noivo(a) 2 *</label>
                   <input className="form-input" value={form.noivo2 || ''} onChange={e => set('noivo2', e.target.value)} placeholder="Nome completo" />
                 </div>
+
                 <div className="form-group">
                   <label className="form-label">Data do Agendamento</label>
                   <input type="date" className="form-input" value={form.dt_agendamento || ''} onChange={e => set('dt_agendamento', e.target.value)} />
