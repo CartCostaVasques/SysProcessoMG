@@ -496,11 +496,8 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     // Se houver mais de um, pedir para escolher
     let oficioSel = oficiosDisponiveis[0];
     if (oficiosDisponiveis.length > 1) {
-      const opcoes = oficiosDisponiveis.map((o, i) => `${i+1}. Ofício nº ${o.numero} — ${o.dt_oficio ? new Date(o.dt_oficio).toLocaleDateString('pt-BR') : '—'}`).join('
-');
-      const idx = parseInt(prompt(`Mais de um ofício disponível. Escolha o número (1-${oficiosDisponiveis.length}):
-
-${opcoes}`)) - 1;
+      const opcoes = oficiosDisponiveis.map((o, i) => (i+1) + '. n' + o.numero).join(' | ');
+      const idx = parseInt(prompt('Oficios disponíveis: ' + opcoes + '. Digite o número (1-' + oficiosDisponiveis.length + '):')) - 1;
       if (isNaN(idx) || idx < 0 || idx >= oficiosDisponiveis.length) return;
       oficioSel = oficiosDisponiveis[idx];
     }
