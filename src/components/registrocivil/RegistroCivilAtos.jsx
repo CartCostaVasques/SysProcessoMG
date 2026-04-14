@@ -481,16 +481,37 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       return;
     }
 
-    // Buscar próximo número de ofício
-    const hoje = new Date();
-    const mesAno = `${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
-    const { data: numData } = await sb.rpc('proximo_numero_oficio', { p_mes_ano: mesAno });
-    const numOficio = numData || '0001/' + hoje.getFullYear();
+    // Buscar ofícios do tipo "Comunicado de Casamentos" com status Rascunho
+    const { data: oficiosDisponiveis } = await sb.from('oficios')
+      .select('id, numero, dt_oficio, responsavel')
+      .eq('tipo', 'Comunicado de Casamentos')
+      .eq('status', 'Rascunho')
+      .order('dt_oficio', { ascending: false });
 
+    if (!oficiosDisponiveis?.length) {
+      alert('⚠️ Nenhum ofício do tipo "Comunicado de Casamentos" com status "Rascunho" encontrado.
+
+Vá em Ofícios → Novo Ofício, selecione o tipo "Comunicado de Casamentos" e status "Rascunho" para gerar o número primeiro.');
+      return;
+    }
+
+    // Se houver mais de um, pedir para escolher
+    let oficioSel = oficiosDisponiveis[0];
+    if (oficiosDisponiveis.length > 1) {
+      const opcoes = oficiosDisponiveis.map((o, i) => `${i+1}. Ofício nº ${o.numero} — ${o.dt_oficio ? new Date(o.dt_oficio).toLocaleDateString('pt-BR') : '—'}`).join('
+');
+      const idx = parseInt(prompt(`Mais de um ofício disponível. Escolha o número (1-${oficiosDisponiveis.length}):
+
+${opcoes}`)) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= oficiosDisponiveis.length) return;
+      oficioSel = oficiosDisponiveis[idx];
+    }
+
+    const hoje = new Date();
     const nomeCartorio = cartorio?.nome || 'Cartório Costa Vasques';
-    const nomeResponsavel = cartorio?.tabeliao || 'MAURO GEORGE VIANA MARQUES FELISBINO';
-    const cargoResponsavel = cartorio?.cargo_tabeliao || 'Tabelião Substituto';
-    const nomejuiz = 'PLÍNIO MARQUES ANDREA';
+    const nomeResponsavel = cartorio?.responsavel || 'MAURO GEORGE VIANA MARQUES FELISBINO';
+    const nomejuiz = cartorio?.juiz_paz || 'PLÍNIO MARQUES ANDREA';
+    const numOficio = oficioSel.numero;
 
     const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const dataExtenso = `Paranatinga/MT, ${hoje.getDate()} de ${meses[hoje.getMonth()]} de ${hoje.getFullYear()}.`;
@@ -564,14 +585,8 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       const ids = naoComunicados.map(c => c.id);
       await sb.from('casamentos').update({ comunicado: true }).in('id', ids);
       // Registrar ofício no sistema
-      await sb.from('oficios').insert({
-        numero: numOficio,
-        mes_ano: mesAno,
-        tipo: 'Comunicado de Casamentos',
-        assunto: 'Comunicado de Agendamento de Casamentos ao Juiz de Paz',
-        status: 'Expedido',
-        dt_oficio: hoje.toISOString().split('T')[0],
-      }).catch(() => {}); // silencioso se falhar
+      // Atualizar status do ofício para Enviado
+      await sb.from('oficios').update({ status: 'Enviado' }).eq('id', oficioSel.id).catch(() => {});
       carregar();
       addToast('Casamentos marcados como comunicados!', 'success');
     }
