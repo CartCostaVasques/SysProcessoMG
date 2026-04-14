@@ -519,7 +519,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     const fmtHoraDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 
     // Pedir signatário se não definido
-    const respSig = (usuarios || []).filter(u => u.ativo).map(u => u.nome_simples || u.nome_completo);
+    const respSig = (usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => u.nome_simples || u.nome_completo);
     const sigEscolhido = signatario || (respSig.length > 0 ? respSig[0] : nomeResponsavel);
     const nomeSig = sigEscolhido;
     const userSig = (usuarios || []).find(u => (u.nome_simples || u.nome_completo) === nomeSig);
@@ -731,8 +731,8 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Signatário:</span>
             <select className="form-select" style={{ fontSize: 12, height: 32, minWidth: 160 }} value={signatario} onChange={e => setSignatario(e.target.value)}>
               <option value="">Padrão (Cartório)</option>
-              {(usuarios || []).filter(u => u.ativo).map(u => (
-                <option key={u.id} value={u.nome_simples || u.nome_completo}>{u.nome_simples || u.nome_completo}</option>
+              {(usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => (
+                <option key={u.id} value={u.nome_simples || u.nome_completo}>{u.nome_simples || u.nome_completo}{u.cargo ? ` (${u.cargo})` : ''}</option>
               ))}
             </select>
           </div>
