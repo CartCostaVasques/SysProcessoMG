@@ -544,30 +544,42 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     try {
       const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, Header, AlignmentType, BorderStyle, WidthType, ShadingType, UnderlineType } = await import('docx');
 
-      // Carregar imagem do cabeçalho igual ao ModelosOficio
+      // Carregar imagem do cabeçalho — mesmo padrão do ModelosOficio
       const cabecalhoImgUrl = cartorio?.cabecalho_img_url || cartorio?.logo_url || null;
       let headerChildren = [];
-      let headerHeightDXA = 1800;
-      const MAR_TOP_DOC = 2410, MAR_RIGHT_DOC = 991, MAR_BOT_DOC = 1134, MAR_LEFT_DOC = 1701, MAR_HEADER_DOC = 426;
-      const LARGURA_PX = Math.round((11906 - MAR_LEFT_DOC - MAR_RIGHT_DOC) / 20); // largura útil em pontos
+      // Dimensões fixas igual ao modelo ajustado (17cm × 3.5cm a 96dpi)
+      const MAR_RIGHT_DOC = 991, MAR_BOT_DOC = 1134, MAR_LEFT_DOC = 1701, MAR_HEADER_DOC = 426;
+      const targetW = Math.round(17 * 37.795);   // 642px (~17cm a 96dpi)
+      const targetH = Math.round(3.5 * 37.795);  // 132px (~3.5cm a 96dpi)
+      let headerHeightDXA = Math.round((3.5 / 2.54) * 1440) + 400; // ~1980 DXA + folga
 
       if (cabecalhoImgUrl) {
         try {
-          const imgResp = await fetch(cabecalhoImgUrl);
-          const imgBlob = await imgResp.blob();
-          const imgBuffer = await imgBlob.arrayBuffer();
-          const mime = imgBlob.type || 'image/jpeg';
-          const imgType = mime.includes('png') ? 'png' : 'jpg';
-          // Mesma proporção do modelo: largura útil, altura proporcional
-          const targetW = LARGURA_PX;
-          const targetH = Math.round(targetW * (1116965 / 5828306)); // proporção original
-          headerHeightDXA = Math.round((targetH / 72 * 2.54 / 2.54) * 1440) + 400;
+          // Se for data URL base64, decodificar diretamente (igual ModelosOficio)
+          let imgBytes;
+          let imgType;
+          if (cabecalhoImgUrl.startsWith('data:')) {
+            const base64 = cabecalhoImgUrl.split(',')[1];
+            const binary = atob(base64);
+            imgBytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) imgBytes[i] = binary.charCodeAt(i);
+            const mimeMatch = cabecalhoImgUrl.match(/data:([^;]+);/);
+            imgType = (mimeMatch?.[1] || 'image/jpeg').includes('png') ? 'png' : 'jpg';
+          } else {
+            // URL pública: fetch + converter para Uint8Array
+            const imgResp = await fetch(cabecalhoImgUrl);
+            const imgBuffer = await imgResp.arrayBuffer();
+            imgBytes = new Uint8Array(imgBuffer);
+            const contentType = imgResp.headers.get('content-type') || 'image/jpeg';
+            imgType = contentType.includes('png') ? 'png' : 'jpg';
+          }
           headerChildren = [new Paragraph({
-            alignment: AlignmentType.LEFT,
+            alignment: AlignmentType.CENTER,
             spacing: { before: 0, after: 0 },
-            children: [new ImageRun({ data: imgBuffer, transformation: { width: targetW, height: targetH }, type: imgType })],
+            children: [new ImageRun({ data: imgBytes.buffer, transformation: { width: targetW, height: targetH }, type: imgType })],
           })];
         } catch(e) {
+          console.warn('Erro ao carregar imagem do cabeçalho:', e);
           headerChildren = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] })];
         }
       } else {
