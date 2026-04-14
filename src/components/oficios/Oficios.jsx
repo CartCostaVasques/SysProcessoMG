@@ -4,11 +4,12 @@ import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 import ModelosOficio from './ModelosOficio.jsx';
 
-const STATUS_OFICIO = ['Enviado', 'Aguardando Resposta', 'Respondido', 'Arquivado'];
+const STATUS_OFICIO = ['Rascunho', 'Enviado', 'Aguardando Resposta', 'Respondido', 'Arquivado'];
+const TIPOS_OFICIO = ['', 'Comunicado de Casamentos', 'Notificação', 'Solicitação', 'Informação', 'Outros'];
 const EMPTY = {
   numero: '', mes_ano: '', dt_oficio: new Date().toISOString().split('T')[0],
   destinatario: '', assunto: '', responsavel_id: null, responsavel: '',
-  processo_id: null, status: 'Enviado',
+  processo_id: null, status: 'Rascunho', tipo: '',
 };
 
 function gerarNumeroOficio(oficios, mesAno, numeroInicial = 0) {
@@ -104,6 +105,12 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, nu
                 {STATUS_OFICIO.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            <div className="form-group">
+              <label className="form-label">Tipo</label>
+              <select className="form-select" value={form.tipo || ''} onChange={e => set('tipo', e.target.value)}>
+                {TIPOS_OFICIO.map(t => <option key={t} value={t}>{t || 'Selecione...'}</option>)}
+              </select>
+            </div>
           </div>
         </div>
         <div className="modal-footer">
@@ -157,7 +164,7 @@ export default function Oficios() {
   };
 
   const statusBadge = (s) => {
-    const map = { 'Enviado': 'badge-info', 'Aguardando Resposta': 'badge-warning', 'Respondido': 'badge-success', 'Arquivado': 'badge-neutral' };
+    const map = { 'Rascunho': 'badge-neutral', 'Enviado': 'badge-info', 'Aguardando Resposta': 'badge-warning', 'Respondido': 'badge-success', 'Arquivado': 'badge-neutral' };
     return <span className={`badge ${map[s] || 'badge-neutral'}`}>{s}</span>;
   };
 
