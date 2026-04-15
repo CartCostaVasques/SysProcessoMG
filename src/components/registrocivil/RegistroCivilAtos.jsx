@@ -768,8 +768,8 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-border)' }}>
-              {['','Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status',''].map(h => (
-                <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+              {['','Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status','Ações'].map((h, hi) => (
+                <th key={hi} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -785,26 +785,21 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
               return (
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 8px', width: 36, textAlign: 'center' }}>
-                    {c.status === 'agendado' && !c.comunicado && (() => {
-                      const marcado = selecionados.includes(c.id);
-                      return (
-                        <button
-                          type="button"
-                          onClick={e => { e.stopPropagation(); setSelecionados(prev =>
-                            prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
-                          );}}
-                          title={marcado ? 'Desmarcar para ofício' : 'Marcar para ofício'}
-                          style={{
-                            width: 24, height: 24, borderRadius: 4, border: '2px solid',
-                            borderColor: marcado ? 'var(--color-accent)' : 'var(--color-border)',
-                            background: marcado ? 'var(--color-accent)' : 'transparent',
-                            color: marcado ? '#fff' : 'transparent',
-                            cursor: 'pointer', fontSize: 14, display: 'flex',
-                            alignItems: 'center', justifyContent: 'center', padding: 0,
-                          }}
-                        >✓</button>
-                      );
-                    })()}
+                    {c.status === 'agendado' && !c.comunicado && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setSelecionados(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]); }}
+                        title={selecionados.includes(c.id) ? 'Desmarcar' : 'Marcar para ofício'}
+                        style={{
+                          width: 22, height: 22, borderRadius: 4, border: '2px solid',
+                          borderColor: selecionados.includes(c.id) ? 'var(--color-accent)' : 'var(--color-border)',
+                          background: selecionados.includes(c.id) ? 'var(--color-accent)' : 'transparent',
+                          color: selecionados.includes(c.id) ? '#fff' : 'transparent',
+                          cursor: 'pointer', fontSize: 13, lineHeight: 1,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                        }}
+                      >✓</button>
+                    )}
                     {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
