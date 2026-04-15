@@ -786,19 +786,13 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 8px', width: 36, textAlign: 'center' }}>
                     {c.status === 'agendado' && !c.comunicado && (
-                      <button
-                        type="button"
-                        onClick={e => { e.stopPropagation(); setSelecionados(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]); }}
-                        title={selecionados.includes(c.id) ? 'Desmarcar' : 'Marcar para ofício'}
-                        style={{
-                          width: 22, height: 22, borderRadius: 4, border: '2px solid',
-                          borderColor: selecionados.includes(c.id) ? 'var(--color-accent)' : 'var(--color-border)',
-                          background: selecionados.includes(c.id) ? 'var(--color-accent)' : 'transparent',
-                          color: selecionados.includes(c.id) ? '#fff' : 'transparent',
-                          cursor: 'pointer', fontSize: 13, lineHeight: 1,
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-                        }}
-                      >✓</button>
+                      <input
+                        type="checkbox"
+                        checked={selecionados.includes(c.id)}
+                        onChange={() => setSelecionados(prev =>
+                          prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                        )}
+                      />
                     )}
                     {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
                   </td>
