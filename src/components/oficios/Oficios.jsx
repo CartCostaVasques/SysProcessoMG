@@ -107,7 +107,11 @@ function ModalOficio({ oficio, onClose, onSave, oficios, usuarios, processos, nu
             </div>
             <div className="form-group">
               <label className="form-label">Tipo</label>
-              <select className="form-select" value={form.tipo || ''} onChange={e => set('tipo', e.target.value)}>
+              <select className="form-select" value={form.tipo || ''} onChange={e => {
+                const tipo = e.target.value;
+                set('tipo', tipo);
+                if (tipo === 'Comunicado de Casamentos') set('status', 'Enviado');
+              }}>
                 {TIPOS_OFICIO.map(t => <option key={t} value={t}>{t || 'Selecione...'}</option>)}
               </select>
             </div>
