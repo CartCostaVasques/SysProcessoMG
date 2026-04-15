@@ -508,10 +508,10 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
 
     const { data: oficiosDisponiveis } = await sb.from('oficios')
       .select('id, numero, dt_oficio, responsavel, tipo, status')
-      .eq('status', 'Rascunho').order('dt_oficio', { ascending: false });
+      .in('status', ['Rascunho','Enviado']).order('dt_oficio', { ascending: false });
     const oficiosCasamento = (oficiosDisponiveis || []).filter(o => o.tipo === 'Comunicado de Casamentos');
     if (!oficiosCasamento?.length) {
-      alert('Nenhum oficio do tipo "Comunicado de Casamentos" com status Rascunho encontrado.\nVá em Ofícios > Novo Ofício, selecione o tipo e status Rascunho para gerar o número primeiro.');
+      alert('Nenhum oficio do tipo "Comunicado de Casamentos" encontrado.\nVá em Ofícios > Novo Ofício e selecione o tipo para gerar o número primeiro.');
       return;
     }
 
@@ -647,7 +647,9 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
     }
 
     await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
-    await sb.from('oficios').update({ status: 'Enviado' }).eq('id', oficioSel.id);
+    const { error: errOficio } = await sb.from('oficios').update({ status: 'Enviado' }).eq('id', oficioSel.id);
+    if (errOficio) console.error('Erro ao atualizar ofício:', errOficio, 'id:', oficioSel.id);
+    else console.log('Ofício', oficioSel.id, 'atualizado para Enviado');
     setMarcados([]);
     carregar();
     addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
