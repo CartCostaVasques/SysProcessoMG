@@ -314,7 +314,7 @@ function gerarDivorcioMandado(corpo, origem, dataCom) {
 
 // ── Componente Principal ──────────────────────────────────────
 // ── Componente de Casamentos ─────────────────────────────────
-function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
+function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
   const [casamentos, setCasamentos] = useState([]);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('');
@@ -322,9 +322,9 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
   const [buscaProcesso, setBuscaProcesso] = useState('');
-  const [signatario, setSignatario] = useState('');
-  const [selecionados, setSelecionados] = useState([]);
   const [processosFiltrados, setProcessosFiltrados] = useState([]);
+  const [signatario, setSignatario] = useState('');
+  const [marcados, setMarcados] = useState([]);
 
   useEffect(() => { carregar(); }, []);
 
@@ -335,6 +335,12 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     setCasamentos(data || []);
   };
 
+  const toggleMarcado = (id) => {
+    setMarcados(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
   const abrirNovo = () => {
     setForm({ status: 'agendado', tipo: 'civil', local_tipo: 'serventia', dt_agendamento: new Date().toISOString().split('T')[0] });
     setBuscaProcesso('');
@@ -343,7 +349,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   };
 
   const abrirEditar = (c) => {
-    setForm({ ...c, processo_busca: c.processos?.numero_interno || '' });
+    setForm({ ...c });
     setBuscaProcesso(c.processos?.numero_interno || '');
     setModal(true);
   };
@@ -360,7 +366,6 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     set('processo_id', p.id);
     setBuscaProcesso(p.numero_interno);
     setProcessosFiltrados([]);
-    // Puxar nomes pelo vínculo
     try {
       const partes = typeof p.partes === 'string' ? JSON.parse(p.partes) : (p.partes || []);
       const outorgante = partes.find(x => x.vinculo === 'Outorgante');
@@ -403,7 +408,6 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
 
   const concluir = async (id) => {
     await sb.from('casamentos').update({ status: 'realizado', atualizado_em: new Date().toISOString() }).eq('id', id);
-    // Verificar se tem processo vinculado
     const cas = casamentos.find(c => c.id === id);
     if (cas?.processo_id) {
       const confirmar = window.confirm('Casamento concluído!\n\nDeseja concluir o processo vinculado também?');
@@ -419,149 +423,103 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     carregar();
   };
 
+  const cancelar = async (id) => {
+    if (!confirm('Cancelar este casamento?')) return;
+    await sb.from('casamentos').update({ status: 'cancelado', atualizado_em: new Date().toISOString() }).eq('id', id);
+    carregar();
+  };
+
+  const excluir = async (id) => {
+    if (!confirm('Excluir este casamento?')) return;
+    await sb.from('casamentos').delete().eq('id', id);
+    carregar();
+  };
+
   const gerarRelatorio = (tipo) => {
     const lista = tipo === 'pendentes'
       ? casamentos.filter(c => c.status === 'agendado')
       : casamentos.filter(c => c.status === 'realizado');
-
-    const fmtDtHora2 = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+    const fmtDH = (iso) => { if (!iso) return '—'; return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
     const TIPO2 = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
     const LOCAL2 = { serventia: 'Serventia', externo: 'Externo' };
     const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
     const titulo = tipo === 'pendentes' ? 'Casamentos Pendentes (Agendados)' : 'Casamentos Realizados';
-
-    const linhas = lista.map((c, i) => `
-      <tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${c.noivo1}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.noivo2}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap">${fmtDtHora2(c.dt_celebracao)}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${TIPO2[c.tipo]||c.tipo}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${LOCAL2[c.local_tipo]||c.local_tipo}${c.local_tipo==='externo'&&c.local_endereco?'<br><small style="color:#6b7280">'+c.local_endereco+'</small>':''}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${c.processos?.numero_interno||'—'}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.usuarios?.nome_simples||'—'}</td>
-        ${tipo==='pendentes'?'':`<td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center"><span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">Realizado</span></td>`}
-      </tr>`).join('');
-
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <style>
-      body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; margin: 0; padding: 20px; }
-      @media print { body { padding: 10px; } .no-print { display: none; } }
-      h1 { font-size: 18px; margin-bottom: 4px; }
-      .sub { font-size: 12px; color: #64748b; margin-bottom: 16px; }
-      table { width: 100%; border-collapse: collapse; }
-      th { background: #f1f5f9; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; }
-      .total { margin-top: 12px; font-size: 13px; color: #475569; }
-      .btn-print { margin-bottom: 16px; padding: 8px 20px; background: #1e40af; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    </style>
-    </head><body>
+    const linhas = lista.map((c, i) => `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-weight:600">${c.noivo1}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.noivo2}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap">${fmtDH(c.dt_celebracao)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${TIPO2[c.tipo]||c.tipo}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${LOCAL2[c.local_tipo]||c.local_tipo}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-family:monospace;font-size:12px">${c.processos?.numero_interno||'—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${c.usuarios?.nome_simples||'—'}</td>
+    </tr>`).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:13px;color:#1e293b;margin:0;padding:20px}@media print{body{padding:10px}.no-print{display:none}}h1{font-size:18px;margin-bottom:4px}.sub{font-size:12px;color:#64748b;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#f1f5f9;padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:2px solid #e2e8f0}.btn-print{margin-bottom:16px;padding:8px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}</style></head><body>
     <button class="btn-print no-print" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
-    <div style="background:#1e293b;color:#fff;padding:14px 20px;border-radius:6px;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:700">Cartório Costa Vasques</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:2px">Paranatinga - MT</div>
-    </div>
-    <h1>${titulo}</h1>
-    <div class="sub">Gerado em ${hoje} · Total: ${lista.length} casamento(s)</div>
-    <table>
-      <thead><tr>
-        <th>Noivo(a) 1</th><th>Noivo(a) 2</th><th>Data/Hora</th><th>Tipo</th><th>Local</th><th>Processo</th><th>Responsável</th>
-        ${tipo==='pendentes'?'':'<th>Status</th>'}
-      </tr></thead>
-      <tbody>${linhas||'<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8">Nenhum registro encontrado.</td></tr>'}</tbody>
-    </table>
-    <div class="total">Total: <strong>${lista.length}</strong> casamento(s)</div>
+    <div style="background:#1e293b;color:#fff;padding:14px 20px;border-radius:6px;margin-bottom:16px"><div style="font-size:16px;font-weight:700">Cartório Costa Vasques</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Paranatinga - MT</div></div>
+    <h1>${titulo}</h1><div class="sub">Gerado em ${hoje} · Total: ${lista.length} casamento(s)</div>
+    <table><thead><tr><th>Noivo(a) 1</th><th>Noivo(a) 2</th><th>Data/Hora</th><th>Tipo</th><th>Local</th><th>Processo</th><th>Responsável</th></tr></thead>
+    <tbody>${linhas||'<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8">Nenhum registro encontrado.</td></tr>'}</tbody></table>
+    <div style="margin-top:12px;font-size:13px;color:#475569">Total: <strong>${lista.length}</strong> casamento(s)</div>
     </body></html>`;
-
     const w = window.open('', '_blank', 'width=900,height=700');
     w.document.write(html);
     w.document.close();
   };
 
   const gerarOficioJuizPaz = async () => {
-    // Usar selecionados se houver, senão todos agendados não comunicados
     const naoComunicados = casamentos.filter(c => c.status === 'agendado' && !c.comunicado);
-    const paraOficio = selecionados.length > 0
-      ? casamentos.filter(c => selecionados.includes(c.id))
+    const paraOficio = marcados.length > 0
+      ? casamentos.filter(c => marcados.includes(c.id))
       : naoComunicados;
-    if (paraOficio.length === 0) {
-      addToast('Nenhum casamento selecionado para comunicação.', 'info');
-      return;
-    }
+    if (paraOficio.length === 0) { addToast('Nenhum casamento selecionado para comunicação.', 'info'); return; }
 
-    // Buscar ofícios do tipo "Comunicado de Casamentos" com status Rascunho
     const { data: oficiosDisponiveis } = await sb.from('oficios')
       .select('id, numero, dt_oficio, responsavel, tipo, status')
-      .eq('status', 'Rascunho')
-      .order('dt_oficio', { ascending: false });
+      .eq('status', 'Rascunho').order('dt_oficio', { ascending: false });
     const oficiosCasamento = (oficiosDisponiveis || []).filter(o => o.tipo === 'Comunicado de Casamentos');
-
     if (!oficiosCasamento?.length) {
-      alert('Nenhum oficio do tipo Comunicado de Casamentos com status Rascunho encontrado. Va em Oficios > Novo Oficio, selecione o tipo e status Rascunho para gerar o numero primeiro.');
+      alert('Nenhum oficio do tipo "Comunicado de Casamentos" com status Rascunho encontrado.\nVá em Ofícios > Novo Ofício, selecione o tipo e status Rascunho para gerar o número primeiro.');
       return;
     }
 
-    // Se houver mais de um, pedir para escolher
     let oficioSel = oficiosCasamento[0];
     if (oficiosCasamento.length > 1) {
-      const opcoes = oficiosCasamento.map((o, i) => (i+1) + '. n' + o.numero).join(' | ');
-      const idx = parseInt(prompt('Oficios disponíveis: ' + opcoes + '. Digite o número (1-' + oficiosCasamento.length + '):')) - 1;
+      const opcoes = oficiosCasamento.map((o, i) => (i+1) + '. nº ' + o.numero).join(' | ');
+      const idx = parseInt(prompt('Ofícios disponíveis: ' + opcoes + '\nDigite o número (1-' + oficiosCasamento.length + '):')) - 1;
       if (isNaN(idx) || idx < 0 || idx >= oficiosCasamento.length) return;
-      oficioSel = oficiosDisponiveis[idx];
+      oficioSel = oficiosCasamento[idx];
     }
 
     const hoje = new Date();
     const nomeCartorio = cartorio?.nome || 'Cartório Costa Vasques';
-    const nomeResponsavel = cartorio?.responsavel || 'MAURO GEORGE VIANA MARQUES FELISBINO';
-    const cargoResponsavel = 'Tabelião Substituto';
-    const nomejuiz = paraOficio.find(c => c.juiz_paz)?.juiz_paz || cartorio?.juiz_paz || 'PLÍNIO MARQUES ANDREA';
+    const nomeResponsavel = cartorio?.responsavel || '';
+    const nomejuiz = paraOficio.find(c => c.juiz_paz)?.juiz_paz || cartorio?.juiz_paz || '';
     const numOficio = oficioSel.numero;
-
     const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     const dataExtenso = 'Paranatinga - MT, ' + hoje.getDate() + ' de ' + meses[hoje.getMonth()].toLowerCase() + ' de ' + hoje.getFullYear() + '.';
     const mesCasamentos = meses[paraOficio[0]?.dt_celebracao ? new Date(paraOficio[0].dt_celebracao).getMonth() : hoje.getMonth()].toUpperCase() + ' ' + hoje.getFullYear();
+    const fmtDataDoc = (iso) => { if (!iso) return '—'; return new Date(iso).toLocaleDateString('pt-BR'); };
+    const fmtHoraDoc = (iso) => { if (!iso) return '—'; return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 
-    const fmtDataDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR'); };
-    const fmtHoraDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+    const sigAssinantes = (usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase()));
+    const sigEscolhido = signatario
+      ? (signatario === nomeResponsavel ? { nome: nomeResponsavel, cargo: cartorio?.cargo_tabeliao || 'Tabelião' } : sigAssinantes.find(u => (u.nome_completo || u.nome_simples) === signatario))
+      : (sigAssinantes[0] || { nome: nomeResponsavel, cargo: cartorio?.cargo_tabeliao || 'Tabelião' });
+    const nomeSig = (sigEscolhido?.nome_completo || sigEscolhido?.nome_simples || sigEscolhido?.nome || nomeResponsavel).toUpperCase();
+    const cargoSig = sigEscolhido?.cargo || cartorio?.cargo_tabeliao || 'Tabelião Substituto';
 
-    // Pedir signatário se não definido
-    const respSig = (usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => u.nome_completo || u.nome_simples);
-    const sigEscolhido = signatario || (respSig.length > 0 ? respSig[0] : nomeResponsavel);
-    const nomeSig = sigEscolhido;
-    const userSig = (usuarios || []).find(u => (u.nome_completo || u.nome_simples) === nomeSig);
-    const cargoSig = userSig?.cargo || cartorio?.cargo_tabeliao || 'Tabelião Substituto';
-
-    const dadosOficio = {
-      numOficio,
-      dataExtenso,
-      nomeCartorio,
-      nomeSignatario: nomeSig.toUpperCase(),
-      cargoSignatario: cargoSig,
-      nomejuiz,
-      mesCasamentos,
-      casamentos: paraOficio.map(c => ({
-        prenomes: c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0],
-        data: fmtDataDoc(c.dt_celebracao),
-        horario: fmtHoraDoc(c.dt_celebracao),
-      })),
-    };
-
-    // Gerar docx igual ao ModelosOficio — client-side
     try {
-      const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, Header, AlignmentType, BorderStyle, WidthType, ShadingType, UnderlineType } = await import('docx');
-
-      // Carregar imagem do cabeçalho — mesmo padrão do ModelosOficio
+      const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, Header, AlignmentType, BorderStyle, WidthType, ShadingType } = await import('docx');
       const cabecalhoImgUrl = cartorio?.cabecalho_img_url || cartorio?.logo_url || null;
       let headerChildren = [];
-      // Dimensões fixas igual ao modelo ajustado (17cm × 3.5cm a 96dpi)
       const MAR_RIGHT_DOC = 991, MAR_BOT_DOC = 1134, MAR_LEFT_DOC = 1701, MAR_HEADER_DOC = 426;
-      const targetW = Math.round(17 * 37.795);   // 642px (~17cm a 96dpi)
-      const targetH = Math.round(3.5 * 37.795);  // 132px (~3.5cm a 96dpi)
-      let headerHeightDXA = Math.round((3.5 / 2.54) * 1440) + 400; // ~1980 DXA + folga
+      const targetW = Math.round(17 * 37.795);
+      const targetH = Math.round(3.5 * 37.795);
+      let headerHeightDXA = Math.round((3.5 / 2.54) * 1440) + 400;
 
       if (cabecalhoImgUrl) {
         try {
-          // Se for data URL base64, decodificar diretamente (igual ModelosOficio)
-          let imgBytes;
-          let imgType;
+          let imgBytes, imgType;
           if (cabecalhoImgUrl.startsWith('data:')) {
             const base64 = cabecalhoImgUrl.split(',')[1];
             const binary = atob(base64);
@@ -570,20 +528,13 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             const mimeMatch = cabecalhoImgUrl.match(/data:([^;]+);/);
             imgType = (mimeMatch?.[1] || 'image/jpeg').includes('png') ? 'png' : 'jpg';
           } else {
-            // URL pública: fetch + converter para Uint8Array
             const imgResp = await fetch(cabecalhoImgUrl);
             const imgBuffer = await imgResp.arrayBuffer();
             imgBytes = new Uint8Array(imgBuffer);
-            const contentType = imgResp.headers.get('content-type') || 'image/jpeg';
-            imgType = contentType.includes('png') ? 'png' : 'jpg';
+            imgType = (imgResp.headers.get('content-type') || '').includes('png') ? 'png' : 'jpg';
           }
-          headerChildren = [new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 0, after: 0 },
-            children: [new ImageRun({ data: imgBytes.buffer, transformation: { width: targetW, height: targetH }, type: imgType })],
-          })];
+          headerChildren = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new ImageRun({ data: imgBytes.buffer, transformation: { width: targetW, height: targetH }, type: imgType })] })];
         } catch(e) {
-          console.warn('Erro ao carregar imagem do cabeçalho:', e);
           headerChildren = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio.toUpperCase(), font: 'Arial', size: 26, bold: true })] })];
         }
       } else {
@@ -591,9 +542,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       }
 
       const wordHeader = new Header({ children: headerChildren });
-      const FONTE = 'Arial', TAM = 24;
-      const FIRST_LINE = 1701;
-
+      const FONTE = 'Arial', TAM = 24, FIRST_LINE = 1701;
       const t = (text, bold=false, underline=false) => new TextRun({ text, font: FONTE, size: TAM, bold, underline: underline ? {} : undefined });
       const tW = (text, bold=false) => new TextRun({ text, font: FONTE, size: TAM, bold, color: 'FFFFFF' });
       const p = (children, align=AlignmentType.JUSTIFIED, sp={}) => new Paragraph({ alignment: align, spacing: { line: 360, lineRule: 'auto', before: 120, after: 120, ...sp }, children: Array.isArray(children) ? children : [t(children)] });
@@ -601,7 +550,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       const pV = () => new Paragraph({ children: [t('')], spacing: { line: 240, before: 0, after: 0 } });
 
       const LARG = 11906 - MAR_LEFT_DOC - MAR_RIGHT_DOC;
-      const C1=Math.round(LARG*0.45), C2=Math.round(LARG*0.30), C3=LARG-Math.round(LARG*0.45)-Math.round(LARG*0.30);
+      const C1=Math.round(LARG*0.45), C2=Math.round(LARG*0.30), C3=LARG-C1-C2;
       const brd={style:BorderStyle.SINGLE,size:4,color:'000000'}, brdAll={top:brd,bottom:brd,left:brd,right:brd}, mC={top:80,bottom:80,left:120,right:120};
       const th = (text,w) => new TableCell({ width:{size:w,type:WidthType.DXA}, borders:brdAll, margins:mC, shading:{fill:'000000',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.CENTER,children:[tW(text,true)]})] });
       const td = (text,w,i) => new TableCell({ width:{size:w,type:WidthType.DXA}, borders:brdAll, margins:mC, shading:{fill:i%2===0?'FFFFFF':'F5F5F5',type:ShadingType.CLEAR}, children:[new Paragraph({alignment:AlignmentType.CENTER,children:[t(text)]})] });
@@ -609,7 +558,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         width:{size:LARG,type:WidthType.DXA}, columnWidths:[C1,C2,C3],
         rows:[
           new TableRow({tableHeader:true, children:[th('PRENOME DOS NUBENTES',C1),th('DATA AGENDADA',C2),th('HORÁRIO AGENDADO',C3)]}),
-          ...dadosOficio.casamentos.map((c,i)=>new TableRow({children:[td(c.prenomes,C1,i),td(c.data,C2,i),td(c.horario,C3,i)]})),
+          ...paraOficio.map((c,i)=>new TableRow({children:[td(c.noivo1.split(' ')[0]+' e '+c.noivo2.split(' ')[0],C1,i),td(fmtDataDoc(c.dt_celebracao),C2,i),td(fmtHoraDoc(c.dt_celebracao),C3,i)]})),
         ],
       });
 
@@ -619,7 +568,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
           headers:{default:wordHeader},
           properties:{page:{size:{width:11906,height:16838},margin:{top:headerHeightDXA,right:MAR_RIGHT_DOC,bottom:MAR_BOT_DOC,left:MAR_LEFT_DOC,header:MAR_HEADER_DOC,footer:567,gutter:0}}},
           children:[
-            p([t(dadosOficio.dataExtenso)], AlignmentType.RIGHT, {before:0,after:0}),
+            p([t(dataExtenso)], AlignmentType.RIGHT, {before:0,after:0}),
             pV(),
             p([t('Ofício nº '+numOficio,true)], AlignmentType.LEFT, {before:0,after:0}),
             pV(),
@@ -627,7 +576,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             p([t('Exmo. Sr. Juiz de Paz,')], AlignmentType.LEFT, {before:0,after:120}),
             pR([t('Venho por meio do presente, '),t('INFORMAR',true,true),t(' as datas e horários agendados para realização de casamentos nesta Serventia:')], AlignmentType.JUSTIFIED),
             pV(),
-            p([t('CASAMENTOS AGENDADOS NO MÊS DE ',false,true),t(dadosOficio.mesCasamentos,true,true)], AlignmentType.CENTER, {before:0,after:120}),
+            p([t('CASAMENTOS AGENDADOS NO MÊS DE ',false,true),t(mesCasamentos,true,true)], AlignmentType.CENTER, {before:0,after:120}),
             tabela,
             pV(),
             pR([t('Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.')], AlignmentType.JUSTIFIED),
@@ -637,11 +586,11 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             pR([t('Atenciosamente,')], AlignmentType.LEFT),
             pV(), pV(), pV(),
             p([t('_'.repeat(50))], AlignmentType.CENTER, {line:240,before:0,after:0}),
-            p([t(dadosOficio.nomeSignatario,true)], AlignmentType.CENTER, {line:240,before:0,after:0}),
-            p([t(dadosOficio.cargoSignatario)], AlignmentType.CENTER, {line:240,before:0,after:0}),
+            p([t(nomeSig,true)], AlignmentType.CENTER, {line:240,before:0,after:0}),
+            p([t(cargoSig)], AlignmentType.CENTER, {line:240,before:0,after:0}),
             pV(),
             p([t('Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT')], AlignmentType.LEFT, {before:0,after:0}),
-            p([t(dadosOficio.nomejuiz,true,true)], AlignmentType.LEFT, {before:0,after:0}),
+            p([t(nomejuiz,true,true)], AlignmentType.LEFT, {before:0,after:0}),
             pV(),
             p([t('Recebido em: ___________________________.') ], AlignmentType.LEFT, {before:0,after:0}),
           ],
@@ -655,41 +604,22 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       a.download = 'Oficio_' + numOficio.replace('/', '_') + '_Casamentos.docx';
       a.click();
       URL.revokeObjectURL(url);
-      // Marcar como comunicado e limpar seleção
-      await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
-      setSelecionados([]);
-      carregar();
-      addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     } catch(errDocx) {
       console.error('Erro docx:', errDocx);
-      // Fallback: HTML para impressão
-      const linhas = paraOficio.map(c => '<tr><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + c.noivo1.split(' ')[0] + ' e ' + c.noivo2.split(' ')[0] + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtDataDoc(c.dt_celebracao) + '</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">' + fmtHoraDoc(c.dt_celebracao) + '</td></tr>').join('');
-      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:12pt;margin:0;padding:40px 60px}@media print{body{padding:20px 40px}.no-print{display:none}@page{size:A4;margin:2cm}}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#000;color:#fff;padding:6px 12px;border:1px solid #000;text-align:center}.btn{margin-bottom:16px;padding:8px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer}</style></head><body><button class="btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button><p style="text-align:right">' + dataExtenso + '</p><p><strong>Ofício nº ' + numOficio + '</strong></p><blockquote><p>Assunto: <strong>COMUNICADO DE AGENDAMENTO DE CASAMENTOS</strong>.</p></blockquote><p>Exmo. Sr. Juiz de Paz,</p><p style="margin-left:3cm">Venho por meio do presente, <strong>INFORMAR</strong> as datas e horários agendados para realização de casamentos nesta Serventia:</p><p style="text-align:center"><u>CASAMENTOS AGENDADOS NO MÊS DE <strong>' + mesCasamentos + '</strong></u></p><table><thead><tr><th>PRENOME DOS NUBENTES</th><th>DATA AGENDADA</th><th>HORÁRIO AGENDADO</th></tr></thead><tbody>' + linhas + '</tbody></table><p style="margin-left:3cm">Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.</p><p style="margin-left:3cm">Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.</p><p style="margin-left:3cm">Atenciosamente,</p><br><br><div style="text-align:center"><p>' + '_'.repeat(50) + '</p><p><strong>' + nomeSig.toUpperCase() + '</strong></p><p>' + cargoSig + '</p></div><p style="margin-left:3cm">Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT - <strong>' + nomejuiz + '</strong></p><br><p style="margin-left:3cm">Recebido em: _____________________________.</p></body></html>';
+      const linhas2 = paraOficio.map(c => `<tr><td style="padding:6px 12px;border:1px solid #000;text-align:center">${c.noivo1.split(' ')[0]} e ${c.noivo2.split(' ')[0]}</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">${fmtDataDoc(c.dt_celebracao)}</td><td style="padding:6px 12px;border:1px solid #000;text-align:center">${fmtHoraDoc(c.dt_celebracao)}</td></tr>`).join('');
+      const htmlFallback = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial,sans-serif;font-size:12pt;margin:0;padding:40px 60px}@media print{body{padding:20px 40px}.no-print{display:none}@page{size:A4;margin:2cm}}table{width:100%;border-collapse:collapse;margin:16px 0}th{background:#000;color:#fff;padding:6px 12px;border:1px solid #000;text-align:center}.btn{margin-bottom:16px;padding:8px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer}</style></head><body><button class="btn no-print" onclick="window.print()">Imprimir / Salvar PDF</button><p style="text-align:right">${dataExtenso}</p><p><strong>Ofício nº ${numOficio}</strong></p><p>Assunto: <strong><u>COMUNICADO DE AGENDAMENTO DE CASAMENTOS</u></strong>.</p><p>Exmo. Sr. Juiz de Paz,</p><p style="margin-left:3cm">Venho por meio do presente, <strong>INFORMAR</strong> as datas e horários agendados para realização de casamentos nesta Serventia:</p><p style="text-align:center"><u>CASAMENTOS AGENDADOS NO MÊS DE <strong>${mesCasamentos}</strong></u></p><table><thead><tr><th>PRENOME DOS NUBENTES</th><th>DATA AGENDADA</th><th>HORÁRIO AGENDADO</th></tr></thead><tbody>${linhas2}</tbody></table><p style="margin-left:3cm">Outrossim, informo que, será entregue uma lista atualizada semanalmente por esta Serventia.</p><p style="margin-left:3cm">Sendo o que nos apresenta de momento, aproveito a oportunidade para renovar à Vossa Excelência protestos de elevada estima e consideração.</p><p style="margin-left:3cm">Atenciosamente,</p><br><br><div style="text-align:center"><p>${'_'.repeat(50)}</p><p><strong>${nomeSig}</strong></p><p>${cargoSig}</p></div><p>Ao Exmo. Sr. Juiz de Paz deste município de Paranatinga/MT - <strong>${nomejuiz}</strong></p><br><p>Recebido em: _____________________________.</p></body></html>`;
       const w = window.open('', '_blank', 'width=900,height=750');
-      w.document.write(html);
+      w.document.write(htmlFallback);
       w.document.close();
-      await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
-      setSelecionados([]);
-      carregar();
-      addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     }
-  };
 
-  const cancelar = async (id) => {
-    if (!confirm('Cancelar este casamento?')) return;
-    await sb.from('casamentos').update({ status: 'cancelado', atualizado_em: new Date().toISOString() }).eq('id', id);
+    await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
+    setMarcados([]);
     carregar();
+    addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
   };
 
-  const excluir = async (id) => {
-    if (!confirm('Excluir este casamento?')) return;
-    await sb.from('casamentos').delete().eq('id', id);
-    carregar();
-  };
-
-  const fmtDt = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
-  const fmtDtHora = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
-
+  const fmtDtHora = (iso) => { if (!iso) return '—'; return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
   const diasAte = (iso) => { if (!iso) return null; return Math.ceil((new Date(iso) - new Date()) / 86400000); };
 
   const ST = {
@@ -697,19 +627,15 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     realizado: { label: 'Realizado', bg: '#dcfce7', cor: '#15803d' },
     cancelado: { label: 'Cancelado', bg: '#fee2e2', cor: '#dc2626' },
   };
-
-  const TIPO = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
+  const TIPO  = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
   const LOCAL = { serventia: '🏢 Serventia', externo: '📍 Externo' };
 
   const proximos = casamentos.filter(c => c.status === 'agendado' && c.dt_celebracao && diasAte(c.dt_celebracao) !== null && diasAte(c.dt_celebracao) <= 7 && diasAte(c.dt_celebracao) >= 0);
-
   const lista = casamentos.filter(c => {
     if (filtroStatus !== 'todos' && c.status !== filtroStatus) return false;
     if (filtroPeriodo && c.dt_celebracao && !c.dt_celebracao.startsWith(filtroPeriodo)) return false;
     return true;
   });
-
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -728,7 +654,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         </div>
       )}
 
-      {/* Linha 1: filtros de status + período + Novo Casamento */}
+      {/* Linha 1: filtros + Novo Casamento */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         {['todos','agendado','realizado','cancelado'].map(s => (
           <button key={s} onClick={() => setFiltroStatus(s)}
@@ -743,7 +669,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       </div>
 
       {/* Linha 2: relatórios + signatário + ofício */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-secondary" onClick={() => gerarRelatorio('pendentes')}>📄 Rel. Pendentes</button>
         <button className="btn btn-secondary" onClick={() => gerarRelatorio('realizados')}>📄 Rel. Realizados</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -759,18 +685,23 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
           </select>
         </div>
         <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>
-          📨 Ofício Juiz de Paz{selecionados.length > 0 ? ` (${selecionados.length})` : ''}
+          📨 Ofício Juiz de Paz{marcados.length > 0 ? ` (${marcados.length})` : ''}
         </button>
       </div>
 
       {/* Tabela */}
-      <div className="card" style={{ overflow: 'auto' }}>
+      <div className="card" style={{ overflow: 'auto', padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: 'var(--color-surface-2)', borderBottom: '2px solid var(--color-border)' }}>
-              {['','Noivos','Data Celebração','Tipo / Local','Processo','Responsável','Status','Ações'].map((h, hi) => (
-                <th key={hi} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-              ))}
+              <th style={{ padding: '10px 12px', width: 40 }}></th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Noivos</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Data Celebração</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Tipo / Local</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Processo</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Responsável</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Status</th>
+              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -782,19 +713,24 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
             ) : lista.map((c, i) => {
               const st = ST[c.status] || ST.agendado;
               const dias = diasAte(c.dt_celebracao);
+              const estaMarcado = marcados.includes(c.id);
               return (
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '10px 8px', width: 36, textAlign: 'center' }}>
-                    {c.status === 'agendado' && !c.comunicado && (
-                      <input
-                        type="checkbox"
-                        checked={selecionados.includes(c.id)}
-                        onChange={() => setSelecionados(prev =>
-                          prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
-                        )}
-                      />
-                    )}
-                    {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
+                  <td style={{ padding: '10px 12px', textAlign: 'center', width: 40 }}>
+                    {c.status === 'agendado' && !c.comunicado ? (
+                      <span
+                        onClick={() => toggleMarcado(c.id)}
+                        style={{
+                          display: 'inline-block', width: 20, height: 20, borderRadius: 4,
+                          border: `2px solid ${estaMarcado ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                          background: estaMarcado ? 'var(--color-accent)' : 'transparent',
+                          cursor: 'pointer', lineHeight: '16px', textAlign: 'center',
+                          fontSize: 13, color: '#fff', userSelect: 'none',
+                        }}
+                      >{estaMarcado ? '✓' : ''}</span>
+                    ) : c.comunicado ? (
+                      <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>
+                    ) : null}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
                     <div style={{ fontWeight: 600 }}>{c.noivo1}</div>
@@ -880,7 +816,6 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                   <label className="form-label">Noivo(a) 2 *</label>
                   <input className="form-input" value={form.noivo2 || ''} onChange={e => set('noivo2', e.target.value)} placeholder="Nome completo" />
                 </div>
-
                 <div className="form-group">
                   <label className="form-label">Data do Agendamento</label>
                   <input type="date" className="form-input" value={form.dt_agendamento || ''} onChange={e => set('dt_agendamento', e.target.value)} />
@@ -921,8 +856,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Juiz de Paz</label>
-                  <input className="form-input" value={form.juiz_paz || ''} onChange={e => set('juiz_paz', e.target.value)}
-                    placeholder={cartorio?.juiz_paz || 'Nome do Juiz de Paz'} />
+                  <input className="form-input" value={form.juiz_paz || ''} onChange={e => set('juiz_paz', e.target.value)} placeholder={cartorio?.juiz_paz || 'Nome do Juiz de Paz'} />
                   <div className="form-hint">Deixe em branco para usar o Juiz cadastrado nas Configurações</div>
                 </div>
                 <div className="form-group">
@@ -932,23 +866,6 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                     <option value="realizado">Realizado</option>
                     <option value="cancelado">Cancelado</option>
                   </select>
-                </div>
-                <div className="form-group" style={{ gridColumn: '1 / -1', position: 'relative' }}>
-                  <label className="form-label">Processo Vinculado</label>
-                  <input className="form-input" value={buscaProcesso} onChange={e => buscarProcesso(e.target.value)} placeholder="Digite o número do processo..." />
-                  {processosFiltrados.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
-                      {processosFiltrados.map(p => (
-                        <div key={p.id} onClick={() => selecionarProcesso(p)}
-                          style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, borderBottom: '1px solid var(--color-border)' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-2)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <strong>{p.numero_interno}</strong> — {p.especie}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {form.processo_id && <div className="form-hint">✓ Processo vinculado — nomes preenchidos automaticamente</div>}
                 </div>
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                   <label className="form-label">Observações</label>
@@ -966,6 +883,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     </div>
   );
 }
+
 
 // ── Componente principal ──────────────────────────────────────
 export default function RegistroCivilAtos() {
