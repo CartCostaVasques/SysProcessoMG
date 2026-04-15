@@ -784,14 +784,26 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
               const dias = diasAte(c.dt_celebracao);
               return (
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '10px 8px', width: 32, textAlign: 'center' }}>
-                    {c.status === 'agendado' && !c.comunicado && (
-                      <input type="checkbox" checked={selecionados.includes(c.id)}
-                        onChange={e => setSelecionados(prev =>
-                          e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
-                        )}
-                        style={{ cursor: 'pointer', width: 15, height: 15 }} />
-                    )}
+                  <td style={{ padding: '10px 8px', width: 36, textAlign: 'center' }}>
+                    {c.status === 'agendado' && !c.comunicado && (() => {
+                      const marcado = selecionados.includes(c.id);
+                      return (
+                        <button
+                          onClick={() => setSelecionados(prev =>
+                            prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                          )}
+                          title={marcado ? 'Desmarcar para ofício' : 'Marcar para ofício'}
+                          style={{
+                            width: 24, height: 24, borderRadius: 4, border: '2px solid',
+                            borderColor: marcado ? 'var(--color-accent)' : 'var(--color-border)',
+                            background: marcado ? 'var(--color-accent)' : 'transparent',
+                            color: marcado ? '#fff' : 'transparent',
+                            cursor: 'pointer', fontSize: 14, display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', padding: 0,
+                          }}
+                        >✓</button>
+                      );
+                    })()}
                     {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
