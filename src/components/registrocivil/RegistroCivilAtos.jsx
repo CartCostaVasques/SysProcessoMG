@@ -654,25 +654,6 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
         </div>
       )}
 
-      {/* TESTE TEMPORÁRIO — remover depois */}
-      <div style={{ padding: 16, background: '#1e293b', borderRadius: 8, border: '2px solid #3b82f6' }}>
-        <div style={{ color: '#94a3b8', marginBottom: 8, fontSize: 12, fontFamily: 'monospace' }}>
-          DIAGNÓSTICO — marcados: [{marcados.join(', ')}]
-        </div>
-        <button type="button"
-          style={{ padding: '6px 14px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', marginRight: 8, fontSize: 13 }}
-          onClick={() => { alert('clique OK! React está funcionando.'); setMarcados(prev => prev.includes('teste') ? prev.filter(x => x !== 'teste') : [...prev, 'teste']); }}>
-          1. Testar clique
-        </button>
-        {casamentos.filter(c => c.status === 'agendado' && !c.comunicado).map(c => (
-          <button key={c.id} type="button"
-            style={{ padding: '4px 12px', margin: '0 4px', background: marcados.includes(c.id) ? '#3b82f6' : 'transparent', color: '#fff', border: '1px solid #3b82f6', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-            onClick={() => setMarcados(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}>
-            {c.noivo1.split(' ')[0]} {marcados.includes(c.id) ? '✓' : '○'}
-          </button>
-        ))}
-      </div>
-
       {/* Linha 1: filtros + Novo Casamento */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         {['todos','agendado','realizado','cancelado'].map(s => (
@@ -736,19 +717,18 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
               return (
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 12px', textAlign: 'center', width: 40 }}>
-                    {c.status === 'agendado' && !c.comunicado ? (
+                    {c.status === 'agendado' ? (
                       <span
                         onClick={() => toggleMarcado(c.id)}
+                        title={c.comunicado && !marcados.includes(c.id) ? 'Já comunicado — clique para re-incluir no ofício' : marcados.includes(c.id) ? 'Desmarcar' : 'Marcar para ofício'}
                         style={{
                           display: 'inline-block', width: 20, height: 20, borderRadius: 4,
-                          border: `2px solid ${estaMarcado ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                          background: estaMarcado ? 'var(--color-accent)' : 'transparent',
+                          border: `2px solid ${marcados.includes(c.id) ? '#3b82f6' : c.comunicado ? '#15803d' : 'var(--color-border)'}`,
+                          background: marcados.includes(c.id) ? '#3b82f6' : c.comunicado ? '#dcfce7' : 'transparent',
                           cursor: 'pointer', lineHeight: '16px', textAlign: 'center',
-                          fontSize: 13, color: '#fff', userSelect: 'none',
+                          fontSize: 13, color: marcados.includes(c.id) ? '#fff' : '#15803d', userSelect: 'none',
                         }}
-                      >{estaMarcado ? '✓' : ''}</span>
-                    ) : c.comunicado ? (
-                      <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>
+                      >{marcados.includes(c.id) ? '✓' : c.comunicado ? '✓' : ''}</span>
                     ) : null}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
