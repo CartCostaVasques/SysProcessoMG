@@ -323,7 +323,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   const [salvando, setSalvando] = useState(false);
   const [buscaProcesso, setBuscaProcesso] = useState('');
   const [signatario, setSignatario] = useState('');
-  const [selecionados, setSelecionados] = useState(new Set());
+  const [selecionados, setSelecionados] = useState([]);
   const [processosFiltrados, setProcessosFiltrados] = useState([]);
 
   useEffect(() => { carregar(); }, []);
@@ -479,8 +479,8 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
   const gerarOficioJuizPaz = async () => {
     // Usar selecionados se houver, senão todos agendados não comunicados
     const naoComunicados = casamentos.filter(c => c.status === 'agendado' && !c.comunicado);
-    const paraOficio = selecionados.size > 0
-      ? casamentos.filter(c => selecionados.has(c.id))
+    const paraOficio = selecionados.length > 0
+      ? casamentos.filter(c => selecionados.includes(c.id))
       : naoComunicados;
     if (paraOficio.length === 0) {
       addToast('Nenhum casamento selecionado para comunicação.', 'info');
@@ -657,7 +657,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       URL.revokeObjectURL(url);
       // Marcar como comunicado e limpar seleção
       await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
-      setSelecionados(new Set());
+      setSelecionados([]);
       carregar();
       addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     } catch(errDocx) {
@@ -669,7 +669,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
       w.document.write(html);
       w.document.close();
       await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
-      setSelecionados(new Set());
+      setSelecionados([]);
       carregar();
       addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
     }
@@ -759,7 +759,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
           </select>
         </div>
         <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>
-          📨 Ofício Juiz de Paz{selecionados.size > 0 ? ` (${selecionados.size})` : ''}
+          📨 Ofício Juiz de Paz{selecionados.length > 0 ? ` (${selecionados.length})` : ''}
         </button>
       </div>
 
@@ -786,12 +786,10 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                 <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
                   <td style={{ padding: '10px 8px', width: 32, textAlign: 'center' }}>
                     {c.status === 'agendado' && !c.comunicado && (
-                      <input type="checkbox" checked={selecionados.has(c.id)}
-                        onChange={e => setSelecionados(prev => {
-                          const s = new Set(prev);
-                          e.target.checked ? s.add(c.id) : s.delete(c.id);
-                          return new Set(s);
-                        })}
+                      <input type="checkbox" checked={selecionados.includes(c.id)}
+                        onChange={e => setSelecionados(prev =>
+                          e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                        )}
                         style={{ cursor: 'pointer', width: 15, height: 15 }} />
                     )}
                     {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
