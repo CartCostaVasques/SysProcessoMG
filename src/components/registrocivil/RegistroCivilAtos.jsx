@@ -654,6 +654,25 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
         </div>
       )}
 
+      {/* TESTE TEMPORÁRIO — remover depois */}
+      <div style={{ padding: 16, background: '#1e293b', borderRadius: 8, border: '2px solid #3b82f6' }}>
+        <div style={{ color: '#94a3b8', marginBottom: 8, fontSize: 12, fontFamily: 'monospace' }}>
+          DIAGNÓSTICO — marcados: [{marcados.join(', ')}]
+        </div>
+        <button type="button"
+          style={{ padding: '6px 14px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', marginRight: 8, fontSize: 13 }}
+          onClick={() => { alert('clique OK! React está funcionando.'); setMarcados(prev => prev.includes('teste') ? prev.filter(x => x !== 'teste') : [...prev, 'teste']); }}>
+          1. Testar clique
+        </button>
+        {casamentos.filter(c => c.status === 'agendado' && !c.comunicado).map(c => (
+          <button key={c.id} type="button"
+            style={{ padding: '4px 12px', margin: '0 4px', background: marcados.includes(c.id) ? '#3b82f6' : 'transparent', color: '#fff', border: '1px solid #3b82f6', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+            onClick={() => setMarcados(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}>
+            {c.noivo1.split(' ')[0]} {marcados.includes(c.id) ? '✓' : '○'}
+          </button>
+        ))}
+      </div>
+
       {/* Linha 1: filtros + Novo Casamento */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         {['todos','agendado','realizado','cancelado'].map(s => (
