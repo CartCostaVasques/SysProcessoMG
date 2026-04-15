@@ -325,14 +325,47 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
   const [processosFiltrados, setProcessosFiltrados] = useState([]);
   const [signatario, setSignatario] = useState('');
   const [marcados, setMarcados] = useState([]);
+  const [juizes, setJuizes] = useState([]);
+  const [modalJuiz, setModalJuiz] = useState(false);
+  const [formJuiz, setFormJuiz] = useState({});
+  const [salvandoJuiz, setSalvandoJuiz] = useState(false);
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { carregar(); carregarJuizes(); }, []);
 
   const carregar = async () => {
     const { data } = await sb.from('casamentos')
       .select('*, processos(numero_interno, especie), usuarios(nome_simples, cargo)')
       .order('dt_celebracao', { ascending: true });
     setCasamentos(data || []);
+  };
+
+  const carregarJuizes = async () => {
+    const { data } = await sb.from('juizes_paz').select('*').order('status').order('nome');
+    setJuizes(data || []);
+  };
+
+  const salvarJuiz = async () => {
+    if (!formJuiz.nome?.trim()) { addToast('Informe o nome do juiz', 'error'); return; }
+    setSalvandoJuiz(true);
+    try {
+      const payload = { nome: formJuiz.nome.trim(), status: formJuiz.status || 'titular', ativo: formJuiz.ativo !== false };
+      if (formJuiz.id) {
+        await sb.from('juizes_paz').update(payload).eq('id', formJuiz.id);
+      } else {
+        await sb.from('juizes_paz').insert(payload);
+      }
+      addToast('Juiz de Paz salvo!', 'success');
+      setModalJuiz(false);
+      setFormJuiz({});
+      carregarJuizes();
+    } catch(e) { addToast('Erro: ' + e.message, 'error'); }
+    finally { setSalvandoJuiz(false); }
+  };
+
+  const excluirJuiz = async (id) => {
+    if (!confirm('Excluir este Juiz de Paz?')) return;
+    await sb.from('juizes_paz').delete().eq('id', id);
+    carregarJuizes();
   };
 
   const toggleMarcado = (id) => {
@@ -640,6 +673,38 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+      {/* Painel Juízes de Paz */}
+      <div className="card" style={{ padding: '14px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: juizes.length > 0 ? 12 : 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-text)' }}>⚖ Juízes de Paz</div>
+          <button className="btn btn-secondary" style={{ height: 28, fontSize: 12 }}
+            onClick={() => { setFormJuiz({ status: 'titular', ativo: true }); setModalJuiz(true); }}>
+            + Cadastrar
+          </button>
+        </div>
+        {juizes.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {juizes.map(j => (
+              <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: j.status === 'titular' ? '#dbeafe' : 'var(--color-surface-2)', border: `1px solid ${j.status === 'titular' ? '#93c5fd' : 'var(--color-border)'}`, opacity: j.ativo ? 1 : 0.5 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: j.status === 'titular' ? '#1d4ed8' : 'var(--color-text-muted)' }}>
+                  {j.status === 'titular' ? '★' : '○'} {j.nome}
+                </span>
+                <span style={{ fontSize: 10, color: j.status === 'titular' ? '#1d4ed8' : 'var(--color-text-faint)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  {j.status === 'titular' ? 'Titular' : 'Suplente'}
+                </span>
+                <button className="btn-icon" style={{ width: 18, height: 18, fontSize: 11 }}
+                  onClick={() => { setFormJuiz({ ...j }); setModalJuiz(true); }}>✎</button>
+                <button className="btn-icon" style={{ width: 18, height: 18, fontSize: 11, color: 'var(--color-danger)' }}
+                  onClick={() => excluirJuiz(j.id)}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {juizes.length === 0 && (
+          <div style={{ fontSize: 12, color: 'var(--color-text-faint)', marginTop: 8 }}>Nenhum Juiz de Paz cadastrado.</div>
+        )}
+      </div>
+
       {/* Alerta próximos 7 dias */}
       {proximos.length > 0 && (
         <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 'var(--radius-md)', padding: '12px 16px' }}>
@@ -855,8 +920,12 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Juiz de Paz</label>
-                  <input className="form-input" value={form.juiz_paz || ''} onChange={e => set('juiz_paz', e.target.value)} placeholder={cartorio?.juiz_paz || 'Nome do Juiz de Paz'} />
-                  <div className="form-hint">Deixe em branco para usar o Juiz cadastrado nas Configurações</div>
+                  <select className="form-select" value={form.juiz_paz || ''} onChange={e => set('juiz_paz', e.target.value || null)}>
+                    <option value="">Selecione</option>
+                    {juizes.filter(j => j.ativo).map(j => (
+                      <option key={j.id} value={j.nome}>{j.nome} ({j.status === 'titular' ? 'Titular' : 'Suplente'})</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Status</label>
@@ -875,6 +944,44 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={salvar} disabled={salvando}>{salvando ? '⏳ Salvando...' : '✓ Salvar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Juiz de Paz */}
+      {modalJuiz && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalJuiz(false)}>
+          <div className="modal" style={{ maxWidth: 400 }}>
+            <div className="modal-header">
+              <span className="modal-title">⚖ {formJuiz.id ? 'Editar' : 'Novo'} Juiz de Paz</span>
+              <button className="btn-icon" onClick={() => setModalJuiz(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Nome completo *</label>
+                  <input className="form-input" value={formJuiz.nome || ''} onChange={e => setFormJuiz(p => ({ ...p, nome: e.target.value }))} placeholder="Nome do Juiz de Paz" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Função</label>
+                  <select className="form-select" value={formJuiz.status || 'titular'} onChange={e => setFormJuiz(p => ({ ...p, status: e.target.value }))}>
+                    <option value="titular">Titular</option>
+                    <option value="suplente">Suplente</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Situação</label>
+                  <select className="form-select" value={formJuiz.ativo !== false ? 'true' : 'false'} onChange={e => setFormJuiz(p => ({ ...p, ativo: e.target.value === 'true' }))}>
+                    <option value="true">Ativo</option>
+                    <option value="false">Inativo</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalJuiz(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvarJuiz} disabled={salvandoJuiz}>{salvandoJuiz ? '⏳ Salvando...' : '✓ Salvar'}</button>
             </div>
           </div>
         </div>
