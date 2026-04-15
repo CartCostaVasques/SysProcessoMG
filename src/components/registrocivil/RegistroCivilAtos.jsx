@@ -523,10 +523,10 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
     const fmtHoraDoc = (iso) => { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
 
     // Pedir signatário se não definido
-    const respSig = (usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => u.nome_simples || u.nome_completo);
+    const respSig = (usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => u.nome_completo || u.nome_simples);
     const sigEscolhido = signatario || (respSig.length > 0 ? respSig[0] : nomeResponsavel);
     const nomeSig = sigEscolhido;
-    const userSig = (usuarios || []).find(u => (u.nome_simples || u.nome_completo) === nomeSig);
+    const userSig = (usuarios || []).find(u => (u.nome_completo || u.nome_simples) === nomeSig);
     const cargoSig = userSig?.cargo || cartorio?.cargo_tabeliao || 'Tabelião Substituto';
 
     const dadosOficio = {
@@ -728,7 +728,7 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
         </div>
       )}
 
-      {/* Filtros + botão */}
+      {/* Linha 1: filtros de status + período + Novo Casamento */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         {['todos','agendado','realizado','cancelado'].map(s => (
           <button key={s} onClick={() => setFiltroStatus(s)}
@@ -737,26 +737,30 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
           </button>
         ))}
         <input type="month" className="form-input" value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} style={{ maxWidth: 160 }} />
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => gerarRelatorio('pendentes')}>📄 Rel. Pendentes</button>
-          <button className="btn btn-secondary" onClick={() => gerarRelatorio('realizados')}>📄 Rel. Realizados</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Signatário:</span>
-            <select className="form-select" style={{ fontSize: 12, height: 32, minWidth: 160 }} value={signatario} onChange={e => setSignatario(e.target.value)}>
-              <option value="">Padrão (Cartório)</option>
-              {cartorio?.responsavel && (
-                <option value={cartorio.responsavel}>{cartorio.responsavel} ({cartorio.cargo_tabeliao || 'Tabelião'})</option>
-              )}
-              {(usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => (
-                <option key={u.id} value={u.nome_simples || u.nome_completo}>{u.nome_simples || u.nome_completo}{u.cargo ? ` (${u.cargo})` : ''}</option>
-              ))}
-            </select>
-          </div>
-          <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>
-            📨 Ofício Juiz de Paz{selecionados.size > 0 ? ` (${selecionados.size})` : ''}
-          </button>
+        <div style={{ marginLeft: 'auto' }}>
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Casamento</button>
         </div>
+      </div>
+
+      {/* Linha 2: relatórios + signatário + ofício */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+        <button className="btn btn-secondary" onClick={() => gerarRelatorio('pendentes')}>📄 Rel. Pendentes</button>
+        <button className="btn btn-secondary" onClick={() => gerarRelatorio('realizados')}>📄 Rel. Realizados</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Signatário:</span>
+          <select className="form-select" style={{ fontSize: 12, height: 32, minWidth: 180 }} value={signatario} onChange={e => setSignatario(e.target.value)}>
+            <option value="">Padrão (Cartório)</option>
+            {cartorio?.responsavel && (
+              <option value={cartorio.responsavel}>{cartorio.responsavel} ({cartorio.cargo_tabeliao || 'Tabelião'})</option>
+            )}
+            {(usuarios || []).filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase())).map(u => (
+              <option key={u.id} value={u.nome_completo || u.nome_simples}>{u.nome_completo || u.nome_simples}{u.cargo ? ` (${u.cargo})` : ''}</option>
+            ))}
+          </select>
+        </div>
+        <button className="btn btn-secondary" style={{ color: 'var(--color-accent)', borderColor: 'var(--color-accent)' }} onClick={gerarOficioJuizPaz}>
+          📨 Ofício Juiz de Paz{selecionados.size > 0 ? ` (${selecionados.size})` : ''}
+        </button>
       </div>
 
       {/* Tabela */}
@@ -783,7 +787,11 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                   <td style={{ padding: '10px 8px', width: 32, textAlign: 'center' }}>
                     {c.status === 'agendado' && !c.comunicado && (
                       <input type="checkbox" checked={selecionados.has(c.id)}
-                        onChange={e => setSelecionados(prev => { const s = new Set(prev); e.target.checked ? s.add(c.id) : s.delete(c.id); return s; })}
+                        onChange={e => setSelecionados(prev => {
+                          const s = new Set(prev);
+                          e.target.checked ? s.add(c.id) : s.delete(c.id);
+                          return new Set(s);
+                        })}
                         style={{ cursor: 'pointer', width: 15, height: 15 }} />
                     )}
                     {c.comunicado && <span title="Já comunicado" style={{ fontSize: 14 }}>📨</span>}
