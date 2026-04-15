@@ -789,9 +789,10 @@ function AbaCasamentos({ sb, addToast, usuarios, processos, cartorio }) {
                       const marcado = selecionados.includes(c.id);
                       return (
                         <button
-                          onClick={() => setSelecionados(prev =>
+                          type="button"
+                          onClick={e => { e.stopPropagation(); setSelecionados(prev =>
                             prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
-                          )}
+                          );}}
                           title={marcado ? 'Desmarcar para ofício' : 'Marcar para ofício'}
                           style={{
                             width: 24, height: 24, borderRadius: 4, border: '2px solid',
