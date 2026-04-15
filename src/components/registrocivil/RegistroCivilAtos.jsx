@@ -647,6 +647,7 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
     }
 
     await Promise.all(paraOficio.map(c => sb.from('casamentos').update({ comunicado: true }).eq('id', c.id)));
+    await sb.from('oficios').update({ status: 'Enviado' }).eq('id', oficioSel.id);
     setMarcados([]);
     carregar();
     addToast('Ofício gerado! ' + paraOficio.length + ' casamento(s) marcado(s) como comunicado.', 'success');
