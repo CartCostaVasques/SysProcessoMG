@@ -736,18 +736,18 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
       )}
 
       {/* Linha 1: filtros + Novo Casamento */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {['todos','agendado','realizado','cancelado'].map(s => (
           <button key={s} onClick={() => setFiltroStatus(s)}
             style={{ padding: '5px 14px', borderRadius: 20, border: `1px solid ${filtroStatus === s ? 'var(--color-accent)' : 'var(--color-border)'}`, background: filtroStatus === s ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-surface-2)', color: filtroStatus === s ? 'var(--color-accent)' : 'var(--color-text-muted)', fontSize: 12, fontWeight: filtroStatus === s ? 700 : 400, cursor: 'pointer' }}>
             {s === 'todos' ? 'Todos' : ST[s]?.label}
           </button>
         ))}
-        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 90 }}>
+        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 80 }}>
           <option value="">Todos anos</option>
           {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
-        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value !== '' ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 120 }}>
+        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value !== '' ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 110 }}>
           <option value="">Todos meses</option>
           {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
