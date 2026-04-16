@@ -743,11 +743,13 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
             {s === 'todos' ? 'Todos' : ST[s]?.label}
           </button>
         ))}
-        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 80 }}>
+        <select value={filtroAno} onChange={e => setFiltroAno(e.target.value ? parseInt(e.target.value) : '')}
+          style={{ fontSize: 12, height: 32, padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface-2)', color: 'var(--color-text)', cursor: 'pointer' }}>
           <option value="">Todos anos</option>
           {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
-        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value !== '' ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 110 }}>
+        <select value={filtroMes} onChange={e => setFiltroMes(e.target.value !== '' ? parseInt(e.target.value) : '')}
+          style={{ fontSize: 12, height: 32, padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-surface-2)', color: 'var(--color-text)', cursor: 'pointer' }}>
           <option value="">Todos meses</option>
           {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
