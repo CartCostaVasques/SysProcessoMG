@@ -38,6 +38,7 @@ import Estoque        from './components/estoque/Estoque.jsx';
 import Colaboradores  from './components/colaboradores/Colaboradores.jsx';
 import Chat           from './components/chat/Chat.jsx';
 import RegistroCivilAtos from './components/registrocivil/RegistroCivilAtos.jsx';
+import AlertaCasamento   from './components/registrocivil/AlertaCasamento.jsx';
 import Panoramico   from './components/panoramico/Panoramico.jsx';
 import ImportacaoCSV from './components/importacao/ImportacaoCSV.jsx';
 import { Servicos, Setores } from './components/servicos/ServicosSetores.jsx';
@@ -105,6 +106,7 @@ function AppShell() {
         </main>
       </div>
       <ToastContainer />
+      <AlertaCasamento />
     </div>
   );
 }
