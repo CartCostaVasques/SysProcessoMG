@@ -67,7 +67,9 @@ function valorPorExtenso(valor) {
 
 function formatarCidade(cidade) {
   if (!cidade) return '';
-  return /\-[A-Z]{2}$/.test(cidade.trim()) ? cidade.trim() : cidade.trim() + '-MT';
+  // Remove qualquer sufixo -UF já existente antes de normalizar
+  const semUF = cidade.trim().replace(/-[A-Z]{2}$/i, '').trim();
+  return semUF + '-MT';
 }
 
 function cabecalhoHtml(cartorio) {
@@ -178,7 +180,7 @@ function gerarViaCliente(recibo, interessado, cartorio, label, assinante) {
     <table class="campos">
       <tr>
         <td class="lbl">Recebi de</td>
-        <td><div class="campo-box">${interessado?.nome || '—'}</div></td>
+        <td><div class="campo-box campo-box-bold">${interessado?.nome || '—'}</div></td>
       </tr>
       <tr>
         <td class="lbl">CPF/CNPJ</td>
@@ -231,12 +233,13 @@ const CSS_RECIBO = `
   .cab-sub{font-size:10px;color:#444;line-height:1.8}
   .titulo-bloco{margin:16px 0 18px;background:#e8e8e8;padding:10px 16px;border-radius:2px}
   .titulo-recibo{font-size:17px;font-weight:bold;text-align:center;letter-spacing:0.5px}
-  .via-check{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:6px}
+  .via-check{font-size:12px;font-weight:bold;margin-top:7px;display:flex;align-items:center;gap:6px}
   .check-box{font-size:13px}
   .campos{width:100%;border-collapse:collapse;margin-bottom:20px}
   .campos tr td{padding:4px 6px;vertical-align:top}
   .lbl{font-size:11px;color:#555;width:80px;padding-top:8px;white-space:nowrap}
   .campo-box{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px}
+  .campo-box-bold{border:1px solid #999;padding:6px 10px;font-size:12px;min-height:28px;background:#fff;margin-bottom:2px;font-weight:bold}
   .campo-meio{max-width:50%;display:inline-block;min-width:0;width:50%}
   .valor-destaque{font-size:13px;font-weight:bold}
   .valor-ext{font-size:11px;color:#333;margin-top:2px;padding-left:2px}
@@ -252,7 +255,10 @@ const CSS_RECIBO = `
   .obs-condicionada{border:1px solid #999;padding:9px 12px;font-size:10.5px;line-height:1.75;color:#000;margin-top:14px;background:#fff}
   .rodape{text-align:center;font-size:9px;color:#888;border-top:1px solid #ddd;padding-top:5px;margin-top:12px}
   .sep{border:none;border-top:2px dashed #bbb;margin:8mm 0}
-  @media print{body{margin:0}}
+  @media print{
+    body{margin:0}
+    @page{margin:14mm 16mm;size:A4 portrait}
+  }
 `;
 
 function imprimirRecibo(recibo, interessado, cartorio) {
@@ -262,7 +268,7 @@ function imprimirRecibo(recibo, interessado, cartorio) {
   if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
   if (vias.length === 0)    vias.push('Primeira Via');
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title></title>
 <style>${CSS_RECIBO}</style></head><body>
 ${vias.map((v, i) => gerarViaColaborador(recibo, interessado, cartorio, v) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
 </body></html>`;
@@ -280,7 +286,7 @@ function imprimirReciboCliente(recibo, interessado, cartorio, assinante) {
   if (recibo.recibo_futuro) vias.push('Recibo para Pagamento Futuro');
   if (vias.length === 0)    vias.push('1ª Via — Cartório');
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title></title>
 <style>${CSS_RECIBO}</style></head><body>
 ${vias.map((v, i) => gerarViaCliente(recibo, interessado, cartorio, v, assinante) + (i < vias.length - 1 ? '<hr class="sep">' : '')).join('')}
 </body></html>`;
@@ -302,7 +308,7 @@ function imprimirLote(recibosComInt, cartorio) {
   });
 
   const cssLote = CSS_RECIBO + ' .via{page-break-after:always}';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibos em Lote</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title></title>
 <style>${cssLote}</style></head><body>
 ${partes.join('')}
 </body></html>`;
