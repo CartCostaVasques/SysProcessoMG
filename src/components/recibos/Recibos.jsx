@@ -67,9 +67,12 @@ function valorPorExtenso(valor) {
 
 function formatarCidade(cidade) {
   if (!cidade) return '';
-  // Remove qualquer sufixo -UF já existente antes de normalizar
-  const semUF = cidade.trim().replace(/-[A-Z]{2}$/i, '').trim();
-  return semUF + '-MT';
+  // Extrai apenas o nome da cidade (antes de qualquer hífen/traço seguido de UF)
+  const s = cidade.trim();
+  // Pega tudo antes do primeiro hífen ou espaço seguido de 2 letras maiúsculas no final
+  const match = s.match(/^(.+?)\s*[-–]\s*[A-Z]{2}/i);
+  const nomeCidade = match ? match[1].trim() : s.replace(/\s*[-–]\s*[A-Z]{2}.*$/i, '').trim() || s;
+  return nomeCidade + ' - MT';
 }
 
 function cabecalhoHtml(cartorio) {
@@ -221,10 +224,14 @@ function gerarViaHtml(recibo, interessado, cartorio, label) {
 }
 
 const CSS_RECIBO = `
-  @page{size:A4 portrait;margin:14mm 16mm}
+  @page{size:A4 portrait;margin:0}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff}
-  .via{padding:15mm 0;page-break-inside:avoid}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff;padding:14mm 16mm}
+  .via{padding:4mm 0;page-break-inside:avoid}
+  @media print{
+    body{padding:14mm 16mm}
+    @page{margin:0;size:A4 portrait}
+  }
   .cab{display:flex;align-items:flex-start;gap:16px;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:14px}
   .logo-box{width:110px;height:90px;border:2px solid #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;padding:4px}
   .logo-box img{max-width:100%;max-height:100%;object-fit:contain}
@@ -255,10 +262,6 @@ const CSS_RECIBO = `
   .obs-condicionada{border:1px solid #999;padding:9px 12px;font-size:10.5px;line-height:1.75;color:#000;margin-top:14px;background:#fff}
   .rodape{text-align:center;font-size:9px;color:#888;border-top:1px solid #ddd;padding-top:5px;margin-top:12px}
   .sep{border:none;border-top:2px dashed #bbb;margin:8mm 0}
-  @media print{
-    body{margin:0}
-    @page{margin:14mm 16mm;size:A4 portrait}
-  }
 `;
 
 function imprimirRecibo(recibo, interessado, cartorio) {
