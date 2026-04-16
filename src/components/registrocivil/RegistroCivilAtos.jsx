@@ -317,7 +317,8 @@ function gerarDivorcioMandado(corpo, origem, dataCom) {
 function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
   const [casamentos, setCasamentos] = useState([]);
   const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [filtroPeriodo, setFiltroPeriodo] = useState('');
+  const [filtroAno, setFiltroAno] = useState(new Date().getFullYear());
+  const [filtroMes, setFiltroMes] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
@@ -666,10 +667,22 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
   const TIPO  = { civil: 'Civil', religioso: 'Religioso', civil_religioso: 'Civil e Religioso' };
   const LOCAL = { serventia: '🏢 Serventia', externo: '📍 Externo' };
 
+  const anoAtual = new Date().getFullYear();
+  const anosDisponiveis = [...new Set(casamentos.filter(c => c.dt_celebracao).map(c => new Date(c.dt_celebracao).getFullYear()))].sort((a,b) => b - a);
+  if (!anosDisponiveis.includes(anoAtual)) anosDisponiveis.unshift(anoAtual);
+
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
   const proximos = casamentos.filter(c => c.status === 'agendado' && c.dt_celebracao && diasAte(c.dt_celebracao) !== null && diasAte(c.dt_celebracao) <= 7 && diasAte(c.dt_celebracao) >= 0);
   const lista = casamentos.filter(c => {
     if (filtroStatus !== 'todos' && c.status !== filtroStatus) return false;
-    if (filtroPeriodo && c.dt_celebracao && !c.dt_celebracao.startsWith(filtroPeriodo)) return false;
+    if (c.dt_celebracao) {
+      const d = new Date(c.dt_celebracao);
+      if (filtroAno && d.getFullYear() !== filtroAno) return false;
+      if (filtroMes !== '' && d.getMonth() !== filtroMes) return false;
+    } else {
+      if (filtroAno || filtroMes !== '') return false;
+    }
     return true;
   });
 
@@ -730,7 +743,14 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
             {s === 'todos' ? 'Todos' : ST[s]?.label}
           </button>
         ))}
-        <input type="month" className="form-input" value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} style={{ maxWidth: 160 }} />
+        <select className="form-select" value={filtroAno} onChange={e => setFiltroAno(e.target.value ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 90 }}>
+          <option value="">Todos anos</option>
+          {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <select className="form-select" value={filtroMes} onChange={e => setFiltroMes(e.target.value !== '' ? parseInt(e.target.value) : '')} style={{ fontSize: 12, height: 32, minWidth: 120 }}>
+          <option value="">Todos meses</option>
+          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+        </select>
         <div style={{ marginLeft: 'auto' }}>
           <button className="btn btn-primary" onClick={abrirNovo}>+ Novo Casamento</button>
         </div>
