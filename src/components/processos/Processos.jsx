@@ -438,6 +438,7 @@ export default function Processos() {
   const [salvandoNovo, setSalvandoNovo] = useState(false);
   const [modalNovoInt, setModalNovoInt] = useState(null);
   const [modalRapido, setModalRapido]   = useState(false);
+  const [modalDiag, setModalDiag]       = useState(false);
   const [processoDetalhe, setProcessoDetalhe] = useState(null);
   const [busca, setBusca]               = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
@@ -586,6 +587,7 @@ export default function Processos() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={() => setModalRapido(true)}>⚡ Cadastro Rápido</button>
+          <button className="btn btn-secondary" style={{ color: 'var(--color-warning)', borderColor: 'var(--color-warning)' }} onClick={() => setModalDiag(true)}>⚠ Diagnóstico</button>
           <button className="btn btn-primary" onClick={() => setNewRow({ ...EMPTY_ROW, responsavel_id: usuario?.id || null })}>+ Novo Processo</button>
         </div>
       </div>
@@ -753,6 +755,97 @@ export default function Processos() {
 
       {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
+
+      {/* Modal Diagnóstico de Inconsistências */}
+      {modalDiag && (() => {
+        const comDataSemConcluido = processos.filter(p =>
+          p.dt_conclusao && p.status !== 'Concluído'
+        );
+        const concluidoSemData = processos.filter(p =>
+          p.status === 'Concluído' && !p.dt_conclusao
+        );
+        const comValorSemConcluido = processos.filter(p =>
+          p.valor_ato > 0 && p.status === 'Concluído' && !p.dt_conclusao
+        );
+        const total = comDataSemConcluido.length + concluidoSemData.length;
+        const fmtBRL2 = (v) => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const fmtDt = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—';
+
+        const Secao = ({ titulo, cor, items, colunas }) => items.length === 0 ? null : (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: cor, display: 'inline-block' }} />
+              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-text)' }}>{titulo}</span>
+              <span style={{ fontSize: 11, background: cor + '22', color: cor, borderRadius: 10, padding: '1px 8px', fontWeight: 700 }}>{items.length}</span>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--color-surface-2)' }}>
+                  {colunas.map(c => <th key={c} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border)' }}>{c}</th>)}
+                  <th style={{ padding: '6px 10px', borderBottom: '1px solid var(--color-border)' }} />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((p, i) => (
+                  <tr key={p.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{p.numero_interno}</td>
+                    <td style={{ padding: '7px 10px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.especie}</td>
+                    <td style={{ padding: '7px 10px' }}><span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: p.status === 'Concluído' ? '#dcfce7' : '#fee2e2', color: p.status === 'Concluído' ? '#15803d' : '#dc2626' }}>{p.status}</span></td>
+                    <td style={{ padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{fmtDt(p.dt_conclusao)}</td>
+                    <td style={{ padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--color-accent)' }}>{fmtBRL2(p.valor_ato)}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <button className="btn-icon btn-sm" title="Ver processo" onClick={() => { setProcessoDetalhe(p); setModalDiag(false); }}>↗</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+
+        return (
+          <Portal>
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModalDiag(false)}>
+              <div className="modal" style={{ maxWidth: 780 }}>
+                <div className="modal-header">
+                  <span className="modal-title">⚠ Diagnóstico de Inconsistências</span>
+                  <button className="btn-icon" onClick={() => setModalDiag(false)}>✕</button>
+                </div>
+                <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                  {total === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>Nenhuma inconsistência encontrada!</div>
+                      <div style={{ fontSize: 13, marginTop: 6 }}>Todos os processos estão com status e datas consistentes.</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ padding: '10px 14px', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 'var(--radius-md)', marginBottom: 20, fontSize: 12, color: '#92400e' }}>
+                        <strong>⚠ {total} inconsistência(s) encontrada(s).</strong> Clique em ↗ para abrir o processo e corrigir.
+                      </div>
+                      <Secao
+                        titulo="Com data de conclusão mas status ≠ Concluído"
+                        cor="#ef4444"
+                        items={comDataSemConcluido}
+                        colunas={['Nº Interno', 'Espécie', 'Status', 'Dt. Conclusão', 'Valor']}
+                      />
+                      <Secao
+                        titulo="Status Concluído mas sem data de conclusão"
+                        cor="#f97316"
+                        items={concluidoSemData}
+                        colunas={['Nº Interno', 'Espécie', 'Status', 'Dt. Conclusão', 'Valor']}
+                      />
+                    </>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setModalDiag(false)}>Fechar</button>
+                </div>
+              </div>
+            </div>
+          </Portal>
+        );
+      })()}
       {processoDetalhe && (
         <ProcessoDetalhe
           processo={processoDetalhe}
