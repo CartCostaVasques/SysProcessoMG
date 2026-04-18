@@ -56,7 +56,7 @@ const SERVICOS_RAPIDOS = [
 // ─── Modal Cadastro Rápido ───────────────────────────────────
 const LINHA_VAZIA = () => ({ numero: '', valor: '0,00', _id: Math.random() });
 
-function ModalServicRapido({ usuarios, onSalvar, onClose }) {
+function ModalServicRapido({ usuarios, onSalvar, onClose, processos = [] }) {
   const { servicos, usuario } = useApp();
   const [modo, setModo]               = useState(null); // null | 'certidoes' | 'atos'
   const [categoriaAtos, setCategoriaAtos] = useState('');
@@ -67,6 +67,8 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
   const [linhas, setLinhas]           = useState([LINHA_VAZIA(), LINHA_VAZIA(), LINHA_VAZIA()]);
   const [salvando, setSalvando]       = useState(false);
   const primeiroRef = useRef(null);
+
+  const numExiste = (num) => num.trim() && processos.some(p => p.numero_interno.trim() === num.trim());
 
   useEffect(() => { primeiroRef.current?.focus(); }, []);
 
@@ -295,7 +297,8 @@ function ModalServicRapido({ usuarios, onSalvar, onClose }) {
                     onChange={e => setLinha(idx, 'numero', e.target.value)}
                     onKeyDown={e => handleKeyDown(e, idx)}
                     placeholder={`Nº ${idx + 1}`}
-                    style={{ fontSize: 13 }}
+                    style={{ fontSize: 13, borderColor: numExiste(l.numero) ? '#ef4444' : undefined, outline: numExiste(l.numero) ? '1px solid #ef4444' : undefined }}
+                    title={numExiste(l.numero) ? '⚠ Número já cadastrado!' : ''}
                   />
                   <input
                     className="form-input rapido-input"
@@ -490,25 +493,20 @@ export default function Processos() {
     setEditingId(null);
   };
 
-  // Gera nº interno único: se "123" já existe, tenta "123-1", "123-2"...
-  const gerarNumeroUnico = (base) => {
-    const existe = (n) => processos.some(p => p.numero_interno.trim() === n.trim());
-    if (!existe(base)) return base;
-    let i = 1;
-    while (existe(`${base}-${i}`)) i++;
-    return `${base}-${i}`;
-  };
+  // Verifica se número já existe
+  const numeroExiste = (num) => processos.some(p => p.numero_interno.trim() === num.trim());
 
   const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
     if (salvandoNovo) return;
-    setSalvandoNovo(true);
-    const numeroFinal = gerarNumeroUnico(newRow.numero_interno.trim());
-    const { _sel, ...rest } = newRow;
-    await addProcesso({ ...rest, numero_interno: numeroFinal, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
-    if (numeroFinal !== newRow.numero_interno.trim()) {
-      addToast(`Nº duplicado — salvo como "${numeroFinal}"`, 'info');
+    const num = newRow.numero_interno.trim();
+    if (numeroExiste(num)) {
+      addToast(`Nº ${num} já existe! Verifique antes de cadastrar.`, 'error');
+      return;
     }
+    setSalvandoNovo(true);
+    const { _sel, ...rest } = newRow;
+    await addProcesso({ ...rest, numero_interno: num, quantidade: parseInt(rest.quantidade || 1), partes: serializarPartes(_sel) });
     setSalvandoNovo(false);
     setNewRow(null);
   };
@@ -529,10 +527,14 @@ export default function Processos() {
   };
 
   const handleSalvarRapido = async (lista) => {
+    const duplicados = lista.filter(d => numeroExiste(d.numero_interno.trim())).map(d => d.numero_interno.trim());
+    if (duplicados.length > 0) {
+      addToast(`Nº duplicado(s): ${duplicados.join(', ')}. Corrija antes de salvar.`, 'error');
+      return;
+    }
     let salvos = 0;
     for (const dados of lista) {
-      const numeroFinal = gerarNumeroUnico(dados.numero_interno.trim());
-      await addProcesso({ ...dados, numero_interno: numeroFinal, quantidade: 1 });
+      await addProcesso({ ...dados, numero_interno: dados.numero_interno.trim(), quantidade: 1 });
       salvos++;
     }
     setModalRapido(false);
@@ -646,7 +648,7 @@ export default function Processos() {
             {/* Nova linha */}
             {newRow && (
               <tr className="row-editing">
-                <td><input ref={numRef} className="td-input" value={newRow.numero_interno} onChange={e => setNR('numero_interno', e.target.value)} placeholder="Nº *" style={{ width: 70 }} /></td>
+                <td><input ref={numRef} className="td-input" value={newRow.numero_interno} onChange={e => setNR('numero_interno', e.target.value)} placeholder="Nº *" style={{ width: 70, borderColor: newRow.numero_interno && numeroExiste(newRow.numero_interno.trim()) ? '#ef4444' : undefined, outline: newRow.numero_interno && numeroExiste(newRow.numero_interno.trim()) ? '1px solid #ef4444' : undefined }} title={newRow.numero_interno && numeroExiste(newRow.numero_interno.trim()) ? '⚠ Número já cadastrado!' : ''} /></td>
                 <td><input className="td-input" type="date" value={newRow.dt_abertura} onChange={e => setNR('dt_abertura', e.target.value)} style={{ width: 85 }} /></td>
                 <td><select className="td-select" value={newRow.categoria} onChange={e => { setNR('categoria', e.target.value); setNR('especie', ''); }} style={{ width: 105 }}>
                   <option value="">Categoria</option>{categorias.map(c => <option key={c}>{c}</option>)}
@@ -753,7 +755,7 @@ export default function Processos() {
         </table>
       </div>
 
-      {modalRapido && <ModalServicRapido usuarios={usuarios} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
+      {modalRapido && <ModalServicRapido usuarios={usuarios} processos={processos} onSalvar={handleSalvarRapido} onClose={() => setModalRapido(false)} />}
       {modalNovoInt && <ModalInteressado nomeInicial={modalNovoInt.nome} onSalvar={handleSalvarInteressado} onClose={() => setModalNovoInt(null)} />}
 
       {/* Modal Diagnóstico de Inconsistências */}
