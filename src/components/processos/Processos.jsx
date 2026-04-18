@@ -109,21 +109,31 @@ function ModalServicRapido({ usuarios, onSalvar, onClose, processos = [] }) {
     if (!selecionado) { alert('Selecione um tipo de serviço'); return; }
     const validas = linhas.filter(l => l.numero.trim());
     if (validas.length === 0) { alert('Preencha ao menos um Nº Interno'); return; }
+    // Verificar duplicados antes de salvar
+    const duplicados = validas.filter(l => numExiste(l.numero)).map(l => l.numero.trim());
+    if (duplicados.length > 0) {
+      alert(`Nº duplicado(s): ${duplicados.join(', ')}.\nCorrija antes de salvar.`);
+      return;
+    }
     setSalvando(true);
-    const dt = data || HOJE();
-    await onSalvar(validas.map(l => ({
-      numero_interno: l.numero.trim(),
-      categoria:      selecionado.categoria,
-      especie:        selecionado.especie,
-      responsavel_id: respId || null,
-      dt_abertura:    dt,
-      dt_conclusao:   concluido ? dt : null,
-      status:         concluido ? 'Concluído' : 'Em andamento',
-      valor_ato:      parseBRL(l.valor),
-      partes:         '[]',
-      municipio:      'Paranatinga',
-      obs:            '',
-    })));
+    try {
+      const dt = data || HOJE();
+      await onSalvar(validas.map(l => ({
+        numero_interno: l.numero.trim(),
+        categoria:      selecionado.categoria,
+        especie:        selecionado.especie,
+        responsavel_id: respId || null,
+        dt_abertura:    dt,
+        dt_conclusao:   concluido ? dt : null,
+        status:         concluido ? 'Concluído' : 'Em andamento',
+        valor_ato:      parseBRL(l.valor),
+        partes:         '[]',
+        municipio:      'Paranatinga',
+        obs:            '',
+      })));
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const btnModo = (ativo) => ({
