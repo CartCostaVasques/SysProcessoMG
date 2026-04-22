@@ -112,7 +112,7 @@ function gerarRelatorio(titulo, grupos, cartorio, isConcluido, filtroMes, filtro
 
 export default function RelatorioServicos() {
   const { processos, cartorio, usuarios } = useApp();
-  const [filtro,      setFiltro]      = useState('Concluído');
+  const [filtro,      setFiltro]      = useState('pendentes');
   const [filtroMes,   setFiltroMes]   = useState(String(new Date().getMonth() + 1).padStart(2, '0'));
   const [filtroAno,   setFiltroAno]   = useState(String(new Date().getFullYear()));
   const [busca,       setBusca]       = useState('');
@@ -135,7 +135,9 @@ export default function RelatorioServicos() {
 
   const grupos = useMemo(() => {
     const lista = processos.filter(p => {
-      const matchStatus = filtro === 'todos' ? true : p.status === filtro;
+      const matchStatus = filtro === 'todos' ? true
+        : filtro === 'pendentes' ? (p.status === 'Em andamento' || p.status === 'Em reanálise')
+        : p.status === filtro;
       const dtRef = filtro === 'Concluído' ? p.dt_conclusao : p.dt_abertura;
       let matchData;
       if (modoData === 'periodo') {
@@ -166,7 +168,8 @@ export default function RelatorioServicos() {
   const isConcluido = filtro === 'Concluído';
   const labelData   = isConcluido ? 'Dt. Conclusão' : 'Dt. Abertura';
 
-  const tituloRel = filtro === 'Em andamento' ? 'Relatório de Serviços em Andamento'
+  const tituloRel = filtro === 'pendentes'    ? 'Relatório de Processos Pendentes'
+    : filtro === 'Em andamento' ? 'Relatório de Serviços em Andamento'
     : filtro === 'Concluído' ? 'Relatório de Serviços Concluídos'
     : 'Relatório de Serviços — Todos';
 
@@ -197,6 +200,7 @@ export default function RelatorioServicos() {
         {/* Status */}
         <div style={{ display: 'flex', gap: 6 }}>
           {[
+            { v: 'pendentes',    l: '⏳ Pendentes'  },
             { v: 'Em andamento', l: 'Em Andamento' },
             { v: 'Devolvido',    l: 'Devolvido'    },
             { v: 'Em reanálise', l: 'Em Reanálise' },
