@@ -1005,7 +1005,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
   const cidade      = cartorio?.cidade   || '';
   const telefone    = cartorio?.telefone || '';
   const email       = cartorio?.email    || '';
-  const logo        = cartorio?.logo     || '';
+  const logo        = cartorio?.logo_url  || '';
   const dtConc      = proc.dt_conclusao
     ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
 
@@ -1021,6 +1021,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
+<title>Arquivo de Atos — ${proc.numero_interno || ''}</title>
 <style>
   @page { size: A4 portrait; margin: 20mm 20mm 20mm 20mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
