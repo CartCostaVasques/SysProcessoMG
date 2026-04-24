@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
-const TIPOS_RC = ['Casamento', 'Divórcio', 'Óbito', 'Nascimento', 'Outros'];
+const TIPOS_RC = ['Casamento', 'Divórcio', 'Óbito', 'Nascimento', 'Interdição', 'Outros'];
 const MODELOS = [
   { id: 'comunicacao_rc',    label: 'Comunicação ao Registro Civil', descricao: 'Comunicação de ato notarial ao Registro Civil (casamento, divórcio, óbito...)' },
   { id: 'forum_cumprimento', label: 'Ofício ao Fórum / Juízo',       descricao: 'Cumprimento de mandado, envio de documentos, resposta a solicitação...' },
