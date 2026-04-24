@@ -5,7 +5,7 @@ import { formatDate } from '../../data/mockData.js';
 import ModelosOficio from './ModelosOficio.jsx';
 
 const STATUS_OFICIO = ['Rascunho', 'Enviado', 'Aguardando Resposta', 'Respondido', 'Arquivado'];
-const TIPOS_OFICIO = ['', 'Comunicado de Casamentos', 'Notificação', 'Solicitação', 'Informação', 'Outros'];
+const TIPOS_OFICIO = ['', 'Comunicado de Casamentos', 'Notificação', 'Solicitação', 'Informação', 'Interdição', 'Outros'];
 const EMPTY = {
   numero: '', mes_ano: '', dt_oficio: new Date().toISOString().split('T')[0],
   destinatario: '', assunto: '', responsavel_id: null, responsavel: '',
