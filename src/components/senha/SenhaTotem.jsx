@@ -57,19 +57,23 @@ function TelaSetores({ setores, onEscolher, nomeCartorio, config }) {
         <div style={{ fontSize: 19, color: '#94a3b8', marginTop: 3 }}>Retire aqui a Senha para o seu Serviço</div>
       </div>
 
-      {/* Grid fixo: 2 colunas × 4 linhas */}
+      {/* Grid dinâmico: 2 colunas, último botão centralizado se ímpar */}
       <div style={{
         flex: 1,
         padding: '8px 28px 14px',
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gridTemplateRows: 'repeat(4, 1fr)',
+        gridTemplateRows: `repeat(${Math.ceil(setores.length / 2)}, 1fr)`,
         gap: '8px',
         minHeight: 0,
       }}>
-        {setores.slice(0, 8).map(setor => (
+        {setores.map((setor, idx) => (
           <button key={setor.id} onClick={() => onEscolher(setor)}
             style={{
+              gridColumn: (setores.length % 2 !== 0 && idx === setores.length - 1) ? '1 / -1' : undefined,
+              maxWidth:   (setores.length % 2 !== 0 && idx === setores.length - 1) ? '50%'    : undefined,
+              justifySelf:(setores.length % 2 !== 0 && idx === setores.length - 1) ? 'center'  : undefined,
+              width: '100%',
               background: '#1e293b',
               border: '2px solid #334155',
               borderRadius: 10,
