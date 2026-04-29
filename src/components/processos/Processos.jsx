@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext.jsx';
 import { formatDate } from '../../data/mockData.js';
 
 const STATUS_OPTS = ['Em andamento', 'Devolvido', 'Em reanálise', 'Concluído', 'Encerrado'];
-const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+const STATUS_PENDENTES = ['Em andamento', 'Em reanálise'];
 const HOJE = () => new Date().toISOString().split('T')[0];
 const ONTEM = () => { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; };
 
