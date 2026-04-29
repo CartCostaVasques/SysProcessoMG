@@ -17,7 +17,7 @@ const STATUS_CONF_GLOBAL = {
   'Encerrado':    { cor: '#64748b',               sigla: 'EN', icon: '🔒' },
 };
 
-const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+const STATUS_PENDENTES = ['Em andamento', 'Em reanálise'];
 
 const fmtNomeInteressados = (partes) => {
   try {
