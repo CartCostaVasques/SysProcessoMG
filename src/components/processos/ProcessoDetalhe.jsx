@@ -1005,7 +1005,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
   const cidade      = cartorio?.cidade   || '';
   const telefone    = cartorio?.telefone || '';
   const email       = cartorio?.email    || '';
-  const logo        = cartorio?.logo_url  || '';
+  const logo        = cartorio?.logo     || '';
   const dtConc      = proc.dt_conclusao
     ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
 
@@ -1021,15 +1021,12 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
-<title></title>
 <style>
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 20mm 20mm 20mm 20mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; padding: 20mm; }
-  @media print {
-    body { padding: 20mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { margin: 0; size: A4 portrait; }
-  }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; }
+
+  /* === CABEÇALHO === */
   .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 2px solid #000; }
   .logo-box { width: 88px; height: 68px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
   .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -1069,6 +1066,10 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
   /* === RODAPÉ === */
   .rodape { clear: both; border-top: 1px solid #888; margin-top: 40px; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head><body>
 
