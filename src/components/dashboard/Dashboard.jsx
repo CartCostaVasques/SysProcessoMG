@@ -363,7 +363,7 @@ export default function Dashboard({ setPage }) {
           </div>
         </div>
         {[
-          { label: 'Pendentes',          value: stats.emAndamento, sub: 'Em andamento / devolvidos / reanálise', icon: '🔄', color: 'var(--color-warning)' },
+          { label: 'Pendentes',          value: stats.emAndamento, sub: 'Em andamento / reanálise', icon: '🔄', color: 'var(--color-warning)' },
           { label: 'Tarefas Pendentes',  value: stats.tarefasPendentes, sub: stats.tarefasVencidas > 0 ? `${stats.tarefasVencidas} vencida(s)` : 'Sem vencidas', icon: '✓', color: stats.tarefasVencidas > 0 ? 'var(--color-danger)' : 'var(--color-text-muted)' },
           { label: 'Ofícios Enviados',   value: stats.oficiosEnviados, sub: 'Total enviados', icon: '✉', color: 'var(--color-info)' },
           { label: 'Usuários Ativos',    value: usuarios.filter(u => u.ativo).length, sub: `de ${usuarios.length} cadastrados`, icon: '◉', color: 'var(--color-text-muted)' },
