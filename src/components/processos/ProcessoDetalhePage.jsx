@@ -17,7 +17,7 @@ const STATUS_CONF = {
   'Encerrado':    { cor: '#64748b',              sigla: 'EN' },
 };
 
-const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+const STATUS_PENDENTES = ['Em andamento', 'Em reanálise'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function parsePartes(partes) {
