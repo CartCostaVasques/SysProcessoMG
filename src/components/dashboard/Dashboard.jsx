@@ -161,7 +161,7 @@ export default function Dashboard({ setPage }) {
   const stats = useMemo(() => {
     const somaQtd = (arr) => arr.reduce((s,p) => s + parseInt(p.quantidade||1), 0);
     const isRF = (p) => p.categoria === 'Reconhecimento de Firma';
-    const STATUS_PENDENTES = ['Em andamento', 'Devolvido', 'Em reanálise'];
+    const STATUS_PENDENTES = ['Em andamento', 'Em reanálise'];
 
     // Filtra por ano e mês se selecionado
     const filtraPorPeriodo = (arr) => arr.filter(p => {
@@ -279,7 +279,7 @@ export default function Dashboard({ setPage }) {
     });
   }, [processos, filtroAno]);
 
-  const processosPendentes = processos.filter(p => ['Em andamento', 'Devolvido', 'Em reanálise'].includes(p.status)).slice(0, 5);
+  const processosPendentes = processos.filter(p => ['Em andamento', 'Em reanálise'].includes(p.status)).slice(0, 5);
   const tarefasRecentes    = tarefas.filter(t => !t.concluida).slice(0, 4);
 
   const DeltaBadge = ({ diff, pct }) => {
