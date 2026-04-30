@@ -35,22 +35,22 @@ export default function AR({ interessados = [] }) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title></title>
 <style>
-  @page { size: 297mm 148mm landscape; margin: 6mm 25mm 4mm 25mm; }
+  @page { size: 297mm 95mm landscape; margin: 4mm 25mm 3mm 25mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
   body { width: 100%; height: 100%; color: #000; background: #fff; }
-  @media print { @page { margin: 6mm 25mm 4mm 25mm; } }
+  @media print { @page { margin: 4mm 25mm 3mm 25mm; } }
   .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; -webkit-print-color-adjust: exact; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; text-align: center; line-height: 1.4; white-space: nowrap; }
   .corpo { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
   /* Header */
-  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 16mm; flex-shrink: 0; }
-  .hdr-logo { display: flex; align-items: center; padding: 2mm 3mm; border-right: 1px solid #000; }
-  .hdr-titulo { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; }
-  .hdr-titulo .t1 { font-size: 10px; font-weight: bold; }
-  .hdr-titulo .t2 { font-size: 10px; }
-  .hdr-ar { display: flex; align-items: center; padding: 0 5mm; font-size: 28px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
-  .hdr-post { padding: 2mm 3mm; font-size: 8px; font-weight: bold; min-width: 36mm; flex-shrink: 0; }
+  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 12mm; flex-shrink: 0; }
+  .hdr-logo { display: flex; align-items: center; padding: 1.5mm 2mm; border-right: 1px solid #000; }
+  .hdr-titulo { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5mm; }
+  .hdr-titulo .t1 { font-size: 9px; font-weight: bold; }
+  .hdr-titulo .t2 { font-size: 9px; }
+  .hdr-ar { display: flex; align-items: center; padding: 0 4mm; font-size: 24px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
+  .hdr-post { padding: 1.5mm 2mm; font-size: 7.5px; font-weight: bold; min-width: 34mm; flex-shrink: 0; }
   /* Meio */
   .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; overflow: hidden; }
   .dest-col { padding: 2mm 3mm; border-right: 1px solid #000; overflow: hidden; }
@@ -61,10 +61,10 @@ export default function AR({ interessados = [] }) {
   .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 2mm; font-size: 8px; font-weight: bold; }
   .carimbo-bot { flex: 1; padding: 2mm; font-size: 8px; font-weight: bold; }
   /* Baixo */
-  .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 30mm; flex-shrink: 0; overflow: hidden; }
-  .tent { padding: 2mm 3mm; border-right: 1px solid #000; }
-  .tent .lbl2 { font-size: 9px; font-weight: bold; margin-bottom: 1.5mm; }
-  .tent .ln { font-size: 9px; margin: 3px 0; white-space: nowrap; }
+  .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 22mm; flex-shrink: 0; overflow: hidden; }
+  .tent { padding: 1.5mm 2mm; border-right: 1px solid #000; }
+  .tent .lbl2 { font-size: 8px; font-weight: bold; margin-bottom: 1mm; }
+  .tent .ln { font-size: 8px; margin: 2.5px 0; white-space: nowrap; }
   .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; overflow: hidden; }
   .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 8px; font-weight: bold; flex-shrink: 0; }
   .motivo { padding: 1.5mm 2mm; flex: 1; overflow: hidden; }
@@ -74,7 +74,7 @@ export default function AR({ interessados = [] }) {
   .rubrica { padding: 2mm; font-size: 7.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
   .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
-  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 11mm; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 8mm; }
   .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 8px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
