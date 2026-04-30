@@ -52,7 +52,7 @@ export default function AR({ interessados = [] }) {
   .hdr-ar { display: flex; align-items: center; padding: 0 4mm; font-size: 24px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
   .hdr-post { padding: 1.5mm 2mm; font-size: 7.5px; font-weight: bold; min-width: 34mm; flex-shrink: 0; }
   /* Meio */
-  .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; height: 45mm; flex-shrink: 0; overflow: hidden; }
+  .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; height: 60mm; flex-shrink: 0; overflow: hidden; }
   .dest-col { padding: 2mm 3mm; border-right: 1px solid #000; overflow: hidden; }
   .lbl { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
   .dados { font-size: 12px; line-height: 1.6; margin-bottom: 1.5mm; }
@@ -74,7 +74,7 @@ export default function AR({ interessados = [] }) {
   .rubrica { padding: 2mm; font-size: 8.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
   .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
-  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 8mm; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 5mm; }
   .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 9px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
