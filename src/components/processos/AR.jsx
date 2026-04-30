@@ -37,7 +37,7 @@ export default function AR({ interessados = [] }) {
 <style>
   @page { size: 210mm 99mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-  body { width: 204mm; height: 96mm; padding: 2mm; font-size: 8px; color: #000; background: #fff; }
+  body { width: 210mm; height: 99mm; padding: 2mm 27mm; font-size: 8px; color: #000; background: #fff; }
   @media print { @page { margin: 0; } }
   .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 14mm 1fr; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; }
@@ -67,11 +67,12 @@ export default function AR({ interessados = [] }) {
   .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; }
   .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 6.5px; font-weight: bold; flex: 0 0 auto; }
   .motivo { padding: 1.5mm 2mm; flex: 1; }
-  .motivo .lbl2 { font-size: 6px; font-weight: bold; margin-bottom: 0.5mm; }
+  .motivo .lbl2 { font-size: 7.5px; font-weight: bold; margin-bottom: 0.5mm; }
   .motivo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-  .mi { font-size: 5.5px; line-height: 1.4; }
+  .mi { font-size: 7.5px; line-height: 1.5; }
   .rubrica { padding: 2mm; font-size: 6px; font-weight: bold; }
-  .rodape { display: grid; grid-template-columns: 1fr 1fr 1fr; height: 9mm; }
+  .rodape { display: flex; flex-direction: column; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; height: 9mm; border-top: 1px solid #000; }
   .rc { padding: 2mm; border-right: 1px solid #000; font-size: 6.5px; font-weight: bold; }
   .rc:last-child { border-right: none; }
 </style>
@@ -121,9 +122,14 @@ export default function AR({ interessados = [] }) {
       <div class="rubrica">RUBRICA E MATRÍCULA DO CARTEIRO</div>
     </div>
     <div class="rodape">
-      <div class="rc">ASSINATURA DO RECEBEDOR</div>
-      <div class="rc">NOME LEGÍVEL DO RECEBEDOR</div>
-      <div class="rc">Nº DOC. DE IDENTIDADE &nbsp;&nbsp;&nbsp; DATA DE ENTREGA</div>
+      <div class="rodape-row">
+        <div class="rc">ASSINATURA DO RECEBEDOR</div>
+        <div class="rc">DATA DE ENTREGA</div>
+      </div>
+      <div class="rodape-row">
+        <div class="rc">NOME LEGÍVEL DO RECEBEDOR</div>
+        <div class="rc">Nº DOC. DE IDENTIDADE</div>
+      </div>
     </div>
   </div>
 </div>
