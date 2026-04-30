@@ -27,6 +27,7 @@ export default function Interessados() {
   const [form,       setForm]       = useState({ ...EMPTY });
 
   const [aba, setAba] = useState('interessados');
+  const [arHistorico, setArHistorico] = useState([]);
   const set   = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setEd = (k, v) => setEditRow(p => ({ ...p, [k]: v }));
 
@@ -86,7 +87,7 @@ export default function Interessados() {
         ))}
       </div>
 
-      {aba === 'ar' && <AR interessados={interessados} />}
+      {aba === 'ar' && <AR interessados={interessados} historico={arHistorico} setHistorico={setArHistorico} />}
       {aba === 'interessados' && (<>
 
       {showForm && (
