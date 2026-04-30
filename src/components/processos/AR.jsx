@@ -35,48 +35,47 @@ export default function AR({ interessados = [] }) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title></title>
 <style>
-  @page { size: 297mm 110mm landscape; margin: 0; }
+  @page { size: 297mm 148mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-  body { width: 297mm; height: 110mm; padding: 3mm 28mm; color: #000; background: #fff; }
+  body { width: 297mm; height: 148mm; padding: 4mm 25mm; color: #000; background: #fff; }
   @media print { @page { margin: 0; } }
   .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 5.5px; text-align: center; line-height: 1.3; white-space: nowrap; }
+  .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; text-align: center; line-height: 1.4; white-space: nowrap; }
   .corpo { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-  /* Header menor */
-  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 11mm; flex-shrink: 0; }
-  .hdr-logo { display: flex; align-items: center; padding: 1.5mm 2mm; border-right: 1px solid #000; }
-  .hdr-logo .brand { font-size: 11px; font-weight: 900; color: #005CA8; }
-  .hdr-titulo { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1mm; }
-  .hdr-titulo .t1 { font-size: 7.5px; font-weight: bold; }
-  .hdr-titulo .t2 { font-size: 7.5px; }
-  .hdr-ar { display: flex; align-items: center; padding: 0 4mm; font-size: 20px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
-  .hdr-post { padding: 1.5mm 2mm; font-size: 6.5px; font-weight: bold; min-width: 30mm; flex-shrink: 0; }
+  /* Header */
+  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 16mm; flex-shrink: 0; }
+  .hdr-logo { display: flex; align-items: center; padding: 2mm 3mm; border-right: 1px solid #000; }
+  .hdr-titulo { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; }
+  .hdr-titulo .t1 { font-size: 10px; font-weight: bold; }
+  .hdr-titulo .t2 { font-size: 10px; }
+  .hdr-ar { display: flex; align-items: center; padding: 0 5mm; font-size: 28px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
+  .hdr-post { padding: 2mm 3mm; font-size: 8px; font-weight: bold; min-width: 36mm; flex-shrink: 0; }
   /* Meio */
-  .meio { display: grid; grid-template-columns: 1fr 30mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; overflow: hidden; }
-  .dest-col { padding: 1.5mm 2mm; border-right: 1px solid #000; overflow: hidden; }
-  .lbl { font-size: 6px; font-weight: bold; margin-bottom: 0.8mm; }
-  .dados { font-size: 9px; line-height: 1.5; margin-bottom: 1mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .barcode { border: 1px dashed #aaa; padding: 0.8mm; margin: 0.8mm 0; text-align: center; font-size: 5.5px; color: #666; }
+  .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; overflow: hidden; }
+  .dest-col { padding: 2mm 3mm; border-right: 1px solid #000; overflow: hidden; }
+  .lbl { font-size: 7.5px; font-weight: bold; margin-bottom: 1mm; }
+  .dados { font-size: 11px; line-height: 1.6; margin-bottom: 1.5mm; }
+  .barcode { border: 1px dashed #aaa; padding: 1mm; margin: 1.5mm 0; text-align: center; font-size: 7px; color: #666; }
   .carimbo-col { display: flex; flex-direction: column; flex-shrink: 0; }
-  .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 1.5mm; font-size: 6px; font-weight: bold; }
-  .carimbo-bot { flex: 1; padding: 1.5mm; font-size: 6px; font-weight: bold; }
+  .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 2mm; font-size: 8px; font-weight: bold; }
+  .carimbo-bot { flex: 1; padding: 2mm; font-size: 8px; font-weight: bold; }
   /* Baixo */
-  .baixo { display: grid; grid-template-columns: 40mm 1fr 24mm; border-bottom: 1px solid #000; height: 22mm; flex-shrink: 0; overflow: hidden; }
-  .tent { padding: 1.5mm 2mm; border-right: 1px solid #000; }
-  .tent .lbl2 { font-size: 7px; font-weight: bold; margin-bottom: 0.8mm; }
-  .tent .ln { font-size: 7px; margin: 2px 0; white-space: nowrap; }
+  .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 30mm; flex-shrink: 0; overflow: hidden; }
+  .tent { padding: 2mm 3mm; border-right: 1px solid #000; }
+  .tent .lbl2 { font-size: 9px; font-weight: bold; margin-bottom: 1.5mm; }
+  .tent .ln { font-size: 9px; margin: 3px 0; white-space: nowrap; }
   .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; overflow: hidden; }
-  .obs { padding: 1mm 2mm; border-bottom: 1px solid #000; font-size: 6.5px; font-weight: bold; flex-shrink: 0; }
-  .motivo { padding: 1mm 2mm; flex: 1; overflow: hidden; }
-  .motivo .lbl2 { font-size: 7px; font-weight: bold; margin-bottom: 0.5mm; }
+  .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 8px; font-weight: bold; flex-shrink: 0; }
+  .motivo { padding: 1.5mm 2mm; flex: 1; overflow: hidden; }
+  .motivo .lbl2 { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
   .motivo-grid { display: grid; grid-template-columns: 1fr 1fr; }
-  .mi { font-size: 7px; line-height: 1.45; }
-  .rubrica { padding: 1.5mm; font-size: 5.5px; font-weight: bold; }
+  .mi { font-size: 8.5px; line-height: 1.6; }
+  .rubrica { padding: 2mm; font-size: 7.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
   .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
-  .rodape-row { display: grid; grid-template-columns: 1fr 30mm; border-top: 1px solid #000; height: 8mm; }
-  .rc { padding: 1.5mm 2mm; border-right: 1px solid #000; font-size: 6.5px; font-weight: bold; overflow: hidden; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 11mm; }
+  .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 8px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
 </head><body>
