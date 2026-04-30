@@ -1,11 +1,44 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
+
+const STORAGE_KEY = 'ar_historico';
 
 export default function AR({ interessados = [], historico = [], setHistorico = () => {} }) {
   const { cartorio } = useApp();
 
   const [busca,       setBusca]       = useState('');
   const [selecionado, setSelecionado] = useState(null);
+
+  // Carrega histórico do localStorage na primeira vez
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Reconstrói as funções reimprimir (não serializáveis)
+        setHistorico(parsed.map(h => ({ ...h, reimprimir: buildReimp(h) })));
+      }
+    } catch {}
+  }, []);
+
+  const buildReimp = (h) => () => {
+    const w = window.open('', '_blank', h.tipo === 'AR' ? 'width=950,height=620' : 'width=500,height=400');
+    w.document.write(h.htmlSnapshot);
+    w.document.close();
+    w.onload = () => { w.focus(); w.print(); };
+  };
+
+  const addHistorico = (entry) => {
+    setHistorico(prev => {
+      const next = [entry, ...prev].slice(0, 50); // máx 50 registros
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(
+          next.map(({ reimprimir, ...rest }) => rest) // não salva função
+        ));
+      } catch {}
+      return next;
+    });
+  };
 
   const remetente = {
     nome:     cartorio?.nome     || '',
@@ -142,18 +175,15 @@ export default function AR({ interessados = [], historico = [], setHistorico = (
 
     const snap = { ...selecionado };
     const snapHtml = html;
-    setHistorico(prev => [{
+    addHistorico({
       id: Date.now(),
       tipo: 'AR',
       dest: snap,
       hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      reimprimir: () => {
-        const w2 = window.open('', '_blank', 'width=950,height=620');
-        w2.document.write(snapHtml);
-        w2.document.close();
-        w2.onload = () => { w2.focus(); w2.print(); };
-      }
-    }, ...prev]);
+      data: new Date().toLocaleDateString('pt-BR'),
+      htmlSnapshot: snapHtml,
+      reimprimir: buildReimp({ tipo: 'AR', htmlSnapshot: snapHtml }),
+    });
   };
 
   const gerarEtiqueta = () => {
@@ -190,18 +220,15 @@ export default function AR({ interessados = [], historico = [], setHistorico = (
 
     const snap = { ...selecionado };
     const snapHtml = html;
-    setHistorico(prev => [{
+    addHistorico({
       id: Date.now(),
       tipo: 'Etiqueta',
       dest: snap,
       hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      reimprimir: () => {
-        const w2 = window.open('', '_blank', 'width=500,height=400');
-        w2.document.write(snapHtml);
-        w2.document.close();
-        w2.onload = () => { w2.focus(); w2.print(); };
-      }
-    }, ...prev]);
+      data: new Date().toLocaleDateString('pt-BR'),
+      htmlSnapshot: snapHtml,
+      reimprimir: buildReimp({ tipo: 'Etiqueta', htmlSnapshot: snapHtml }),
+    });
   };
 
   return (
@@ -286,15 +313,33 @@ export default function AR({ interessados = [], historico = [], setHistorico = (
       {historico.length > 0 && (
         <div className="card" style={{ marginTop: 16 }}>
           <div className="card-header">
-            <div className="card-title">📋 Histórico da Sessão</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setHistorico([])}>🗑️ Limpar</button>
+            <div className="card-title">📋 Histórico</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              setHistorico([]);
+              localStorage.removeItem(STORAGE_KEY);
+            }}>🗑️ Limpar tudo</button>
           </div>
           <div style={{ padding: '8px 16px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {historico.map(h => (
+            {/* Se tem interessado selecionado, mostra histórico dele primeiro destacado */}
+            {selecionado && historico.some(h => h.dest?.id === selecionado.id) && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', marginBottom: 2 }}>
+                Registros de {selecionado.nome}:
+              </div>
+            )}
+            {historico
+              .slice()
+              .sort((a, b) => selecionado
+                ? (b.dest?.id === selecionado.id) - (a.dest?.id === selecionado.id) || b.id - a.id
+                : b.id - a.id
+              )
+              .map(h => (
               <div key={h.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '8px 12px', borderRadius: 8,
-                background: 'var(--color-surface)', border: '1px solid var(--color-border)'
+                background: selecionado && h.dest?.id === selecionado.id
+                  ? 'var(--color-accent-subtle, rgba(99,102,241,0.08))'
+                  : 'var(--color-surface)',
+                border: `1px solid ${selecionado && h.dest?.id === selecionado.id ? 'var(--color-accent)' : 'var(--color-border)'}`,
               }}>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
@@ -303,13 +348,15 @@ export default function AR({ interessados = [], historico = [], setHistorico = (
                 }}>{h.tipo === 'AR' ? '📮 AR' : '🏷️ Etiqueta'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {h.dest.nome}
+                    {h.dest?.nome}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                    {[h.dest.endereco, h.dest.cidade].filter(Boolean).join(' — ')}
+                    {[h.dest?.endereco, h.dest?.cidade].filter(Boolean).join(' — ')}
                   </div>
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flexShrink: 0 }}>{h.hora}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flexShrink: 0, textAlign: 'right' }}>
+                  {h.data}<br />{h.hora}
+                </span>
                 <button className="btn btn-ghost btn-sm" onClick={h.reimprimir} title="Reimprimir" style={{ flexShrink: 0 }}>
                   🖨️ Reimprimir
                 </button>
