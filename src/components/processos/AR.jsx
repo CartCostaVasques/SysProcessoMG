@@ -74,7 +74,7 @@ export default function AR({ interessados = [] }) {
   .rubrica { padding: 2mm; font-size: 8.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
   .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
-  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 5mm; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 7mm; }
   .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 9px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
