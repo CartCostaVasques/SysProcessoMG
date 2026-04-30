@@ -6,6 +6,7 @@ export default function AR({ interessados = [] }) {
 
   const [busca,       setBusca]       = useState('');
   const [selecionado, setSelecionado] = useState(null);
+  const [historico,   setHistorico]   = useState([]); // { id, tipo, dest, hora, gerarFn }
 
   const remetente = {
     nome:     cartorio?.nome     || '',
@@ -73,8 +74,8 @@ export default function AR({ interessados = [] }) {
   .mi { font-size: 9.5px; line-height: 1.7; }
   .rubrica { padding: 2mm; font-size: 8.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
-  .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
-  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 7mm; }
+  .rodape { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; flex: 1; }
   .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 9px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
@@ -139,6 +140,21 @@ export default function AR({ interessados = [] }) {
     w.document.write(html);
     w.document.close();
     w.onload = () => { w.focus(); w.print(); };
+
+    const snap = { ...selecionado };
+    const snapHtml = html;
+    setHistorico(prev => [{
+      id: Date.now(),
+      tipo: 'AR',
+      dest: snap,
+      hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      reimprimir: () => {
+        const w2 = window.open('', '_blank', 'width=950,height=620');
+        w2.document.write(snapHtml);
+        w2.document.close();
+        w2.onload = () => { w2.focus(); w2.print(); };
+      }
+    }, ...prev]);
   };
 
   const gerarEtiqueta = () => {
@@ -172,6 +188,21 @@ export default function AR({ interessados = [] }) {
     w.document.write(html);
     w.document.close();
     w.onload = () => { w.focus(); w.print(); };
+
+    const snap = { ...selecionado };
+    const snapHtml = html;
+    setHistorico(prev => [{
+      id: Date.now(),
+      tipo: 'Etiqueta',
+      dest: snap,
+      hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      reimprimir: () => {
+        const w2 = window.open('', '_blank', 'width=500,height=400');
+        w2.document.write(snapHtml);
+        w2.document.close();
+        w2.onload = () => { w2.focus(); w2.print(); };
+      }
+    }, ...prev]);
   };
 
   return (
@@ -248,6 +279,43 @@ export default function AR({ interessados = [] }) {
             <button className="btn btn-primary"   onClick={gerarAR}>📮 Gerar AR</button>
             <button className="btn btn-secondary" onClick={gerarEtiqueta}>🏷️ Gerar Etiqueta</button>
             <button className="btn btn-ghost" onClick={limpar} style={{ marginLeft: 'auto' }}>✕ Limpar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Histórico */}
+      {historico.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card-header">
+            <div className="card-title">📋 Histórico da Sessão</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setHistorico([])}>🗑️ Limpar</button>
+          </div>
+          <div style={{ padding: '8px 16px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {historico.map(h => (
+              <div key={h.id} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '8px 12px', borderRadius: 8,
+                background: 'var(--color-surface)', border: '1px solid var(--color-border)'
+              }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+                  background: h.tipo === 'AR' ? 'var(--color-primary)' : 'var(--color-secondary)',
+                  color: '#fff', flexShrink: 0
+                }}>{h.tipo === 'AR' ? '📮 AR' : '🏷️ Etiqueta'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {h.dest.nome}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                    {[h.dest.endereco, h.dest.cidade].filter(Boolean).join(' — ')}
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)', flexShrink: 0 }}>{h.hora}</span>
+                <button className="btn btn-ghost btn-sm" onClick={h.reimprimir} title="Reimprimir" style={{ flexShrink: 0 }}>
+                  🖨️ Reimprimir
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
