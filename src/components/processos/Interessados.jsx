@@ -214,7 +214,7 @@ export default function Interessados() {
           </tbody>
         </table>
       </div>
-      )}
+      </>)}
     </div>
   );
 }
