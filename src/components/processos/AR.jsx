@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
 
-export default function AR({ interessados = [] }) {
+export default function AR({ interessados = [], historico = [], setHistorico = () => {} }) {
   const { cartorio } = useApp();
 
   const [busca,       setBusca]       = useState('');
   const [selecionado, setSelecionado] = useState(null);
-  const [historico,   setHistorico]   = useState([]); // { id, tipo, dest, hora, gerarFn }
 
   const remetente = {
     nome:     cartorio?.nome     || '',
