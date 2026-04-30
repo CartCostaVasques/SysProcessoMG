@@ -35,41 +35,43 @@ export default function AR({ interessados = [] }) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title></title>
 <style>
-  @page { size: 210mm 105mm landscape; margin: 0; }
+  @page { size: 210mm 99mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-  body { width: 210mm; height: 105mm; padding: 3mm; font-size: 8px; color: #000; background: #fff; }
+  body { width: 204mm; height: 96mm; padding: 2mm; font-size: 8px; color: #000; background: #fff; }
   @media print { @page { margin: 0; } }
-  .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 16mm 1fr; }
+  .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 14mm 1fr; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; }
-  .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 6.5px; text-align: center; line-height: 1.4; }
+  .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 6px; text-align: center; line-height: 1.4; }
   .corpo { display: flex; flex-direction: column; height: 100%; }
-  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 18mm; }
-  .hdr-logo { display: flex; align-items: center; padding: 2mm 3mm; border-right: 1px solid #000; }
-  .hdr-logo .brand { font-size: 13px; font-weight: 900; color: #005CA8; }
+  .hdr { display: grid; grid-template-columns: auto 1fr auto auto; border-bottom: 1px solid #000; height: 16mm; }
+  .hdr-logo { display: flex; align-items: center; padding: 2mm; border-right: 1px solid #000; }
+  .hdr-logo .brand { font-size: 12px; font-weight: 900; color: #005CA8; }
   .hdr-titulo { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2mm; }
-  .hdr-titulo .t1 { font-size: 9px; font-weight: bold; }
-  .hdr-titulo .t2 { font-size: 9px; }
-  .hdr-ar { display: flex; align-items: center; padding: 0 5mm; font-size: 26px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
-  .hdr-post { padding: 2mm; font-size: 7px; font-weight: bold; min-width: 38mm; }
-  .meio { display: grid; grid-template-columns: 1fr 38mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; }
+  .hdr-titulo .t1 { font-size: 8px; font-weight: bold; }
+  .hdr-titulo .t2 { font-size: 8px; }
+  .hdr-ar { display: flex; align-items: center; padding: 0 4mm; font-size: 22px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
+  .hdr-post { padding: 2mm; font-size: 7px; font-weight: bold; min-width: 34mm; }
+  .meio { display: grid; grid-template-columns: 1fr 34mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; }
   .dest-col { padding: 2mm; border-right: 1px solid #000; overflow: hidden; }
-  .lbl { font-size: 6.5px; font-weight: bold; margin-bottom: 1.5mm; }
-  .dados { font-size: 8px; line-height: 1.7; margin-bottom: 2mm; }
-  .barcode { border: 1px dashed #aaa; padding: 1.5mm; margin: 1.5mm 0; text-align: center; font-size: 6.5px; color: #666; }
+  .lbl { font-size: 6.5px; font-weight: bold; margin-bottom: 1mm; }
+  .dados { font-size: 10px; line-height: 1.6; margin-bottom: 1.5mm; }
+  .barcode { border: 1px dashed #aaa; padding: 1mm; margin: 1mm 0; text-align: center; font-size: 6px; color: #666; }
   .carimbo-col { display: flex; flex-direction: column; }
   .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 2mm; font-size: 6.5px; font-weight: bold; }
   .carimbo-bot { flex: 1; padding: 2mm; font-size: 6.5px; font-weight: bold; }
-  .baixo { display: grid; grid-template-columns: 44mm 28mm 1fr 30mm; border-bottom: 1px solid #000; height: 22mm; }
+  /* baixo: tent | obs+motivo(empilhados) | rubrica */
+  .baixo { display: grid; grid-template-columns: 42mm 1fr 26mm; border-bottom: 1px solid #000; height: 20mm; }
   .tent { padding: 2mm; border-right: 1px solid #000; }
-  .tent .lbl2 { font-size: 6.5px; font-weight: bold; margin-bottom: 1mm; }
-  .tent .ln { font-size: 6.5px; margin: 2.5px 0; }
-  .obs { padding: 2mm; border-right: 1px solid #000; font-size: 6.5px; font-weight: bold; }
-  .motivo { padding: 2mm; border-right: 1px solid #000; }
-  .motivo .lbl2 { font-size: 6.5px; font-weight: bold; margin-bottom: 1mm; }
-  .motivo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
-  .mi { font-size: 6px; line-height: 1.5; }
-  .rubrica { padding: 2mm; font-size: 6.5px; font-weight: bold; }
-  .rodape { display: grid; grid-template-columns: 1fr 1fr 1fr; height: 10mm; }
+  .tent .lbl2 { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
+  .tent .ln { font-size: 8.5px; margin: 2px 0; }
+  .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; }
+  .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 6.5px; font-weight: bold; flex: 0 0 auto; }
+  .motivo { padding: 1.5mm 2mm; flex: 1; }
+  .motivo .lbl2 { font-size: 6px; font-weight: bold; margin-bottom: 0.5mm; }
+  .motivo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .mi { font-size: 5.5px; line-height: 1.4; }
+  .rubrica { padding: 2mm; font-size: 6px; font-weight: bold; }
+  .rodape { display: grid; grid-template-columns: 1fr 1fr 1fr; height: 9mm; }
   .rc { padding: 2mm; border-right: 1px solid #000; font-size: 6.5px; font-weight: bold; }
   .rc:last-child { border-right: none; }
 </style>
@@ -103,15 +105,17 @@ export default function AR({ interessados = [] }) {
         <div class="ln">2ª ____/____/______ _____:_____h</div>
         <div class="ln">3ª ____/____/______ _____:_____h</div>
       </div>
-      <div class="obs">OBSERVAÇÃO</div>
-      <div class="motivo">
-        <div class="lbl2">MOTIVO DE DEVOLUÇÃO</div>
-        <div class="motivo-grid">
-          <div class="mi">1 Mudou-se</div>        <div class="mi">5 Recusado</div>
-          <div class="mi">2 End. insuficiente</div><div class="mi">6 Não procurado</div>
-          <div class="mi">3 Não existe o nº</div>  <div class="mi">7 Ausente</div>
-          <div class="mi">4 Desconhecido</div>     <div class="mi">8 Falecido</div>
-          <div class="mi">9 Outros</div>
+      <div class="centro-col">
+        <div class="obs">OBSERVAÇÃO</div>
+        <div class="motivo">
+          <div class="lbl2">MOTIVO DE DEVOLUÇÃO</div>
+          <div class="motivo-grid">
+            <div class="mi">1 Mudou-se</div>        <div class="mi">5 Recusado</div>
+            <div class="mi">2 End. insuficiente</div><div class="mi">6 Não procurado</div>
+            <div class="mi">3 Não existe o nº</div>  <div class="mi">7 Ausente</div>
+            <div class="mi">4 Desconhecido</div>     <div class="mi">8 Falecido</div>
+            <div class="mi">9 Outros</div>
+          </div>
         </div>
       </div>
       <div class="rubrica">RUBRICA E MATRÍCULA DO CARTEIRO</div>
