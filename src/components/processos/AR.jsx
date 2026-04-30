@@ -37,9 +37,9 @@ export default function AR({ interessados = [] }) {
 <style>
   @page { size: 297mm 148mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-  body { width: 297mm; height: 148mm; padding: 4mm 25mm; color: #000; background: #fff; }
-  @media print { @page { margin: 0; } }
-  .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; }
+  body { width: 297mm; height: 148mm; padding: 5mm 25mm 4mm; color: #000; background: #fff; }
+  @media print { @page { margin: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; -webkit-print-color-adjust: exact; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; text-align: center; line-height: 1.4; white-space: nowrap; }
   .corpo { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
