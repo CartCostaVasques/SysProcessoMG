@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
+import AR from './AR.jsx';
 
 const TIPOS = ['Cliente', 'Colaborador', 'Fornecedor', 'Outros'];
 const EMPTY = { nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', cidade: '', cep: '', obs: '', tipo: 'Cliente' };
@@ -25,6 +26,7 @@ export default function Interessados() {
   const [showForm,   setShowForm]   = useState(false);
   const [form,       setForm]       = useState({ ...EMPTY });
 
+  const [aba, setAba] = useState('interessados');
   const set   = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setEd = (k, v) => setEditRow(p => ({ ...p, [k]: v }));
 
@@ -59,10 +61,33 @@ export default function Interessados() {
           <div className="page-title">Interessados</div>
           <div className="page-sub">{interessados.length} cadastrado(s)</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(v => !v)}>
-          {showForm ? '✕ Cancelar' : '+ Novo Interessado'}
-        </button>
+        {aba === 'interessados' && (
+          <button className="btn btn-primary" onClick={() => setShowForm(v => !v)}>
+            {showForm ? '✕ Cancelar' : '+ Novo Interessado'}
+          </button>
+        )}
       </div>
+
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '2px solid var(--color-border)' }}>
+        {[
+          { id: 'interessados', label: '👥 Interessados' },
+          { id: 'ar',          label: '📮 AR / Etiquetas' },
+        ].map(a => (
+          <button key={a.id} onClick={() => setAba(a.id)}
+            style={{
+              padding: '8px 18px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+              borderBottom: aba === a.id ? '2px solid var(--color-accent)' : '2px solid transparent',
+              background: 'transparent', color: aba === a.id ? 'var(--color-accent)' : 'var(--color-text-muted)',
+              marginBottom: -2,
+            }}>
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      {aba === 'ar' && <AR interessados={interessados} />}
+      {aba === 'interessados' && (<>
 
       {showForm && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -189,6 +214,7 @@ export default function Interessados() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
