@@ -35,10 +35,10 @@ export default function AR({ interessados = [] }) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title></title>
 <style>
-  @page { size: 297mm 95mm landscape; margin: 4mm 25mm 3mm 25mm; }
+  @page { size: 297mm 95mm landscape; margin: 14mm 25mm 3mm 25mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
   body { width: 100%; height: 100%; color: #000; background: #fff; }
-  @media print { @page { margin: 4mm 25mm 3mm 25mm; } }
+  @media print { @page { margin: 14mm 25mm 3mm 25mm; } }
   .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; -webkit-print-color-adjust: exact; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; text-align: center; line-height: 1.4; white-space: nowrap; }
