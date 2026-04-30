@@ -35,10 +35,10 @@ export default function AR({ interessados = [] }) {
     const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title></title>
 <style>
-  @page { size: 297mm 95mm landscape; margin: 14mm 25mm 3mm 25mm; }
+  @page { size: 297mm 95mm landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-  body { width: 100%; height: 100%; color: #000; background: #fff; }
-  @media print { @page { margin: 14mm 25mm 3mm 25mm; } }
+  body { width: 297mm; height: 95mm; padding: 10mm 25mm 3mm 25mm; color: #000; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print { @page { margin: 0; } }
   .ar { width: 100%; height: 100%; border: 1.5px solid #000; display: grid; grid-template-columns: 13mm 1fr; overflow: hidden; -webkit-print-color-adjust: exact; }
   .lateral { border-right: 1.5px solid #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .lateral span { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 7px; text-align: center; line-height: 1.4; white-space: nowrap; }
@@ -64,12 +64,12 @@ export default function AR({ interessados = [] }) {
   .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 22mm; flex-shrink: 0; overflow: hidden; }
   .tent { padding: 1.5mm 2mm; border-right: 1px solid #000; }
   .tent .lbl2 { font-size: 8px; font-weight: bold; margin-bottom: 1mm; }
-  .tent .ln { font-size: 8px; margin: 2.5px 0; white-space: nowrap; }
+  .tent .ln { font-size: 8px; margin: 4.5px 0; white-space: nowrap; }
   .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; overflow: hidden; }
   .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 8px; font-weight: bold; flex-shrink: 0; }
   .motivo { padding: 1.5mm 2mm; flex: 1; overflow: hidden; }
   .motivo .lbl2 { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
-  .motivo-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .motivo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
   .mi { font-size: 8.5px; line-height: 1.6; }
   .rubrica { padding: 2mm; font-size: 7.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
@@ -113,11 +113,9 @@ export default function AR({ interessados = [] }) {
         <div class="motivo">
           <div class="lbl2">MOTIVO DE DEVOLUÇÃO</div>
           <div class="motivo-grid">
-            <div class="mi">1 Mudou-se</div>        <div class="mi">5 Recusado</div>
-            <div class="mi">2 End. insuficiente</div><div class="mi">6 Não procurado</div>
-            <div class="mi">3 Não existe o nº</div>  <div class="mi">7 Ausente</div>
-            <div class="mi">4 Desconhecido</div>     <div class="mi">8 Falecido</div>
-            <div class="mi">9 Outros</div>
+            <div class="mi">1 Mudou-se</div>         <div class="mi">4 Desconhecido</div>  <div class="mi">7 Ausente</div>
+            <div class="mi">2 End. insuficiente</div> <div class="mi">5 Recusado</div>       <div class="mi">8 Falecido</div>
+            <div class="mi">3 Não existe o nº</div>   <div class="mi">6 Não procurado</div>  <div class="mi">9 Outros</div>
           </div>
         </div>
       </div>
