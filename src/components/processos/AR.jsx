@@ -52,30 +52,30 @@ export default function AR({ interessados = [] }) {
   .hdr-ar { display: flex; align-items: center; padding: 0 4mm; font-size: 24px; font-weight: 900; border-left: 1px solid #000; border-right: 1px solid #000; }
   .hdr-post { padding: 1.5mm 2mm; font-size: 7.5px; font-weight: bold; min-width: 34mm; flex-shrink: 0; }
   /* Meio */
-  .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; flex: 1; min-height: 0; overflow: hidden; }
+  .meio { display: grid; grid-template-columns: 1fr 36mm; border-bottom: 1px solid #000; height: 45mm; flex-shrink: 0; overflow: hidden; }
   .dest-col { padding: 2mm 3mm; border-right: 1px solid #000; overflow: hidden; }
-  .lbl { font-size: 7.5px; font-weight: bold; margin-bottom: 1mm; }
-  .dados { font-size: 11px; line-height: 1.6; margin-bottom: 1.5mm; }
-  .barcode { border: 1px dashed #aaa; padding: 1mm; margin: 1.5mm 0; text-align: center; font-size: 7px; color: #666; }
+  .lbl { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
+  .dados { font-size: 12px; line-height: 1.6; margin-bottom: 1.5mm; }
+  .barcode { border: 1px dashed #aaa; padding: 1mm; margin: 1.5mm 0; text-align: center; font-size: 8px; color: #666; }
   .carimbo-col { display: flex; flex-direction: column; flex-shrink: 0; }
-  .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 2mm; font-size: 8px; font-weight: bold; }
-  .carimbo-bot { flex: 1; padding: 2mm; font-size: 8px; font-weight: bold; }
+  .carimbo-top { flex: 1; border-bottom: 1px solid #000; padding: 2mm; font-size: 9px; font-weight: bold; }
+  .carimbo-bot { flex: 1; padding: 2mm; font-size: 9px; font-weight: bold; }
   /* Baixo */
-  .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 22mm; flex-shrink: 0; overflow: hidden; }
-  .tent { padding: 1.5mm 2mm; border-right: 1px solid #000; }
-  .tent .lbl2 { font-size: 8px; font-weight: bold; margin-bottom: 1mm; }
-  .tent .ln { font-size: 8px; margin: 4.5px 0; white-space: nowrap; }
+  .baixo { display: grid; grid-template-columns: 48mm 1fr 28mm; border-bottom: 1px solid #000; height: 32mm; flex-shrink: 0; overflow: hidden; }
+  .tent { padding: 2mm 3mm; border-right: 1px solid #000; }
+  .tent .lbl2 { font-size: 9.5px; font-weight: bold; margin-bottom: 1.5mm; }
+  .tent .ln { font-size: 9.5px; margin: 5px 0; white-space: nowrap; }
   .centro-col { display: flex; flex-direction: column; border-right: 1px solid #000; overflow: hidden; }
-  .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 8px; font-weight: bold; flex-shrink: 0; }
+  .obs { padding: 1.5mm 2mm; border-bottom: 1px solid #000; font-size: 9px; font-weight: bold; flex-shrink: 0; }
   .motivo { padding: 1.5mm 2mm; flex: 1; overflow: hidden; }
-  .motivo .lbl2 { font-size: 8.5px; font-weight: bold; margin-bottom: 1mm; }
+  .motivo .lbl2 { font-size: 9.5px; font-weight: bold; margin-bottom: 1mm; }
   .motivo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
-  .mi { font-size: 8.5px; line-height: 1.6; }
-  .rubrica { padding: 2mm; font-size: 7.5px; font-weight: bold; }
+  .mi { font-size: 9.5px; line-height: 1.7; }
+  .rubrica { padding: 2mm; font-size: 8.5px; font-weight: bold; }
   /* Rodapé 2 linhas */
   .rodape { display: flex; flex-direction: column; flex-shrink: 0; }
   .rodape-row { display: grid; grid-template-columns: 1fr 36mm; border-top: 1px solid #000; height: 8mm; }
-  .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 8px; font-weight: bold; overflow: hidden; }
+  .rc { padding: 2mm 3mm; border-right: 1px solid #000; font-size: 9px; font-weight: bold; overflow: hidden; }
   .rc:last-child { border-right: none; }
 </style>
 </head><body>
