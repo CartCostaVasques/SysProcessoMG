@@ -404,9 +404,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
           new TableRow({ children: [cell('', TW)] }),
         ] : [
           new TableRow({ children: [cell('', TW)] }),
-          new TableRow({ children: [cell('', TW)] }),
-          new TableRow({ children: [cell('', TW)] }),
-          new TableRow({ children: [cell('', TW)] }),
         ],
       }),
       ...rodape,
