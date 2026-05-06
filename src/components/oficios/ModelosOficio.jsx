@@ -397,10 +397,15 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       p('Informações Judiciais para o Ato:', { bold: true, after: 120 }),
       new Table({
         width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
-        rows: [
+        rows: tipoLabel === 'casamento' ? [
           new TableRow({ children: [cell('Habilitação nº ________________________________  Validade: _____/_____/_________', TW)] }),
           new TableRow({ children: [cell('Proclamas publicados em: _____/_____/_________  e  _____/_____/_________', TW)] }),
           new TableRow({ children: [cell('Observações: _______________________________________________________________________', TW)] }),
+          new TableRow({ children: [cell('', TW)] }),
+        ] : [
+          new TableRow({ children: [cell('', TW)] }),
+          new TableRow({ children: [cell('', TW)] }),
+          new TableRow({ children: [cell('', TW)] }),
           new TableRow({ children: [cell('', TW)] }),
         ],
       }),
