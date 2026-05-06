@@ -349,34 +349,35 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const matricula  = dados.matricula || '';
     const dadosCompl = dados.dados_complementares || '';
 
+    const TW = 9638; // largura útil real: 11906 - 2*1134
     const tabelaAssento = new Table({
-      width: { size: 9071, type: WidthType.DXA }, columnWidths: [1505, 1505, 1505, 4556],
+      width: { size: TW, type: WidthType.DXA }, columnWidths: [1599, 1599, 1599, 4841],
       rows: [
-        new TableRow({ children: [cell('Livro', 1505, 'E8EFF6'), cell('Folhas', 1505, 'E8EFF6'), cell('Termo', 1505, 'E8EFF6'), cell('Data do Assento', 4511, 'E8EFF6')] }),
-        new TableRow({ children: [cell(livro, 1505), cell(folhas, 1505), cell(termo, 1505), cell(dtAssento, 4511)] }),
+        new TableRow({ children: [cell('Livro', 1599, 'E8EFF6'), cell('Folhas', 1599, 'E8EFF6'), cell('Termo', 1599, 'E8EFF6'), cell('Data do Assento', 4841, 'E8EFF6')] }),
+        new TableRow({ children: [cell(livro, 1599), cell(folhas, 1599), cell(termo, 1599), cell(dtAssento, 4841)] }),
       ]
     });
 
     const linhasPartes = [];
     if (tipoLabel === 'casamento') {
-      if (parte1)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Noiva (nome de solteira): ', bold: true }, { text: parte1 }], 9026)] }));
-      if (parte1Novo) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], 9026)] }));
-      if (parte2)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], 9026)] }));
+      if (parte1)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Noiva (nome de solteira): ', bold: true }, { text: parte1 }], TW)] }));
+      if (parte1Novo) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Novo nome após casamento: ', bold: true }, { text: parte1Novo }], TW)] }));
+      if (parte2)     linhasPartes.push(new TableRow({ children: [cell([{ text: 'Contraente: ', bold: true }, { text: parte2 }], TW)] }));
     } else {
-      if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: tipoLabel==='óbito'?'Falecido(a): ':'Parte 1: ', bold: true }, { text: parte1 }], 9026)] }));
-      if (parte2 && tipoLabel !== 'óbito') linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], 9026)] }));
+      if (parte1) linhasPartes.push(new TableRow({ children: [cell([{ text: tipoLabel==='óbito'?'Falecido(a): ':'Parte 1: ', bold: true }, { text: parte1 }], TW)] }));
+      if (parte2 && tipoLabel !== 'óbito') linhasPartes.push(new TableRow({ children: [cell([{ text: 'Parte 2: ', bold: true }, { text: parte2 }], TW)] }));
     }
-    if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], 9026)] }));
+    if (matricula) linhasPartes.push(new TableRow({ children: [cell([{ text: 'Matrícula: ', bold: true }, { text: matricula }], TW)] }));
 
     const tabelaPartes = linhasPartes.length > 0
-      ? new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasPartes })
+      ? new Table({ width: { size: TW, type: WidthType.DXA }, columnWidths: [TW], rows: linhasPartes })
       : null;
 
     const linhasAto = dadosCompl
-      ? dadosCompl.split('\n').filter(l => l.trim()).map(l => new TableRow({ children: [cell(l, 9026)] }))
-      : [new TableRow({ children: [cell('', 9026)] }), new TableRow({ children: [cell('', 9026)] })];
+      ? dadosCompl.split('\n').filter(l => l.trim()).map(l => new TableRow({ children: [cell(l, TW)] }))
+      : [new TableRow({ children: [cell('', TW)] }), new TableRow({ children: [cell('', TW)] })];
 
-    const tabelaAto = new Table({ width: { size: 9071, type: WidthType.DXA }, columnWidths: [9071], rows: linhasAto });
+    const tabelaAto = new Table({ width: { size: TW, type: WidthType.DXA }, columnWidths: [TW], rows: linhasAto });
 
     return [
       ...cabecalho,
@@ -392,6 +393,17 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ...(tabelaPartes ? [p('Dados das partes:', { bold: true, after: 120 }), tabelaPartes, pEmpty()] : []),
       p('Dados do assento pertinente à comunicação:', { bold: true, after: 120 }),
       tabelaAto,
+      pEmpty(),
+      p('Informações Judiciais para o Ato:', { bold: true, after: 120 }),
+      new Table({
+        width: { size: TW, type: WidthType.DXA }, columnWidths: [TW],
+        rows: [
+          new TableRow({ children: [cell('Habilitação nº ________________________________  Validade: _____/_____/_________', TW)] }),
+          new TableRow({ children: [cell('Proclamas publicados em: _____/_____/_________  e  _____/_____/_________', TW)] }),
+          new TableRow({ children: [cell('Observações: _______________________________________________________________________', TW)] }),
+          new TableRow({ children: [cell('', TW)] }),
+        ],
+      }),
       ...rodape,
     ];
   };
