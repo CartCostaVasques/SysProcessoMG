@@ -1005,7 +1005,7 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
   const cidade      = cartorio?.cidade   || '';
   const telefone    = cartorio?.telefone || '';
   const email       = cartorio?.email    || '';
-  const logo        = cartorio?.logo     || '';
+  const logo        = cartorio?.cabecalho_img_url || cartorio?.logo_url || cartorio?.logo || '';
   const dtConc      = proc.dt_conclusao
     ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
 
