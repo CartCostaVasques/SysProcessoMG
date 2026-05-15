@@ -283,6 +283,13 @@ export default function Comunicacoes() {
     carregar();
   };
 
+  const excluirOcorrencia = async (id) => {
+    if (!confirm('Excluir este registro de ocorrência pendente?')) return;
+    await supabase.from('comunicacoes_ocorrencias').delete().eq('id', id);
+    addToast('Ocorrência excluída.', 'success');
+    carregar();
+  };
+
   const excluirConfig = async (id) => {
     if (!confirm('Excluir esta comunicação e todo seu histórico?')) return;
     await supabase.from('comunicacoes_config').delete().eq('id', id);
@@ -398,6 +405,10 @@ export default function Comunicacoes() {
                       <button className="btn btn-primary btn-sm" style={{ fontSize: 12 }}
                         onClick={() => setModalRealizar({ ocorrencia: o, config: o.cfg })}>
                         ✓ Realizar
+                      </button>
+                      <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, color: 'var(--color-danger)' }}
+                        onClick={() => excluirOcorrencia(o.id)} title="Excluir ocorrência">
+                        🗑
                       </button>
                     </div>
                   </div>
