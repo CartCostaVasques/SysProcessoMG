@@ -130,6 +130,22 @@ function AbaFerias({ colaboradores, sb, addToast }) {
     return true;
   });
 
+  // IDs com sobreposição: férias programadas que conflitam com outro colaborador no mesmo período
+  const idsComSobreposicao = new Set();
+  const programadas = ferias.filter(f => f.ferias_ini && f.ferias_fim);
+  for (let i = 0; i < programadas.length; i++) {
+    for (let j = i + 1; j < programadas.length; j++) {
+      const a = programadas[i], b = programadas[j];
+      if (a.colaborador_id === b.colaborador_id) continue; // mesmo colaborador, não é conflito
+      const aIni = a.ferias_ini, aFim = a.ferias_fim;
+      const bIni = b.ferias_ini, bFim = b.ferias_fim;
+      if (aIni <= bFim && bIni <= aFim) {
+        idsComSobreposicao.add(a.id);
+        idsComSobreposicao.add(b.id);
+      }
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -147,7 +163,15 @@ function AbaFerias({ colaboradores, sb, addToast }) {
         </div>
       )}
 
-      {/* Header com filtros e ação */}
+      {/* Alerta sobreposição */}
+      {idsComSobreposicao.size > 0 && (
+        <div style={{ background: 'color-mix(in srgb, var(--color-danger) 10%, transparent)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-md)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ fontSize: 13, color: 'var(--color-danger)', fontWeight: 600 }}>
+            {idsComSobreposicao.size} período(s) com sobreposição de férias entre colaboradores — verifique os registros destacados abaixo.
+          </span>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <input className="form-input" placeholder="Buscar colaborador..." value={colFiltro}
           onChange={e => setColFiltro(e.target.value)} style={{ maxWidth: 220 }} />
@@ -184,9 +208,19 @@ function AbaFerias({ colaboradores, sb, addToast }) {
             ) : feriasFiltradas.map((f, i) => {
               const dias = diasAte(f.periodo_aquisitivo_fim);
               const st = STATUS_FERIAS[f.status] || STATUS_FERIAS.a_vencer;
+              const conflito = idsComSobreposicao.has(f.id);
               return (
-                <tr key={f.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{f.colaboradores?.nome_completo || '—'}</td>
+                <tr key={f.id} style={{
+                  background: conflito ? 'color-mix(in srgb, var(--color-danger) 8%, transparent)' : i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)',
+                  borderBottom: '1px solid var(--color-border)',
+                  borderLeft: conflito ? '3px solid var(--color-danger)' : '3px solid transparent',
+                }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {conflito && <span title="Sobreposição com outro colaborador" style={{ color: 'var(--color-danger)', fontSize: 14 }}>⚠</span>}
+                      {f.colaboradores?.nome_completo || '—'}
+                    </div>
+                  </td>
                   <td style={{ padding: '10px 12px', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{fmtData(f.periodo_aquisitivo_ini)} → {fmtData(f.periodo_aquisitivo_fim)}</td>
                   <td style={{ padding: '10px 12px' }}>
                     {dias !== null ? (
