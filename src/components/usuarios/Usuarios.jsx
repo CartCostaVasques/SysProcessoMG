@@ -8,6 +8,7 @@ const MODULOS = [
   { id: 'processos',   label: 'Processos' },
   { id: 'andamentos',  label: 'Andamentos' },
   { id: 'tarefas',     label: 'Tarefas' },
+  { id: 'comunicacoes', label: 'Comunicações' },
   { id: 'chat',        label: 'Chat' },
   { id: 'estoque',     label: 'Estoque' },
   { id: 'oficios',     label: 'Ofícios' },
@@ -53,10 +54,10 @@ function ModalUsuario({ usuario, onClose, onSave, setores, isNovo, iniciarEditan
   const handlePerfil = (p) => {
     set('perfil', p);
     if (p === 'Administrador') set('permissoes', TODOS_MODULOS);
-    else if (p === 'Tabelião')   set('permissoes', ['dashboard','processos','andamentos','tarefas','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes','senha_guiche']);
-    else if (p === 'Substituto') set('permissoes', ['dashboard','processos','andamentos','tarefas','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes','senha_guiche']);
-    else if (p === 'Escrevente') set('permissoes', ['dashboard','processos','andamentos','tarefas','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','servicos','setores','senha_guiche']);
-    else if (p === 'Auxiliar')   set('permissoes', ['dashboard','processos','tarefas','chat','estoque','recibos','senha_guiche']);
+    else if (p === 'Tabelião')   set('permissoes', ['dashboard','processos','andamentos','tarefas','comunicacoes','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes','senha_guiche']);
+    else if (p === 'Substituto') set('permissoes', ['dashboard','processos','andamentos','tarefas','comunicacoes','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','relconfig','panoramico','servicos','setores','configuracoes','senha_guiche']);
+    else if (p === 'Escrevente') set('permissoes', ['dashboard','processos','andamentos','tarefas','comunicacoes','chat','estoque','oficios','recibos','regcivil','interessados','relservicos','servicos','setores','senha_guiche']);
+    else if (p === 'Auxiliar')   set('permissoes', ['dashboard','processos','tarefas','comunicacoes','chat','estoque','recibos','senha_guiche']);
     else if (p === 'Consultor')  set('permissoes', ['dashboard','panoramico','relservicos']);
   };
 
