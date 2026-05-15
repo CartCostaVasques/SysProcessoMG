@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
+import { supabase } from '../../lib/supabase.js';
 
 const PERIODICIDADE = [
   { value: 'quinzenal',  label: 'Quinzenal'  },
@@ -192,10 +193,9 @@ function ModalRealizar({ ocorrencia, config, onClose, onSave }) {
 }
 
 export default function Comunicacoes() {
-  const { supabase, usuario, addToast } = useApp();
+  const { usuario, addToast, usuarios } = useApp();
   const [configs, setConfigs] = useState([]);
   const [ocorrencias, setOcorrencias] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalConfig, setModalConfig] = useState(null);  // null | 'novo' | objeto
   const [modalRealizar, setModalRealizar] = useState(null); // null | { ocorrencia, config }
@@ -203,17 +203,22 @@ export default function Comunicacoes() {
   const [filtroResp, setFiltroResp] = useState('');
 
   const carregar = useCallback(async () => {
-    setLoading(true);
-    const [{ data: cfgs }, { data: ocors }, { data: usrs }] = await Promise.all([
-      supabase.from('comunicacoes_config').select('*').order('titulo'),
-      supabase.from('comunicacoes_ocorrencias').select('*').order('dt_vencimento', { ascending: false }),
-      supabase.from('usuarios').select('id, nome_simples, nome_completo').order('nome_simples'),
-    ]);
-    setConfigs(cfgs || []);
-    setOcorrencias(ocors || []);
-    setUsuarios(usrs || []);
-    setLoading(false);
-  }, [supabase]);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      setLoading(true);
+      const [{ data: cfgs }, { data: ocors }] = await Promise.all([
+        supabase.from('comunicacoes_config').select('*').order('titulo'),
+        supabase.from('comunicacoes_ocorrencias').select('*').order('dt_vencimento', { ascending: false }),
+      ]);
+      setConfigs(cfgs || []);
+      setOcorrencias(ocors || []);
+    } catch(e) {
+      console.warn('Comunicacoes carregar:', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Gerar ocorrências pendentes automaticamente
   const gerarOcorrencias = useCallback(async (cfgs, ocors) => {
@@ -243,7 +248,7 @@ export default function Comunicacoes() {
       await supabase.from('comunicacoes_ocorrencias').insert(inserts);
       await carregar();
     }
-  }, [supabase, carregar]);
+  }, [carregar]);
 
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => {
