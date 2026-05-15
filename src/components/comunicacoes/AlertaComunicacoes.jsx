@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { supabase } from '../../lib/supabase.js';
 
 function hoje() {
   const d = new Date();
@@ -7,40 +7,45 @@ function hoje() {
 }
 
 export default function AlertaComunicacoes({ onNavigate }) {
-  const { supabase } = useApp();
   const [alertas, setAlertas] = useState([]);
   const [fechado, setFechado] = useState(false);
 
   useEffect(() => {
     async function carregar() {
-      const { data: ocors } = await supabase
-        .from('comunicacoes_ocorrencias')
-        .select('*, comunicacoes_config(*)')
-        .in('status', ['pendente', 'atrasado']);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
 
-      if (!ocors?.length) return;
+        const { data: ocors } = await supabase
+          .from('comunicacoes_ocorrencias')
+          .select('*, comunicacoes_config(*)')
+          .in('status', ['pendente', 'atrasado']);
 
-      const h = hoje();
-      const relevantes = ocors
-        .map(o => {
-          const cfg = o.comunicacoes_config;
-          if (!cfg) return null;
-          const dtV = new Date(o.dt_vencimento + 'T00:00:00');
-          const diffDias = Math.ceil((dtV - h) / 86400000);
-          const diasAlerta = cfg.dias_alerta || 2;
-          // Mostrar se atrasado ou dentro do prazo de alerta
-          if (o.status === 'atrasado' || diffDias <= diasAlerta) {
-            return { ...o, cfg, diffDias };
-          }
-          return null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.diffDias - b.diffDias);
+        if (!ocors?.length) return;
 
-      setAlertas(relevantes);
+        const h = hoje();
+        const relevantes = ocors
+          .map(o => {
+            const cfg = o.comunicacoes_config;
+            if (!cfg) return null;
+            const dtV = new Date(o.dt_vencimento + 'T00:00:00');
+            const diffDias = Math.ceil((dtV - h) / 86400000);
+            const diasAlerta = cfg.dias_alerta || 2;
+            if (o.status === 'atrasado' || diffDias <= diasAlerta) {
+              return { ...o, cfg, diffDias };
+            }
+            return null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.diffDias - b.diffDias);
+
+        setAlertas(relevantes);
+      } catch (e) {
+        console.warn('AlertaComunicacoes:', e.message);
+      }
     }
     carregar();
-  }, [supabase]);
+  }, []);
 
   if (fechado || alertas.length === 0) return null;
 
