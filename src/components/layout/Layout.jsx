@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { id: 'importacaocsv',  label: 'Importação CSV',     icon: '📄', section: 'Configurações' },
   { id: 'interessados',   label: 'Interessados',     icon: '👤', section: 'Operacional' },
   { id: 'tarefas',        label: 'Tarefas',          icon: '✓',  section: 'Operacional' },
+  { id: 'comunicacoes',   label: 'Comunicações',     icon: '📡', section: 'Operacional' },
   { id: 'chat',           label: 'Chat',             icon: '💬', section: 'Operacional' },
   { id: 'oficios',        label: 'Ofícios',          icon: '✉',  section: 'Operacional' },
   { id: 'recibos',        label: 'Recibos',          icon: '🧾', section: 'Operacional' },
@@ -91,7 +92,7 @@ export function Header({ page, setPage }) {
 
   const PAGE_LABELS = {
     dashboard: 'Dashboard', processos: 'Processos', andamentos: 'Processo Detalhe', interessados: 'Interessados',
-    tarefas: 'Tarefas', oficios: 'Ofícios', recibos: 'Recibos', panoramico: 'Panorâmico', importacaocsv: 'Importação CSV', servicos: 'Tipo de Serviços',
+    tarefas: 'Tarefas', comunicacoes: 'Comunicações', oficios: 'Ofícios', recibos: 'Recibos', panoramico: 'Panorâmico', importacaocsv: 'Importação CSV', servicos: 'Tipo de Serviços',
     setores: 'Setores', relservicos: 'Serviços por Setor', relconfig: 'Relatórios E-mail', usuarios: 'Usuários', configuracoes: 'Configurações',
     logs: 'Logs de Acesso',
   };
