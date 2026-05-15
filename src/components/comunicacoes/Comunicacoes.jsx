@@ -4,10 +4,11 @@ import { useApp } from '../../context/AppContext.jsx';
 import { supabase } from '../../lib/supabase.js';
 
 const PERIODICIDADE = [
-  { value: 'quinzenal',  label: 'Quinzenal'  },
-  { value: 'mensal',     label: 'Mensal'     },
-  { value: 'semestral',  label: 'Semestral'  },
-  { value: 'anual',      label: 'Anual'      },
+  { value: 'quinzenal',   label: 'Quinzenal'   },
+  { value: 'mensal',      label: 'Mensal'      },
+  { value: 'trimestral',  label: 'Trimestral'  },
+  { value: 'semestral',   label: 'Semestral'   },
+  { value: 'anual',       label: 'Anual'       },
 ];
 
 const STATUS_CLS = {
@@ -60,6 +61,15 @@ function calcProximoVencimento(config) {
     let d = new Date(h.getFullYear(), h.getMonth(), dia);
     if (h > d) d = new Date(h.getFullYear(), h.getMonth() + 1, dia);
     return d;
+  }
+
+  if (config.periodicidade === 'trimestral') {
+    for (let i = 0; i < 5; i++) {
+      const m = (Math.floor(h.getMonth() / 3) * 3 + i * 3) % 12;
+      const y = h.getFullYear() + Math.floor((Math.floor(h.getMonth() / 3) * 3 + i * 3) / 12);
+      const d = new Date(y, m, dia);
+      if (d >= h) return d;
+    }
   }
 
   if (config.periodicidade === 'semestral') {
