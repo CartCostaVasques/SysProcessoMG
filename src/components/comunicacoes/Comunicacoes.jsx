@@ -458,7 +458,11 @@ export default function Comunicacoes() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-secondary btn-sm" style={{ fontSize: 12 }} onClick={() => setModalConfig(c)}>✏ Editar</button>
+                    <button className="btn btn-secondary btn-sm" style={{ fontSize: 12 }} onClick={() => setModalConfig({
+                      id: c.id, titulo: c.titulo, descricao: c.descricao || '',
+                      periodicidade: c.periodicidade, dia_vencimento: c.dia_vencimento,
+                      responsavel_id: c.responsavel_id || '', dias_alerta: c.dias_alerta, ativo: c.ativo,
+                    })}>✏ Editar</button>
                     <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, color: 'var(--color-danger)' }} onClick={() => excluirConfig(c.id)}>🗑</button>
                   </div>
                 </div>
