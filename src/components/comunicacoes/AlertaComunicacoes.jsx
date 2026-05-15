@@ -62,7 +62,7 @@ export default function AlertaComunicacoes({ onNavigate }) {
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 1200,
       width: 340, maxWidth: 'calc(100vw - 48px)',
-      background: 'var(--color-surface)',
+      background: 'var(--color-surface, #1e293b)',
       border: '1px solid var(--color-warning)',
       borderRadius: 'var(--radius-lg)',
       boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
