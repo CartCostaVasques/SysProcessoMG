@@ -11,9 +11,9 @@ const PERIODICIDADE = [
 ];
 
 const STATUS_CLS = {
-  pendente:  { label: 'Pendente',  bg: '#fef3c7', color: '#b45309', border: '#fbbf24' },
-  realizado: { label: 'Realizado', bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
-  atrasado:  { label: 'Atrasado',  bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' },
+  pendente:  { label: 'Pendente',  bg: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',  color: 'var(--color-warning)',  border: 'var(--color-warning)'  },
+  realizado: { label: 'Realizado', bg: 'color-mix(in srgb, var(--color-success) 15%, transparent)',  color: 'var(--color-success)',  border: 'var(--color-success)'  },
+  atrasado:  { label: 'Atrasado',  bg: 'color-mix(in srgb, var(--color-danger)  15%, transparent)',  color: 'var(--color-danger)',   border: 'var(--color-danger)'   },
 };
 
 const EMPTY_CONFIG = { titulo: '', descricao: '', periodicidade: 'mensal', dia_vencimento: 1, responsavel_id: '', dias_alerta: 2, ativo: true };
@@ -367,8 +367,8 @@ export default function Comunicacoes() {
                 const urgente = !atrasado && o.diffDias <= (o.cfg?.dias_alerta || 2);
                 return (
                   <div key={o.id} style={{
-                    background: atrasado ? '#fff1f1' : urgente ? '#fefce8' : 'var(--color-surface)',
-                    border: `1px solid ${atrasado ? '#fca5a5' : urgente ? '#fbbf24' : 'var(--color-border)'}`,
+                    background: 'var(--color-surface)',
+                    border: `2px solid ${atrasado ? 'var(--color-danger)' : urgente ? 'var(--color-warning)' : 'var(--color-border)'}`,
                     borderRadius: 'var(--radius-md)', padding: '12px 16px',
                     display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
                   }}>
