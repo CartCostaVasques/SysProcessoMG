@@ -21,6 +21,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    storageKey: 'sysprocesso-auth-token',
   },
 });
 
