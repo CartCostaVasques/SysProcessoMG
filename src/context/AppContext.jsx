@@ -1,10 +1,10 @@
 // SysProcesso — AppContext com Supabase + debug
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase.js';
 
 const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // Client separado para signUp de novos usuários (não interfere na sessão do admin)
 const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
