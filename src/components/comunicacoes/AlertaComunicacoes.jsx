@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase.js';
+import { useApp } from '../../context/AppContext.jsx';
 
 function hoje() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+function fmtData(str) {
+  if (!str) return '—';
+  const [y, m, d] = str.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 export default function AlertaComunicacoes({ onNavigate }) {
+  const { usuario } = useApp();
   const [alertas, setAlertas] = useState([]);
   const [fechado, setFechado] = useState(false);
 
@@ -14,7 +22,7 @@ export default function AlertaComunicacoes({ onNavigate }) {
     async function carregar() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session || !usuario?.id) return;
 
         const { data: ocors } = await supabase
           .from('comunicacoes_ocorrencias')
@@ -28,6 +36,7 @@ export default function AlertaComunicacoes({ onNavigate }) {
           .map(o => {
             const cfg = o.comunicacoes_config;
             if (!cfg) return null;
+            if (cfg.responsavel_id && cfg.responsavel_id !== usuario.id) return null;
             const dtV = new Date(o.dt_vencimento + 'T00:00:00');
             const diffDias = Math.ceil((dtV - h) / 86400000);
             const diasAlerta = cfg.dias_alerta || 2;
@@ -45,50 +54,78 @@ export default function AlertaComunicacoes({ onNavigate }) {
       }
     }
     carregar();
-  }, []);
+  }, [usuario?.id]);
 
   if (fechado || alertas.length === 0) return null;
 
-  const atrasadas = alertas.filter(a => a.status === 'atrasado' || a.diffDias < 0);
-  const proximas  = alertas.filter(a => a.status !== 'atrasado' && a.diffDias >= 0);
-
   return (
     <div style={{
-      background: '#fef3c7', border: '1px solid #fbbf24',
-      borderRadius: 'var(--radius-md)', padding: '10px 16px',
-      display: 'flex', alignItems: 'flex-start', gap: 12,
-      margin: '0 0 12px 0',
+      position: 'fixed', bottom: 24, right: 24, zIndex: 1200,
+      width: 340, maxWidth: 'calc(100vw - 48px)',
+      background: 'var(--color-surface)',
+      border: '1px solid var(--color-warning)',
+      borderRadius: 'var(--radius-lg)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+      overflow: 'hidden',
     }}>
-      <span style={{ fontSize: 18, lineHeight: 1.4 }}>📡</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700, color: '#b45309', fontSize: 13, marginBottom: 4 }}>
-          Comunicações que precisam de atenção ({alertas.length})
+      <div style={{
+        background: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
+        borderBottom: '1px solid var(--color-warning)',
+        padding: '10px 14px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>📡</span>
+          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-warning)' }}>
+            Comunicações Pendentes ({alertas.length})
+          </span>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {atrasadas.map(a => (
-            <span key={a.id} style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
-              ⚠ {a.cfg.titulo} — Atrasado {Math.abs(a.diffDias)}d
-            </span>
-          ))}
-          {proximas.map(a => (
-            <span key={a.id} style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#fff', color: '#92400e', border: '1px solid #fbbf24' }}>
-              {a.cfg.titulo} — {a.diffDias === 0 ? 'Hoje!' : `${a.diffDias}d`}
-            </span>
-          ))}
-        </div>
+        <button onClick={() => setFechado(true)} style={{
+          background: 'transparent', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-muted)', fontSize: 16, lineHeight: 1, padding: 2,
+        }}>✕</button>
       </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-        {onNavigate && (
+
+      <div style={{ maxHeight: 280, overflowY: 'auto', padding: '8px 0' }}>
+        {alertas.map(a => {
+          const atrasado = a.status === 'atrasado' || a.diffDias < 0;
+          return (
+            <div key={a.id} style={{
+              padding: '8px 14px',
+              borderBottom: '1px solid var(--color-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {a.cfg.titulo}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                  Vence: {fmtData(a.dt_vencimento)}
+                </div>
+              </div>
+              <span style={{
+                flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: atrasado
+                  ? 'color-mix(in srgb, var(--color-danger) 15%, transparent)'
+                  : 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
+                color: atrasado ? 'var(--color-danger)' : 'var(--color-warning)',
+                border: `1px solid ${atrasado ? 'var(--color-danger)' : 'var(--color-warning)'}`,
+              }}>
+                {atrasado ? `Atrasado ${Math.abs(a.diffDias)}d` : a.diffDias === 0 ? 'Hoje!' : `${a.diffDias}d`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {onNavigate && (
+        <div style={{ padding: '8px 14px', borderTop: '1px solid var(--color-border)' }}>
           <button onClick={() => { onNavigate('comunicacoes'); setFechado(true); }}
-            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 'var(--radius-md)', border: '1px solid #fbbf24', background: '#fff', color: '#b45309', cursor: 'pointer', fontWeight: 600 }}>
-            Ver
+            className="btn btn-primary" style={{ width: '100%', fontSize: 12 }}>
+            Ver Comunicações
           </button>
-        )}
-        <button onClick={() => setFechado(true)}
-          style={{ fontSize: 14, lineHeight: 1, background: 'transparent', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700 }}>
-          ✕
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
