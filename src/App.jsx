@@ -32,6 +32,8 @@ import Processos from './components/processos/Processos.jsx';
 import ProcessoDetalhePage from './components/processos/ProcessoDetalhePage.jsx';
 import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
+import Comunicacoes      from './components/comunicacoes/Comunicacoes.jsx';
+import AlertaComunicacoes from './components/comunicacoes/AlertaComunicacoes.jsx';
 import Oficios  from './components/oficios/Oficios.jsx';
 import Recibos     from './components/recibos/Recibos.jsx';
 import Estoque        from './components/estoque/Estoque.jsx';
@@ -74,6 +76,7 @@ function AppShell() {
       case 'andamentos':    return <ProcessoDetalhePage />;
       case 'interessados':   return <Interessados />;
       case 'tarefas':       return <Tarefas />;
+      case 'comunicacoes':  return <Comunicacoes />;
       case 'oficios':       return <Oficios />;
       case 'recibos':       return <Recibos />;
       case 'estoque':       return <Estoque />;
@@ -107,6 +110,7 @@ function AppShell() {
       </div>
       <ToastContainer />
       <AlertaCasamento />
+      <AlertaComunicacoes onNavigate={setPage} />
     </div>
   );
 }
