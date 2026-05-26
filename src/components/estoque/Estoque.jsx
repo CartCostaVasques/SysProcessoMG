@@ -224,6 +224,7 @@ export default function Estoque() {
     await sb.from('estoque_movimentos').insert({
       item_id: item.id, tipo: 'entrada', quantidade: pedido.quantidade,
       responsavel_id: usuario.id, observacao: `Recebimento de pedido #${pedido.id.slice(0,8)}`,
+      pedido_id: pedido.id,
     });
     await sb.from('estoque_itens').update({ quantidade_atual: novaQtd }).eq('id', item.id);
     addToast(`Recebimento confirmado! +${pedido.quantidade} ${item.unidade} no estoque`, 'success');
@@ -241,14 +242,35 @@ export default function Estoque() {
   const excluirMovimento = async (mov) => {
     const item = itens.find(i => i.id === mov.item_id);
     if (!item) return;
-    if (!confirm(`Excluir este movimento? A quantidade de ${mov.quantidade} ${item.unidade} será ${mov.tipo === 'saida' ? 'reposta' : 'descontada'} do estoque.`)) return;
-    // Repõe: saída excluída → soma de volta; entrada excluída → subtrai
+
+    // Verificar se tem pedido vinculado — pelo campo pedido_id ou pela observação
+    let pedidoId = mov.pedido_id || null;
+    if (!pedidoId && mov.observacao) {
+      const match = mov.observacao.match(/pedido #([a-f0-9]+)/i);
+      if (match) {
+        const prefixo = match[1];
+        const { data: pedidos } = await sb.from('estoque_pedidos').select('id').ilike('id', `${prefixo}%`).limit(1);
+        if (pedidos?.length) pedidoId = pedidos[0].id;
+      }
+    }
+
+    const temPedido = !!pedidoId;
+    const msg = `Excluir este movimento?\n\nA quantidade de ${mov.quantidade} ${item.unidade} será ${mov.tipo === 'saida' ? 'reposta' : 'descontada'} do estoque.${temPedido ? '\n\nO pedido vinculado voltará para "Aguardando".' : ''}`;
+    if (!confirm(msg)) return;
+
     const novaQtd = mov.tipo === 'saida'
       ? item.quantidade_atual + mov.quantidade
       : item.quantidade_atual - mov.quantidade;
+
     await sb.from('estoque_movimentos').delete().eq('id', mov.id);
     await sb.from('estoque_itens').update({ quantidade_atual: Math.max(0, novaQtd) }).eq('id', item.id);
-    addToast('Movimento excluído e estoque ajustado', 'success');
+
+    // Reverter pedido para aguardando
+    if (pedidoId) {
+      await sb.from('estoque_pedidos').update({ status: 'aguardando' }).eq('id', pedidoId);
+    }
+
+    addToast('Movimento excluído e estoque ajustado' + (temPedido ? ' — pedido reaberto' : ''), 'success');
     carregar();
   };
 
