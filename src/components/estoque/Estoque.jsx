@@ -570,7 +570,17 @@ export default function Estoque() {
                             <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{p.observacao || '—'}</td>
                             <td style={{ textAlign: 'center' }}>
                               {p.status === 'recebido'
-                                ? <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✓ Recebido</span>
+                                ? <div style={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center' }}>
+                                    <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✓ Recebido</span>
+                                    <button className="btn btn-ghost btn-sm" title="Reabrir pedido (estornar recebimento)"
+                                      style={{ fontSize: 11, color: 'var(--color-warning)', padding: '2px 6px' }}
+                                      onClick={async () => {
+                                        if (!confirm(`Reabrir pedido de "${itens.find(i=>i.id===p.item_id)?.nome}"?\nO status voltará para "Aguardando" (o estoque NÃO será alterado — use o histórico para excluir o movimento se necessário).`)) return;
+                                        await sb.from('estoque_pedidos').update({ status: 'aguardando' }).eq('id', p.id);
+                                        addToast('Pedido reaberto — verifique o estoque no histórico de movimentos.', 'warning');
+                                        carregar();
+                                      }}>↩ Reabrir</button>
+                                  </div>
                                 : <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#dc2626' }}>Cancelado</span>}
                             </td>
                           </tr>
