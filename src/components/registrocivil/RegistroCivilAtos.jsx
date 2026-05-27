@@ -800,7 +800,7 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
                 <div style={{ fontSize: 32, marginBottom: 8 }}>💍</div>
                 Nenhum casamento encontrado.
               </td></tr>
-            ) : lista.map((c, i) => {
+            ) : filtroStatus !== 'todos' ? lista.map((c, i) => {
               const st = ST[c.status] || ST.agendado;
               const dias = diasAte(c.dt_celebracao);
               const estaMarcado = marcados.includes(c.id);
@@ -855,7 +855,91 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
                   </td>
                 </tr>
               );
-            })}
+            }) : (() => {
+              // Modo "Todos" — agrupa por status com cabeçalho separador
+              const grupos = [
+                { status: 'agendado',  label: '📅 Agendados',  bg: 'color-mix(in srgb, #3b82f6 10%, transparent)', border: '#3b82f6', cor: '#1d4ed8' },
+                { status: 'realizado', label: '✅ Realizados', bg: 'color-mix(in srgb, #22c55e 10%, transparent)', border: '#22c55e', cor: '#15803d' },
+                { status: 'cancelado', label: '⊘ Cancelados',  bg: 'color-mix(in srgb, #ef4444 10%, transparent)', border: '#ef4444', cor: '#dc2626' },
+              ];
+              return grupos.flatMap(({ status, label, bg, border, cor }) => {
+                const grupo = lista.filter(c => c.status === status);
+                if (grupo.length === 0) return [];
+                return [
+                  <tr key={`header-${status}`}>
+                    <td colSpan={8} style={{ padding: '8px 14px', background: bg, borderTop: `2px solid ${border}`, borderBottom: `1px solid ${border}` }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: cor }}>{label}</span>
+                      <span style={{ marginLeft: 8, fontSize: 11, color: cor, fontWeight: 600, background: 'rgba(255,255,255,0.4)', padding: '1px 8px', borderRadius: 10 }}>{grupo.length}</span>
+                    </td>
+                  </tr>,
+                  ...grupo.map((c, i) => {
+                    const st = ST[c.status] || ST.agendado;
+                    const dias = diasAte(c.dt_celebracao);
+                    const estaMarcado = marcados.includes(c.id);
+                    return (
+                      <tr key={c.id} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--color-surface-2)', borderBottom: '1px solid var(--color-border)' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', width: 40 }}>
+                          {c.status === 'agendado' ? (
+                            <span
+                              onClick={() => toggleMarcado(c.id)}
+                              title={c.comunicado && !marcados.includes(c.id) ? 'Já comunicado — clique para re-incluir no ofício' : marcados.includes(c.id) ? 'Desmarcar' : 'Marcar para ofício'}
+                              style={{
+                                display: 'inline-block', width: 20, height: 20, borderRadius: 4,
+                                border: `2px solid ${estaMarcado ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                                background: estaMarcado ? 'var(--color-accent)' : 'transparent',
+                                cursor: 'pointer', position: 'relative',
+                              }}>
+                              {estaMarcado && <span style={{ position: 'absolute', top: -2, left: 2, color: '#fff', fontSize: 14, fontWeight: 700 }}>✓</span>}
+                              {c.comunicado && !estaMarcado && <span style={{ position: 'absolute', top: -1, left: 3, color: 'var(--color-text-muted)', fontSize: 11 }}>✓</span>}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{c.noivo1}</div>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>& {c.noivo2}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', fontSize: 13 }}>
+                          {c.dt_celebracao ? (
+                            <div>
+                              <div>{new Date(c.dt_celebracao).toLocaleDateString('pt-BR', { timeZone: 'America/Cuiaba' })}, {new Date(c.dt_celebracao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Cuiaba' })}</div>
+                              {dias !== null && c.status === 'agendado' && (
+                                <div style={{ fontSize: 11, marginTop: 2, color: dias <= 7 ? 'var(--color-warning)' : 'var(--color-text-muted)', fontWeight: dias <= 7 ? 700 : 400 }}>
+                                  {dias <= 7 && '⚡ '}{dias === 0 ? 'Hoje' : dias < 0 ? `${Math.abs(dias)}d atrás` : `${dias} dias`}
+                                </div>
+                              )}
+                            </div>
+                          ) : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', fontSize: 12 }}>
+                          <div>{c.tipo === 'civil_religioso' ? 'Civil e Religioso' : 'Civil'}</div>
+                          <div style={{ color: 'var(--color-text-muted)', marginTop: 2 }}>
+                            {c.local_tipo === 'externo' ? <><span style={{ color: '#ef4444' }}>📍</span> Externo</> : <>🏢 Serventia</>}
+                          </div>
+                          {c.local_tipo === 'externo' && c.local_endereco && <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 1 }}>{c.local_endereco}</div>}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          {c.processos ? <span style={{ fontFamily: 'var(--font-mono)' }}>{c.processos.numero_interno}</span> : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                          {c.usuarios?.nome_simples || '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: st.bg, color: st.cor }}>{st.label}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn-icon btn-sm" title="Editar" onClick={() => abrirEditar(c)}>✎</button>
+                            {c.status === 'agendado' && <button className="btn btn-secondary btn-sm" onClick={() => concluir(c.id)}>✓ Concluir</button>}
+                            {c.status === 'agendado' && <button className="btn-icon btn-sm" title="Cancelar" style={{ color: 'var(--color-warning)' }} onClick={() => cancelar(c.id)}>⊘</button>}
+                            <button className="btn-icon btn-sm" title="Excluir" style={{ color: 'var(--color-danger)' }} onClick={() => excluir(c.id)}>✕</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }),
+                ];
+              });
+            })()}
           </tbody>
         </table>
       </div>
