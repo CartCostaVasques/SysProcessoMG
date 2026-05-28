@@ -34,6 +34,7 @@ import Interessados from './components/processos/Interessados.jsx';
 import Tarefas from './components/tarefas/Tarefas.jsx';
 import Comunicacoes      from './components/comunicacoes/Comunicacoes.jsx';
 import AlertaComunicacoes from './components/comunicacoes/AlertaComunicacoes.jsx';
+import AlertaAniversario  from './components/colaboradores/AlertaAniversario.jsx';
 import Oficios  from './components/oficios/Oficios.jsx';
 import Recibos     from './components/recibos/Recibos.jsx';
 import Estoque        from './components/estoque/Estoque.jsx';
@@ -111,6 +112,7 @@ function AppShell() {
       <ToastContainer />
       <AlertaCasamento />
       <AlertaComunicacoes onNavigate={setPage} />
+      <AlertaAniversario />
     </div>
   );
 }
