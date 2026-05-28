@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext.jsx';
+import Portal from '../layout/Portal.jsx';
 
 const fmtData = (iso) => {
   if (!iso) return '—';
