@@ -330,6 +330,7 @@ export default function Colaboradores() {
   const [busca, setBusca] = useState('');
   const [filtroAtivo, setFiltroAtivo] = useState('ativos');
   const [modal, setModal] = useState(false);
+  const [verColab, setVerColab] = useState(null);
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
   const [fotoFile, setFotoFile] = useState(null);
@@ -493,6 +494,7 @@ export default function Colaboradores() {
                     {c.dt_demissao && <div>📅 Demissão: {fmtData(c.dt_demissao)}</div>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+                    <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setVerColab(c)}>👁 Ver</button>
                     <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => abrirModal(c)}>✎ Editar</button>
                     <button className="btn-icon btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => excluir(c.id)}>🗑</button>
                   </div>
@@ -508,7 +510,62 @@ export default function Colaboradores() {
         <AbaFerias colaboradores={colaboradores} sb={sb} addToast={addToast} />
       )}
 
-      {/* ── Modal Colaborador ── */}
+      {/* Modal Visualizar */}
+      {verColab && (
+        <Portal>
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setVerColab(null)}>
+            <div className="modal" style={{ maxWidth: 480 }}>
+              <div className="modal-header">
+                <span className="modal-title">👤 Dados do Colaborador</span>
+                <button className="btn-icon" onClick={() => setVerColab(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+
+                {/* Foto + nome */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--color-surface-2)', border: '2px solid var(--color-border)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {verColab.foto_url
+                      ? <img src={verColab.foto_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: 32 }}>👤</span>}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{verColab.nome_completo}</div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 2 }}>{verColab.funcao || '—'}</div>
+                    <span style={{ fontSize: 11, padding: '2px 10px', borderRadius: 10, fontWeight: 700, marginTop: 4, display: 'inline-block', background: verColab.ativo ? 'color-mix(in srgb, var(--color-success) 15%, transparent)' : 'color-mix(in srgb, var(--color-danger) 15%, transparent)', color: verColab.ativo ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                      {verColab.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Campos */}
+                {[
+                  ['CPF',            verColab.cpf],
+                  ['RG',             verColab.rg],
+                  ['Email',          verColab.email],
+                  ['Celular',        verColab.celular],
+                  ['CLT (Nº série)', verColab.clt_serie],
+                  ['PIS',            verColab.pis],
+                  ['Endereço',       verColab.endereco],
+                  ['Cidade',         verColab.cidade],
+                  ['Admissão',       verColab.dt_admissao  ? fmtData(verColab.dt_admissao)  : null],
+                  ['Demissão',       verColab.dt_demissao  ? fmtData(verColab.dt_demissao)  : null],
+                  ['Aniversário',    verColab.dt_aniversario ? fmtData(verColab.dt_aniversario) : null],
+                  ['Sexo',           verColab.sexo === 'F' ? 'Feminino' : verColab.sexo === 'M' ? 'Masculino' : null],
+                ].filter(([, v]) => v).map(([label, valor]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 13 }}>
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>{label}</span>
+                    <span style={{ color: 'var(--color-text)', textAlign: 'right', maxWidth: '60%' }}>{valor}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => { setVerColab(null); abrirModal(verColab); }}>✎ Editar</button>
+                <button className="btn btn-primary" onClick={() => setVerColab(null)}>Fechar</button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )} */}
       {modal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal" style={{ maxWidth: 640 }}>
