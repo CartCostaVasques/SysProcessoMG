@@ -381,6 +381,8 @@ export default function Colaboradores() {
         funcao: form.funcao || null,
         dt_admissao: form.dt_admissao || null,
         dt_demissao: form.dt_demissao || null,
+        dt_aniversario: form.dt_aniversario || null,
+        sexo: form.sexo || null,
         clt_serie: form.clt_serie || null,
         pis: form.pis || null,
         email: form.email || null,
@@ -574,6 +576,18 @@ export default function Colaboradores() {
                     <label className="form-label">Data de Demissão</label>
                     <input type="date" className="form-input" value={form.dt_demissao || ''} onChange={e => set('dt_demissao', e.target.value)} />
                     <div className="form-hint">Preencher torna o colaborador inativo</div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">🎂 Data de Aniversário</label>
+                    <input type="date" className="form-input" value={form.dt_aniversario || ''} onChange={e => set('dt_aniversario', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Sexo</label>
+                    <select className="form-input" value={form.sexo || ''} onChange={e => set('sexo', e.target.value)}>
+                      <option value="">— Selecione —</option>
+                      <option value="F">Feminino</option>
+                      <option value="M">Masculino</option>
+                    </select>
                   </div>
                   <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="form-label">Endereço</label>
