@@ -464,8 +464,8 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
           spacing: { after: 320, line: 276 },
           indent: { left: Math.round(9638 * 0.40) },
           children: [
-            new TextRun({ text: 'REF.: ', font: FONTE, size: TAM, bold: true }),
-            new TextRun({ text: refCircular, font: FONTE, size: TAM, bold: true }),
+            new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
+            new TextRun({ text: refCircular, font: 'Arial', size: 24, bold: true }),
           ],
         }),
       ] : []),
