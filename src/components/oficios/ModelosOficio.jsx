@@ -429,13 +429,14 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     // Monta referência do ofício circular quando for Corregedoria
     let refCircular = null;
     if (isCorreg) {
-      const nro = dados.nro_circular  || '___/____';
+      const nro  = dados.nro_circular  || '___/____';
       const dtRaw = dados.dt_circular || '';
-      const dt  = dtRaw ? dtRaw.split('-').reverse().join('/') : '__/__/____';
-      const cia = dados.cia_n         || '_______________________';
-      const ass = dados.assinante_circular || '___________________________';
-      const ord = dados.ordem_de      || '___________________________';
-      refCircular = `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem de ${ord}.`;
+      const dt   = dtRaw ? dtRaw.split('-').reverse().join('/') : '__/__/____';
+      const cia  = dados.cia_n         || '_______________________';
+      const ass  = dados.assinante_circular || '___________________________';
+      const cargo = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '___') : (dados.cargo_ordem || '___________________________');
+      const nomeCargo = juiz || '___________________________';
+      refCircular = `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem ${cargo === 'Juiz(a) Auxiliar' ? 'da' : 'do'} ${cargo} ${nomeCargo}.`;
     }
 
     // Tabela de partes (mesma lógica do RC)
@@ -465,7 +466,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
           indent: { left: Math.round(9638 * 0.40) },
           children: [
             new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
-            new TextRun({ text: refCircular, font: 'Arial', size: 24, bold: true }),
+            new TextRun({ text: refCircular, font: 'Arial', size: 24 }),
           ],
         }),
       ] : []),
@@ -503,6 +504,17 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
       })),
       ...rodapeForum,
+      // Destinatário no rodapé — apenas Corregedoria
+      ...(isCorreg && juiz ? (() => {
+        const cargo = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
+        return [
+          new Paragraph({ children: [new TextRun({ text: '', size: 24 })], spacing: { after: 0 } }),
+          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: 'Ao', font: 'Arial', size: 24 })] }),
+          ...(cargo ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: cargo, font: 'Arial', size: 24 })] })] : []),
+          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: juiz.toUpperCase(), font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })] }),
+          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: vara, font: 'Arial', size: 24 })] }),
+        ];
+      })() : []),
     ];
   };
 
@@ -906,10 +918,26 @@ export default function ModelosOficio() {
                       <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="cartorio_rc" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'cartorio_rc'})} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Meritíssimo(a) Juiz(a)</label>
-                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
+                      <label className="form-label">{dados.situacao === 'corregedoria' ? 'Nome (Assina e dá a Ordem)' : 'Meritíssimo(a) Juiz(a)'}</label>
+                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                   </div>
+                  {dados.situacao === 'corregedoria' && (
+                    <div style={{ marginTop: 10 }}>
+                      <label className="form-label">Cargo</label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                        {['Juiz(a) Auxiliar', 'Desembargador(a)', 'Corregedor(a)-Geral', 'Outro'].map(c => (
+                          <div key={c} onClick={() => setD('cargo_ordem', c)}
+                            style={{ padding: '5px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.cargo_ordem===c?'var(--color-accent)':'var(--color-border)'}`, background: dados.cargo_ordem===c?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 12, fontWeight: dados.cargo_ordem===c?700:400, color: dados.cargo_ordem===c?'var(--color-accent)':'var(--color-text)' }}>
+                            {dados.cargo_ordem===c?'● ':'○ '}{c}
+                          </div>
+                        ))}
+                      </div>
+                      {dados.cargo_ordem === 'Outro' && (
+                        <input className="form-input" style={{ marginTop: 8 }} value={dados.cargo_outro||''} onChange={e => setD('cargo_outro', e.target.value)} placeholder="Descreva o cargo" />
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Campos exclusivos da Corregedoria */}
@@ -933,10 +961,6 @@ export default function ModelosOficio() {
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Assinado por</label>
                       <input className="form-input" value={dados.assinante_circular||''} onChange={e => setD('assinante_circular', e.target.value)} placeholder="Nome de quem assinou o ofício circular" />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Por ordem de</label>
-                      <input className="form-input" value={dados.ordem_de||''} onChange={e => setD('ordem_de', e.target.value)} placeholder="Ex: Dr. José Luiz Leite Lindote, Corregedor-Geral" />
                     </div>
                   </div>
                 )}
