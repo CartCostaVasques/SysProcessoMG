@@ -473,7 +473,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         return [
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 0, line: 276 },
+            spacing: { after: 120, line: 276 },
             indent: { left: Math.round(9638 * 0.40) },
             children: [
               new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
@@ -482,7 +482,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
           }),
           new Paragraph({
             alignment: AlignmentType.LEFT,
-            spacing: { after: 200, line: 276 },
+            spacing: { after: 80, line: 276 },
             indent: { left: Math.round(9638 * 0.40) },
             children: [new TextRun({ text: saudacao, font: 'Arial', size: 24 })],
           }),
