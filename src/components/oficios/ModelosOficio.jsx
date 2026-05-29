@@ -465,7 +465,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
     return [
       ...cabecalho,
-      // Referência do Ofício Circular (apenas Corregedoria) — na mesma linha da saudação
+      // Referência do Ofício Circular + saudação (apenas Corregedoria)
       ...(refCircular ? (() => {
         const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
         const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
@@ -473,14 +473,19 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         return [
           new Paragraph({
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 320, line: 276 },
+            spacing: { after: 0, line: 276 },
             indent: { left: Math.round(9638 * 0.40) },
             children: [
               new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
               new TextRun({ text: refCircular, font: 'Arial', size: 24 }),
             ],
           }),
-          pMixed([{ text: saudacao }], { after: 200, align: AlignmentType.LEFT }),
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 200, line: 276 },
+            indent: { left: Math.round(9638 * 0.40) },
+            children: [new TextRun({ text: saudacao, font: 'Arial', size: 24 })],
+          }),
           pEmpty(),
         ];
       })() : [pEmpty()]),
