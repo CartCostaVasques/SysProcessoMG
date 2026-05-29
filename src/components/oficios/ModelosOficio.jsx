@@ -55,9 +55,14 @@ Informo ainda, que nos demais CNPJ das filiais não constam protestos em nossa S
     label: 'Texto Livre',
     corpo: '',
   },
-];
+  {
+    id: 'corregedoria',
+    label: 'Corregedoria-Geral de Justiça',
+    corpo: `Em cumprimento ao contido no referido Ofício Circular, venho respeitosamente à presença de Vossa Excelência para informar que esta Tabeliã não possui interesse em assumir as atribuições com relação a Serventia de [SERVENTIA], Comarca de [COMARCA].
 
-// Situações pré-definidas para Protesto
+Sendo o que foi determinado, aproveito a oportunidade para renovar à Vossa Excelência protestos de estima e consideração.`,
+  },
+];
 const SITUACOES_PROTESTO = [
   {
     id: 'retirada_apontamento',
@@ -420,6 +425,19 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const parte1     = dados.parte1     || '';
     const parte2     = dados.parte2     || '';
     const matricula  = dados.matricula  || '';
+    const isCorreg   = dados.situacao   === 'corregedoria';
+
+    // Monta referência do ofício circular quando for Corregedoria
+    const refCircular = isCorreg && (dados.nro_circular || dados.dt_circular || dados.cia_n || dados.assinante_circular || dados.ordem_de)
+      ? (() => {
+          const nro  = dados.nro_circular  || '___/____';
+          const dt   = dados.dt_circular   ? (() => { const [y,m,d] = dados.dt_circular.split('-'); return `${d}/${m}/${y}`; })() : '__/__/____';
+          const cia  = dados.cia_n         || '_______________________';
+          const ass  = dados.assinante_circular || '___________________________';
+          const ord  = dados.ordem_de      || '___________________________';
+          return `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem de ${ord}.`;
+        })()
+      : null;
 
     // Tabela de partes (mesma lógica do RC)
     const linhasPartes = [];
@@ -440,8 +458,20 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     return [
       ...cabecalho,
       pEmpty(),
-      // Referente (negrito, antes da saudação — conforme imagem)
-      ...(referente ? [
+      // Referência do Ofício Circular (apenas Corregedoria)
+      ...(refCircular ? [
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { after: 320, line: 276 },
+          indent: { left: Math.round(9638 * 0.40) },
+          children: [
+            new TextRun({ text: 'REF.: ', font: FONTE, size: TAM, bold: true }),
+            new TextRun({ text: refCircular, font: FONTE, size: TAM, bold: true, italics: true }),
+          ],
+        }),
+      ] : []),
+      // Referente normal (não Corregedoria)
+      ...(referente && !isCorreg ? [
         pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
       ] : []),
       // Destinatário — tratamento conforme Dr./Dra.
@@ -928,6 +958,35 @@ export default function ModelosOficio() {
                     </div>
                   </div>
                 </div>
+
+                {/* Campos exclusivos da Corregedoria */}
+                {dados.situacao === 'corregedoria' && (
+                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Dados do Ofício Circular</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Nº do Ofício Circular</label>
+                        <input className="form-input" value={dados.nro_circular||''} onChange={e => setD('nro_circular', e.target.value)} placeholder="Ex: 012/2026/DFE/CGJ" />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Data do Ofício Circular</label>
+                        <input className="form-input" type="date" value={dados.dt_circular||''} onChange={e => setD('dt_circular', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">CIA n.</label>
+                      <input className="form-input" value={dados.cia_n||''} onChange={e => setD('cia_n', e.target.value)} placeholder="Ex: 0000583-94.2026.8.11-0000" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Assinado por</label>
+                      <input className="form-input" value={dados.assinante_circular||''} onChange={e => setD('assinante_circular', e.target.value)} placeholder="Nome de quem assinou o ofício circular" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Por ordem de</label>
+                      <input className="form-input" value={dados.ordem_de||''} onChange={e => setD('ordem_de', e.target.value)} placeholder="Ex: Dr. José Luiz Leite Lindote, Corregedor-Geral" />
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Referência e Processo</div>
