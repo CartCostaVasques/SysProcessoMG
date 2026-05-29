@@ -465,35 +465,31 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
     return [
       ...cabecalho,
-      pEmpty(),
-      // Referência do Ofício Circular (apenas Corregedoria)
-      ...(refCircular ? [
-        new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: { after: 320, line: 276 },
-          indent: { left: Math.round(9638 * 0.40) },
-          children: [
-            new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
-            new TextRun({ text: refCircular, font: 'Arial', size: 24 }),
-          ],
-        }),
-      ] : []),
+      // Referência do Ofício Circular (apenas Corregedoria) — na mesma linha da saudação
+      ...(refCircular ? (() => {
+        const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
+        const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
+        const saudacao = `${articulo} ${genCargo(cargoRaw)},`;
+        return [
+          new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 320, line: 276 },
+            indent: { left: Math.round(9638 * 0.40) },
+            children: [
+              new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
+              new TextRun({ text: refCircular, font: 'Arial', size: 24 }),
+            ],
+          }),
+          pMixed([{ text: saudacao }], { after: 200, align: AlignmentType.LEFT }),
+          pEmpty(),
+        ];
+      })() : [pEmpty()]),
       // Referente normal (não Corregedoria)
       ...(referente && !isCorreg ? [
         pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
       ] : []),
-      // Destinatário — tratamento conforme cargo e Dr./Dra.
-      ...((() => {
-        const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
-        if (isCorreg) {
-          const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
-          const cargoGen = feminino
-            ? cargoRaw.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
-            : cargoRaw.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
-          return [
-            pMixed([{ text: `${articulo} ${cargoGen},` }], { after: 80 }),
-          ];
-        }
+      // Destinatário — apenas para não-Corregedoria
+      ...(isCorreg ? [] : (() => {
         const tratamento = juiz ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ') : 'Excelentíssimo(a) ';
         return [
           pMixed([{ text: tratamento }, { text: juiz || '' }], { after: 80 }),
