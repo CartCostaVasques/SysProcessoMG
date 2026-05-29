@@ -425,6 +425,12 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const parte2     = dados.parte2     || '';
     const matricula  = dados.matricula  || '';
     const isCorreg   = dados.situacao   === 'corregedoria';
+    const feminino   = juiz.trimStart().toLowerCase().startsWith('dra.');
+
+    // Função auxiliar — converte cargo para o gênero correto
+    const genCargo = (cargo: string) => feminino
+      ? cargo.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
+      : cargo.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
 
     // Monta referência do ofício circular quando for Corregedoria
     let refCircular = null;
@@ -434,9 +440,11 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       const dt   = dtRaw ? dtRaw.split('-').reverse().join('/') : '__/__/____';
       const cia  = dados.cia_n         || '_______________________';
       const ass  = dados.assinante_circular || '___________________________';
-      const cargo = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '___') : (dados.cargo_ordem || '___________________________');
+      const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '___') : (dados.cargo_ordem || '___________________________');
+      const cargoGen = genCargo(cargoRaw);
+      const artigo   = feminino ? 'da' : 'do';
       const nomeCargo = juiz || '___________________________';
-      refCircular = `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem ${cargo === 'Juiz(a) Auxiliar' ? 'da' : 'do'} ${cargo} ${nomeCargo}.`;
+      refCircular = `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem ${artigo} ${cargoGen} ${nomeCargo}.`;
     }
 
     // Tabela de partes (mesma lógica do RC)
@@ -476,20 +484,19 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ] : []),
       // Destinatário — tratamento conforme cargo e Dr./Dra.
       ...((() => {
-        const feminino = juiz.trimStart().toLowerCase().startsWith('dra.');
-        let tratamento;
+        const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
         if (isCorreg) {
-          const cargo = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
-          const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
-          const genCargo = feminino
-            ? cargo.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
-            : cargo.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
-          tratamento = `${articulo} ${genCargo}`;
-        } else {
-          tratamento = juiz ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ') : 'Excelentíssimo(a) ';
+          const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
+          const cargoGen = feminino
+            ? cargoRaw.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
+            : cargoRaw.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
+          return [
+            pMixed([{ text: `${articulo} ${cargoGen},` }], { after: 80 }),
+          ];
         }
+        const tratamento = juiz ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ') : 'Excelentíssimo(a) ';
         return [
-          pMixed([{ text: tratamento + (isCorreg ? '' : ' ') }, { text: juiz || '' }], { after: 80 }),
+          pMixed([{ text: tratamento }, { text: juiz || '' }], { after: 80 }),
           pMixed([{ text: vara, bold: true }], { after: 240 }),
         ];
       })()),
@@ -514,15 +521,15 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
       ...rodapeForum,
       // Destinatário no rodapé — apenas Corregedoria
       ...(isCorreg && juiz ? (() => {
-        const feminino = juiz.trimStart().toLowerCase().startsWith('dra.');
-        const cargo = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
-        const genCargo = feminino
-          ? cargo.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
-          : cargo.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
+        const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
+        const cargoGen = feminino
+          ? cargoRaw.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
+          : cargoRaw.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
+        const artRodape = feminino ? 'À' : 'Ao';
         return [
           new Paragraph({ children: [new TextRun({ text: '', size: 24 })], spacing: { after: 0 } }),
-          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: 'Ao', font: 'Arial', size: 24 })] }),
-          ...(genCargo ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: genCargo, font: 'Arial', size: 24 })] })] : []),
+          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: artRodape, font: 'Arial', size: 24 })] }),
+          ...(cargoGen ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: cargoGen, font: 'Arial', size: 24 })] })] : []),
           new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: juiz.toUpperCase(), font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })] }),
           new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: vara, font: 'Arial', size: 24 })] }),
         ];
