@@ -6,7 +6,6 @@ const MODELOS = [
   { id: 'comunicacao_rc',    label: 'Comunicação ao Registro Civil', descricao: 'Comunicação de ato notarial ao Registro Civil (casamento, divórcio, óbito...)' },
   { id: 'forum_cumprimento', label: 'Ofício ao Fórum / Juízo',       descricao: 'Cumprimento de mandado, envio de documentos, resposta a solicitação...' },
   { id: 'protesto',          label: 'Ofício de Protesto',             descricao: 'Retirada de apontamento, comunicação de protesto, texto livre...' },
-  { id: 'corregedor',        label: 'Manifestação à Corregedoria',    descricao: 'Manifestação de interesse, resposta a Ofício Circular da Corregedoria-Geral de Justiça...' },
 ];
 
 // Situações pré-definidas para o Fórum
@@ -534,54 +533,8 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     ];
   };
 
-  const buildCorregedor = () => {
-    const nroCircular  = dados.nro_circular  || '___/____';
-    const dtCircular   = dados.dt_circular   ? (() => { const [y,m,d] = dados.dt_circular.split('-'); return `${d}/${m}/${y}`; })() : '__/__/____';
-    const ciaN         = dados.cia_n         || '_______________________';
-    const assinante    = dados.assinante_circular || '___________________________';
-    const desembargador= dados.desembargador || '___________________________';
-    const serventia    = dados.serventia     || '___________________________';
-    const comarca      = dados.comarca       || '___________________________';
-    const corregedor   = dados.corregedor    || 'Corregedor-Geral da Justiça do Estado de Mato Grosso';
-    const nomeCorregedor = dados.nome_corregedor || '___________________________';
-    const tratamento   = (dados.nome_corregedor||'').toLowerCase().startsWith('dra.') ? 'Excelentíssima Senhora' : 'Excelentíssimo Senhor';
-
-    const refTexto = `Em cumprimento ao Oficio Circular sob nº ${nroCircular}, datado de ${dtCircular} - CIA n. ${ciaN}, assinado por ${assinante}, por ordem do Excelentíssimo Senhor Desembargador, Dr. ${desembargador}, ${corregedor}.`;
-
-    return [
-      ...cabecalho,
-      pEmpty(),
-      // Referência em negrito + itálico
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 320, line: 276 },
-        indent: { left: Math.round(9638 * 0.45) },
-        children: [new TextRun({ text: 'REF.: ', font: FONTE, size: TAM, bold: true }), new TextRun({ text: refTexto, font: FONTE, size: TAM, bold: true, italics: true })],
-      }),
-      // Destinatário
-      pMixed([{ text: `${tratamento} Corregedor-Geral da Justiça,` }], { after: 320, align: AlignmentType.LEFT }),
-      pEmpty(),
-      // Corpo
-      new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: `Em cumprimento ao contido no referido Ofício Circular, venho respeitosamente à presença de Vossa Excelência para informar que esta Tabeliã não possui interesse em assumir as atribuições com relação a Serventia de ${serventia}, Comarca de ${comarca}.`, font: FONTE, size: TAM })] }),
-      pEmpty(),
-      new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: 'Sendo o que foi determinado, aproveito a oportunidade para renovar à Vossa Excelência protestos de estima e consideração.', font: FONTE, size: TAM })] }),
-      pEmpty(),
-      p('Atenciosamente,', { after: 800, align: AlignmentType.JUSTIFIED }),
-      // Assinatura
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: '_'.repeat(40), font: FONTE, size: TAM })] }),
-      ...rodape,
-      pEmpty(), pEmpty(),
-      // Destinatário no rodapé
-      p('Ao', { after: 0, align: AlignmentType.LEFT }),
-      p('Dr.', { after: 0, align: AlignmentType.LEFT }),
-      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: nomeCorregedor.toUpperCase(), font: FONTE, size: TAM, bold: true, underline: {} })] }),
-      p(corregedor, { after: 0, align: AlignmentType.LEFT }),
-    ];
-  };
-
   const children = modelo.id === 'comunicacao_rc' ? buildRC()
     : modelo.id === 'protesto'        ? buildProtesto()
-    : modelo.id === 'corregedor'      ? buildCorregedor()
     : buildForum();
 
   const doc = new Document({
