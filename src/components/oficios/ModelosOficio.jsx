@@ -428,7 +428,7 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const feminino   = juiz.trimStart().toLowerCase().startsWith('dra.');
 
     // Função auxiliar — converte cargo para o gênero correto
-    const genCargo = (cargo: string) => feminino
+    const genCargo = (cargo) => feminino
       ? cargo.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
       : cargo.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
 
