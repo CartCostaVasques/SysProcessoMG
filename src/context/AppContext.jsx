@@ -231,7 +231,22 @@ export function AppProvider({ children }) {
   };
 
   const fetchUsuarios  = async () => { try { const {data} = await supabase.from('usuarios').select('*').order('nome_completo'); if(data) setUsuarios(data); } catch(e){} };
-  const fetchInteressados = async () => { try { const {data} = await supabase.from('interessados').select('*').order('nome'); if(data) setInteressados(data); } catch(e){console.error('interessados',e)} };
+  const fetchInteressados = async () => {
+    try {
+      const PAGE = 1000;
+      let todos = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase.from('interessados').select('*').order('nome').range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      setInteressados(todos);
+    } catch(e) { console.error('interessados', e); }
+  };
   const fetchProcessos = async () => {
     try {
       // Busca paginada — Supabase limita 1000 por query
