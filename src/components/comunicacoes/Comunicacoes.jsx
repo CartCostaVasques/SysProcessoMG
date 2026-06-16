@@ -101,6 +101,33 @@ function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento })
     .replace(/\{\{RESPONSAVEL\}\}/g, responsavelNome || '___________________');
 }
 
+// Divide o texto em segmentos com formatação (negrito/caixa alta para variáveis especiais)
+function parseSegmentos(linha, juizPaz, mesAno, periodo) {
+  // Marca os trechos que devem ficar em negrito/caixa alta
+  const marcadores = [
+    { texto: juizPaz?.toUpperCase(),  bold: true },
+    { texto: mesAno,                  bold: true },
+    { texto: periodo,                 bold: true },
+  ].filter(m => m.texto);
+
+  // Divide a linha em partes: normal e marcada
+  let partes = [{ texto: linha, bold: false }];
+  for (const { texto, bold } of marcadores) {
+    const novas = [];
+    for (const parte of partes) {
+      if (parte.bold) { novas.push(parte); continue; }
+      const idx = parte.texto.indexOf(texto);
+      if (idx === -1) { novas.push(parte); continue; }
+      if (idx > 0) novas.push({ texto: parte.texto.slice(0, idx), bold: false });
+      novas.push({ texto, bold: true });
+      const resto = parte.texto.slice(idx + texto.length);
+      if (resto) novas.push({ texto: resto, bold: false });
+    }
+    partes = novas;
+  }
+  return partes;
+}
+
 // Gera o .docx usando a mesma estrutura dos ofícios
 async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, titulo }) {
   const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, ImageRun, Header, UnderlineType } = await import('docx');
@@ -178,12 +205,30 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     // Título centralizado, negrito, sublinhado, grande
     pCenter(titulo || 'ATESTADO', { bold: true, underline: true, size: 36, after: 600 }),
-    // Corpo
-    ...linhasCorpo.map(l => pIndent(l, { after: 200 })),
+    // Corpo — espaçamento 1,5, nome do juiz em caixa alta + negrito, mês/ano em negrito
+    ...(() => {
+      const refDate = new Date();
+      const mesAno  = `${MESES[refDate.getMonth()]} de ${refDate.getFullYear()}`;
+      const ultimoDia = diasNoMes(refDate.getFullYear(), refDate.getMonth() + 1);
+      const periodo = `01 a ${ultimoDia} de ${MESES[refDate.getMonth()]} de ${refDate.getFullYear()}`;
+      const juizNome = textoFinal.match(/Sr\. ([^,]+),/)?.[1] || '';
+      return linhasCorpo.map(l => {
+        const segs = parseSegmentos(l, juizNome, mesAno, periodo);
+        return new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 0, line: 360, lineRule: 'auto' },
+          indent: { firstLine: 1701 },
+          children: segs.map(s => new TextRun({ text: s.texto, font: FONTE, size: TAM, bold: s.bold })),
+        });
+      });
+    })(),
+    pEmpty(),
     pEmpty(),
     pEmpty(),
     // Data
-    p(dtEmissao, { align: AlignmentType.CENTER, after: 600 }),
+    p(dtEmissao, { align: AlignmentType.CENTER, after: 0 }),
+    pEmpty(),
+    pEmpty(),
     // Assinatura
     ...assinaturaParags,
   ];
