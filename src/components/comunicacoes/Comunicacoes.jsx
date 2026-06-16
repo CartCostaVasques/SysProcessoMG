@@ -207,6 +207,8 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pCenter(titulo || 'ATESTADO', { bold: true, underline: true, size: 36, after: 0 }),
     pEmpty(),
     pEmpty(),
+    pEmpty(),
+    pEmpty(),
     // Corpo — espaçamento 1,5, nome do juiz em caixa alta + negrito, mês/ano em negrito
     ...(() => {
       const refDate = new Date();
@@ -253,6 +255,8 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     // Data
     p(dtEmissao, { align: AlignmentType.CENTER, after: 0 }),
+    pEmpty(),
+    pEmpty(),
     pEmpty(),
     pEmpty(),
     // Assinatura
