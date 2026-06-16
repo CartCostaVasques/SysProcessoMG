@@ -206,9 +206,24 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
 }
 
 // ── Modal de modelo (editar texto) ──────────────────────────────────
+// Textos padrão por palavra-chave
+const TEXTOS_PADRAO = [
+  {
+    chaves: ['juiz de paz', 'atestado'],
+    titulo: 'ATESTADO',
+    corpo: 'Tem o presente a finalidade de atestar, para os devidos fins de direito e para que surta os efeitos legais, que o Sr. {{NOME_JUIZ_PAZ}}, Juiz de Paz deste Ofício, compareceu em todos os atos que foi convocado à Presidir no período de {{PERIODO}}.',
+  },
+];
+
+function getTextoPadrao(titulo) {
+  const t = (titulo || '').toLowerCase();
+  return TEXTOS_PADRAO.find(p => p.chaves.some(c => t.includes(c))) || null;
+}
+
 function ModalModelo({ config, modelo, onClose, onSave }) {
-  const [titulo, setTitulo] = useState(modelo?.titulo || config.titulo);
-  const [corpo, setCorpo]   = useState(modelo?.corpo  || '');
+  const padrao = !modelo ? getTextoPadrao(config.titulo) : null;
+  const [titulo, setTitulo] = useState(modelo?.titulo || padrao?.titulo || config.titulo);
+  const [corpo, setCorpo]   = useState(modelo?.corpo  || padrao?.corpo  || '');
 
   return (
     <Portal>
