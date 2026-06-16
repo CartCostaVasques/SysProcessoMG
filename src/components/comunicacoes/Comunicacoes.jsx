@@ -313,10 +313,9 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
                 {assinantes.map(a => <option key={a.id} value={a.id}>{a.nome_simples}</option>)}
               </select>
             </div>
-            <div>
-              <label className="form-label">Texto do documento <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>(editável antes de gerar)</span></label>
-              <textarea className="form-input" rows={10} value={texto} onChange={e => setTexto(e.target.value)}
-                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7 }} />
+            <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: 13, lineHeight: 1.7, color: 'var(--color-text-muted)', maxHeight: 180, overflowY: 'auto' }}>
+              <div style={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Preview do documento</div>
+              {texto.split('\n').map((l, i) => <div key={i}>{l || <br/>}</div>)}
             </div>
           </div>
           <div className="modal-footer">
@@ -466,10 +465,39 @@ export default function Comunicacoes() {
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => { if (!loading && configs.length > 0) gerarOcorrencias(configs, ocorrencias); }, [loading]);
 
+  // Modelos automáticos por palavra-chave no título
+  const MODELOS_AUTO = [
+    {
+      chaves: ['juiz de paz', 'atestado'],
+      titulo: 'ATESTADO',
+      corpo: 'Tem o presente a finalidade de atestar, para os devidos fins de direito e para que surta os efeitos legais, que o Sr. {{NOME_JUIZ_PAZ}}, Juiz de Paz deste Ofício, compareceu em todos os atos que foi convocado à Presidir no período de {{PERIODO}}.',
+    },
+  ];
+
   const salvarConfig = async (form) => {
     const payload = { titulo: form.titulo, descricao: form.descricao || null, periodicidade: form.periodicidade, dia_vencimento: form.dia_vencimento, responsavel_id: form.responsavel_id || null, dias_alerta: form.dias_alerta, ativo: form.ativo };
-    if (form.id) { await supabase.from('comunicacoes_config').update(payload).eq('id', form.id); addToast('Comunicação atualizada.', 'success'); }
-    else { await supabase.from('comunicacoes_config').insert(payload); addToast('Comunicação criada.', 'success'); }
+    let configId = form.id;
+    if (form.id) {
+      await supabase.from('comunicacoes_config').update(payload).eq('id', form.id);
+      addToast('Comunicação atualizada.', 'success');
+    } else {
+      const { data } = await supabase.from('comunicacoes_config').insert(payload).select().single();
+      configId = data?.id;
+      // Criar modelo automático se título bater com palavra-chave
+      if (configId) {
+        const tituloLower = form.titulo.toLowerCase();
+        const modeloAuto = MODELOS_AUTO.find(m => m.chaves.some(c => tituloLower.includes(c)));
+        if (modeloAuto) {
+          const jaExiste = modelos.some(m => m.config_id === configId);
+          if (!jaExiste) {
+            await supabase.from('comunicacoes_modelos').insert({ config_id: configId, titulo: modeloAuto.titulo, corpo: modeloAuto.corpo });
+            addToast('Comunicação criada com modelo automático! 📄', 'success');
+          }
+        } else {
+          addToast('Comunicação criada.', 'success');
+        }
+      }
+    }
     setModalConfig(null); carregar();
   };
 
