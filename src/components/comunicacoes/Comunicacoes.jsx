@@ -204,7 +204,9 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     pEmpty(),
     // Título centralizado, negrito, sublinhado, grande
-    pCenter(titulo || 'ATESTADO', { bold: true, underline: true, size: 36, after: 600 }),
+    pCenter(titulo || 'ATESTADO', { bold: true, underline: true, size: 36, after: 0 }),
+    pEmpty(),
+    pEmpty(),
     // Corpo — espaçamento 1,5, nome do juiz em caixa alta + negrito, mês/ano em negrito
     ...(() => {
       const refDate = new Date();
@@ -215,38 +217,37 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
       const matchJuiz = textoFinal.match(/Sr\.\s+([^,]+),\s+Juiz/);
       const juizNome  = matchJuiz?.[1]?.trim() || '';
 
-      return linhasCorpo.map(l => {
-        // Divide a linha em segmentos: trechos marcados ficam bold
-        const marcadores = [
-          juizNome ? { orig: juizNome, render: juizNome.toUpperCase(), bold: true } : null,
-          { orig: periodo,  render: periodo,  bold: true },
-          { orig: mesAno,   render: mesAno,   bold: true },
-        ].filter(Boolean);
+      // Aplica marcadores no texto completo (ignora quebra de linha do Word)
+      const textoCompleto = linhasCorpo.join(' ');
+      const marcadores = [
+        juizNome ? { orig: juizNome, render: juizNome.toUpperCase(), bold: true } : null,
+        { orig: periodo, render: periodo, bold: true },
+        { orig: mesAno,  render: mesAno,  bold: true },
+      ].filter(Boolean);
 
-        // Constrói lista de runs
-        let runs = [{ texto: l, bold: false }];
-        for (const { orig, render, bold } of marcadores) {
-          const novas = [];
-          for (const run of runs) {
-            if (run.bold) { novas.push(run); continue; }
-            const idx = run.texto.indexOf(orig);
-            if (idx === -1) { novas.push(run); continue; }
-            if (idx > 0) novas.push({ texto: run.texto.slice(0, idx), bold: false });
-            novas.push({ texto: render, bold });
-            const resto = run.texto.slice(idx + orig.length);
-            if (resto) novas.push({ texto: resto, bold: false });
-          }
-          runs = novas;
+      let runs = [{ texto: textoCompleto, bold: false }];
+      for (const { orig, render, bold } of marcadores) {
+        const novas = [];
+        for (const run of runs) {
+          if (run.bold) { novas.push(run); continue; }
+          const idx = run.texto.indexOf(orig);
+          if (idx === -1) { novas.push(run); continue; }
+          if (idx > 0) novas.push({ texto: run.texto.slice(0, idx), bold: false });
+          novas.push({ texto: render, bold });
+          const resto = run.texto.slice(idx + orig.length);
+          if (resto) novas.push({ texto: resto, bold: false });
         }
+        runs = novas;
+      }
 
-        return new Paragraph({
-          alignment: AlignmentType.JUSTIFIED,
-          spacing: { after: 0, line: 360, lineRule: 'auto' },
-          indent: { firstLine: 1701 },
-          children: runs.map(r => new TextRun({ text: r.texto, font: FONTE, size: TAM, bold: r.bold })),
-        });
-      });
+      return [new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 0, line: 360, lineRule: 'auto' },
+        indent: { firstLine: 1701 },
+        children: runs.map(r => new TextRun({ text: r.texto, font: FONTE, size: TAM, bold: r.bold })),
+      })];
     })(),
+    pEmpty(),
     pEmpty(),
     pEmpty(),
     pEmpty(),
