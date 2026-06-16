@@ -228,7 +228,7 @@ function ModalModelo({ config, modelo, onClose, onSave }) {
   return (
     <Portal>
       <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-        <div className="modal" style={{ maxWidth: 640 }}>
+        <div className="modal" style={{ maxWidth: 780, width: '95vw' }}>
           <div className="modal-header">
             <span className="modal-title">📄 Modelo de Documento — {config.titulo}</span>
             <button className="btn-icon" onClick={onClose}>✕</button>
@@ -252,9 +252,9 @@ function ModalModelo({ config, modelo, onClose, onSave }) {
                 </div>
                 <div style={{ marginTop: 4, fontSize: 10 }}>Clique na variável para inserir no texto.</div>
               </div>
-              <textarea className="form-input" rows={12} value={corpo} onChange={e => setCorpo(e.target.value)}
+              <textarea className="form-input" rows={18} value={corpo} onChange={e => setCorpo(e.target.value)}
                 placeholder="Digite o texto do documento aqui. Use as variáveis acima para campos automáticos."
-                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }} />
+                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.8, fontSize: 13, minHeight: 220 }} />
             </div>
           </div>
           <div className="modal-footer">
