@@ -273,14 +273,13 @@ function ModalModelo({ config, modelo, onClose, onSave }) {
 // ── Modal de gerar documento ─────────────────────────────────────────
 function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose }) {
   const responsavelNome = usuarios.find(u => u.id === config?.responsavel_id)?.nome_simples || '';
-  const textoInicial = substituirVariaveis(modelo.corpo, {
-    cartorio, responsavelNome, dtVencimento: ocorrencia?.dt_vencimento,
-  });
-  const [texto, setTexto]     = useState(textoInicial);
-  const [titulo, setTitulo]   = useState(modelo.titulo || config?.titulo || 'ATESTADO');
-  const [assinante, setAss]   = useState(null);
-  const [gerando, setGerando] = useState(false);
+  const [juizes,    setJuizes]  = useState([]);
+  const [juizSel,   setJuizSel] = useState(cartorio?.juiz_paz || '');
+  const [titulo,    setTitulo]  = useState(modelo.titulo || config?.titulo || 'ATESTADO');
+  const [assinante, setAss]     = useState(null);
+  const [gerando,   setGerando] = useState(false);
   const { addToast } = useApp();
+  const temJuizVar = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
 
   const assinantes = usuarios.filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase()));
 
@@ -288,10 +287,30 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
     if (!assinante && assinantes.length) setAss(assinantes[0]);
   }, [assinantes.length]);
 
+  useEffect(() => {
+    supabase.from('juizes_paz').select('id, nome, status').order('nome').then(({ data }) => {
+      if (data) {
+        setJuizes(data);
+        // pré-selecionar o ativo ou o do cartório
+        const ativo = data.find(j => j.status === 'ativo');
+        if (ativo) setJuizSel(ativo.nome);
+        else if (cartorio?.juiz_paz) setJuizSel(cartorio.juiz_paz);
+      }
+    });
+  }, []);
+
+  // Texto com variáveis substituídas dinamicamente
+  const texto = substituirVariaveis(modelo.corpo, {
+    cartorio: { ...cartorio, juiz_paz: juizSel },
+    responsavelNome,
+    dtVencimento: ocorrencia?.dt_vencimento,
+  });
+
   const gerar = async () => {
     setGerando(true);
     try {
-      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante, titulo });
+      const assinanteReal = assinante || { nome_completo: cartorio?.responsavel, cargo: 'Tabeliã' };
+      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante: assinanteReal, titulo });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -328,6 +347,21 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
                 {assinantes.map(a => <option key={a.id} value={a.id}>{a.nome_simples}</option>)}
               </select>
             </div>
+            {temJuizVar && (
+              <div>
+                <label className="form-label">Juiz de Paz</label>
+                {juizes.length > 0 ? (
+                  <select className="form-input" value={juizSel} onChange={e => setJuizSel(e.target.value)}>
+                    <option value="">— Selecione —</option>
+                    {juizes.map(j => (
+                      <option key={j.id} value={j.nome}>{j.nome}{j.status === 'ativo' ? ' ✓' : ''}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input className="form-input" value={juizSel} onChange={e => setJuizSel(e.target.value)} placeholder="Nome do Juiz de Paz" />
+                )}
+              </div>
+            )}
             <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: 13, lineHeight: 1.7, color: 'var(--color-text-muted)', maxHeight: 180, overflowY: 'auto' }}>
               <div style={{ fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Preview do documento</div>
               {texto.split('\n').map((l, i) => <div key={i}>{l || <br/>}</div>)}
