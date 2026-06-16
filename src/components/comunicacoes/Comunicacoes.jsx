@@ -211,20 +211,25 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     // Corpo — espaçamento 1,5, nome do juiz em caixa alta + negrito, mês/ano em negrito
     ...(() => {
-      const refDate = new Date();
-      const mesAno    = `${MESES[refDate.getMonth()]} de ${refDate.getFullYear()}`;
-      const ultimoDia = diasNoMes(refDate.getFullYear(), refDate.getMonth() + 1);
-      const periodo   = `01 a ${ultimoDia} de ${MESES[refDate.getMonth()]} de ${refDate.getFullYear()}`;
-      // Extrai o nome do juiz do texto substituído (entre "Sr. " e ", Juiz")
-      const matchJuiz = textoFinal.match(/Sr\.\s+([^,]+),\s+Juiz/);
+      // Extrai diretamente do textoFinal os trechos a negridar
+      const textoCompleto = linhasCorpo.join(' ');
+
+      // Período: extrai "01 a XX de Mês de Ano" do próprio texto
+      const matchPeriodo = textoCompleto.match(/(\d{2} a \d{2} de \w+ de \d{4})/);
+      const periodo      = matchPeriodo?.[1] || '';
+
+      // Mês/ano: extrai "Mês de Ano" do período
+      const matchMes = periodo.match(/de (\w+ de \d{4})$/);
+      const mesAno   = matchMes?.[1] || '';
+
+      // Nome do juiz: extrai entre "Sr. " e ", Juiz"
+      const matchJuiz = textoCompleto.match(/Sr\.\s+([^,]+),\s+Juiz/);
       const juizNome  = matchJuiz?.[1]?.trim() || '';
 
-      // Aplica marcadores no texto completo (ignora quebra de linha do Word)
-      const textoCompleto = linhasCorpo.join(' ');
       const marcadores = [
         juizNome ? { orig: juizNome, render: juizNome.toUpperCase(), bold: true } : null,
-        { orig: periodo, render: periodo, bold: true },
-        { orig: mesAno,  render: mesAno,  bold: true },
+        periodo  ? { orig: periodo,  render: periodo,                bold: true } : null,
+        mesAno   ? { orig: mesAno,   render: mesAno,                 bold: true } : null,
       ].filter(Boolean);
 
       let runs = [{ texto: textoCompleto, bold: false }];
