@@ -6,6 +6,7 @@ const MODELOS = [
   { id: 'comunicacao_rc',    label: 'Comunicação ao Registro Civil', descricao: 'Comunicação de ato notarial ao Registro Civil (casamento, divórcio, óbito...)' },
   { id: 'forum_cumprimento', label: 'Ofício ao Fórum / Juízo',       descricao: 'Cumprimento de mandado, envio de documentos, resposta a solicitação...' },
   { id: 'protesto',          label: 'Ofício de Protesto',             descricao: 'Retirada de apontamento, comunicação de protesto, texto livre...' },
+  { id: 'tabelionato',       label: 'Comunicado de Tabelionato',      descricao: 'Substabelecimento, comunicação de ato entre Tabelionatos, texto livre...' },
 ];
 
 // Situações pré-definidas para o Fórum
@@ -54,14 +55,9 @@ Informo ainda, que nos demais CNPJ das filiais não constam protestos em nossa S
     label: 'Texto Livre',
     corpo: '',
   },
-  {
-    id: 'corregedoria',
-    label: 'Corregedoria-Geral de Justiça',
-    corpo: `Em cumprimento ao contido no referido Ofício Circular, venho respeitosamente à presença de Vossa Excelência para informar que esta Tabeliã não possui interesse em assumir as atribuições com relação a Serventia de [SERVENTIA], Comarca de [COMARCA].
-
-Sendo o que foi determinado, aproveito a oportunidade para renovar à Vossa Excelência protestos de estima e consideração.`,
-  },
 ];
+
+// Situações pré-definidas para Protesto
 const SITUACOES_PROTESTO = [
   {
     id: 'retirada_apontamento',
@@ -80,6 +76,28 @@ Sendo apenas para o momento, aproveito a oportunidade da reiterar a Vossa Senhor
 [RELACIONAR OS TÍTULOS PROTESTADOS]
 
 Permanecemos à disposição para quaisquer esclarecimentos.`,
+  },
+  {
+    id: 'livre',
+    label: 'Texto Livre',
+    corpo: '',
+  },
+];
+
+const SITUACOES_TABELIONATO = [
+  {
+    id: 'substabelecimento',
+    label: 'Comunicado de Substabelecimento',
+    corpo: `Pelo presente, comunicamos a Vossa Senhoria que o Instrumento Público de Procuração lavrado no livro [LIVRO], folhas nº [FOLHAS], em data de [DATA_ATO], em suas Notas, onde figura como OUTORGANTE, [OUTORGANTE], e como OUTORGADO, [OUTORGADO], foi TOTALMENTE SUBSTABELECIDO, SEM reserva de poderes, em favor do Sr. [BENEFICIARIO], através do Instrumento Público de Substabelecimento de Procuração lavrado nesta Serventia, às fls. [FLS_SUBSTAB], do Livro nº [LIVRO_SUBSTAB], em data de [DATA_SUBSTAB].
+
+Aproveito a oportunidade para renovar os nossos protestos de elevada estima e distinta consideração.`,
+  },
+  {
+    id: 'comunicacao_ato',
+    label: 'Comunicação de Ato Notarial',
+    corpo: `Pelo presente, comunicamos a Vossa Senhoria que foi lavrado nesta Serventia o [TIPO_ATO], registrado no Livro [LIVRO], folhas nº [FOLHAS], em data de [DATA_ATO], tendo como partes envolvidas [PARTES].
+
+Aproveito a oportunidade para renovar os nossos protestos de elevada estima e distinta consideração.`,
   },
   {
     id: 'livre',
@@ -424,28 +442,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     const parte1     = dados.parte1     || '';
     const parte2     = dados.parte2     || '';
     const matricula  = dados.matricula  || '';
-    const isCorreg   = dados.situacao   === 'corregedoria';
-    const feminino   = juiz.trimStart().toLowerCase().startsWith('dra.');
-
-    // Função auxiliar — converte cargo para o gênero correto
-    const genCargo = (cargo) => feminino
-      ? cargo.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
-      : cargo.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
-
-    // Monta referência do ofício circular quando for Corregedoria
-    let refCircular = null;
-    if (isCorreg) {
-      const nro  = dados.nro_circular  || '___/____';
-      const dtRaw = dados.dt_circular || '';
-      const dt   = dtRaw ? dtRaw.split('-').reverse().join('/') : '__/__/____';
-      const cia  = dados.cia_n         || '_______________________';
-      const ass  = dados.assinante_circular || '___________________________';
-      const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '___') : (dados.cargo_ordem || '___________________________');
-      const cargoGen = genCargo(cargoRaw);
-      const artigo   = feminino ? 'da' : 'do';
-      const nomeCargo = juiz || '___________________________';
-      refCircular = `Em cumprimento ao Oficio Circular sob nº ${nro}, datado de ${dt} - CIA n. ${cia}, assinado por ${ass}, por ordem ${artigo} ${cargoGen} ${nomeCargo}.`;
-    }
 
     // Tabela de partes (mesma lógica do RC)
     const linhasPartes = [];
@@ -465,37 +461,17 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
 
     return [
       ...cabecalho,
-      // Referência do Ofício Circular + saudação (apenas Corregedoria)
-      ...(refCircular ? (() => {
-        const articulo = feminino ? 'Excelentíssima' : 'Excelentíssimo';
-        const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
-        const saudacao = `${articulo} ${genCargo(cargoRaw)},`;
-        return [
-          new Paragraph({
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 120, line: 276 },
-            indent: { left: Math.round(9638 * 0.40) },
-            children: [
-              new TextRun({ text: 'REF.: ', font: 'Arial', size: 24, bold: true }),
-              new TextRun({ text: refCircular, font: 'Arial', size: 24 }),
-            ],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.LEFT,
-            spacing: { after: 80, line: 276 },
-            indent: { left: Math.round(9638 * 0.40) },
-            children: [new TextRun({ text: saudacao, font: 'Arial', size: 24 })],
-          }),
-          pEmpty(),
-        ];
-      })() : [pEmpty()]),
-      // Referente normal (não Corregedoria)
-      ...(referente && !isCorreg ? [
+      pEmpty(),
+      // Referente (negrito, antes da saudação — conforme imagem)
+      ...(referente ? [
         pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
       ] : []),
-      // Destinatário — apenas para não-Corregedoria
-      ...(isCorreg ? [] : (() => {
-        const tratamento = juiz ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ') : 'Excelentíssimo(a) ';
+      // Destinatário — tratamento conforme Dr./Dra.
+      ...((() => {
+        const feminino = juiz.trimStart().toLowerCase().startsWith('dra.');
+        const tratamento = juiz
+          ? (feminino ? 'Excelentíssima ' : 'Excelentíssimo ')
+          : 'Excelentíssimo(a) ';
         return [
           pMixed([{ text: tratamento }, { text: juiz || '' }], { after: 80 }),
           pMixed([{ text: vara, bold: true }], { after: 240 }),
@@ -520,21 +496,6 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
         children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
       })),
       ...rodapeForum,
-      // Destinatário no rodapé — apenas Corregedoria
-      ...(isCorreg && juiz ? (() => {
-        const cargoRaw = dados.cargo_ordem === 'Outro' ? (dados.cargo_outro || '') : (dados.cargo_ordem || '');
-        const cargoGen = feminino
-          ? cargoRaw.replace('Juiz(a)', 'Juíza').replace('Desembargador(a)', 'Desembargadora').replace('Corregedor(a)-Geral', 'Corregedora-Geral')
-          : cargoRaw.replace('Juiz(a)', 'Juiz').replace('Desembargador(a)', 'Desembargador').replace('Corregedor(a)-Geral', 'Corregedor-Geral');
-        const artRodape = feminino ? 'À' : 'Ao';
-        return [
-          new Paragraph({ children: [new TextRun({ text: '', size: 24 })], spacing: { after: 0 } }),
-          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: artRodape, font: 'Arial', size: 24 })] }),
-          ...(cargoGen ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: cargoGen, font: 'Arial', size: 24 })] })] : []),
-          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: juiz.toUpperCase(), font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })] }),
-          new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: vara, font: 'Arial', size: 24 })] }),
-        ];
-      })() : []),
     ];
   };
 
@@ -565,8 +526,59 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     ];
   };
 
+  const buildTabelionato = () => {
+    const tratamento  = dados.tratamento  || 'Ilmo. Sr.';
+    const destCargo   = dados.dest_cargo  || '';
+    const destNome    = dados.dest_nome   || oficio.destinatario || '___________________________';
+    const destEnder1  = dados.dest_ender1 || '';
+    const destEnder2  = dados.dest_ender2 || '';
+    const assunto     = dados.assunto     || oficio.assunto || '';
+    const corpo       = dados.corpo       || '';
+    const saudacao    = dados.saudacao    || 'Prezado Senhor,';
+
+    return [
+      ...cabecalho,
+      pEmpty(),
+      // Destinatário no topo
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: tratamento, font: 'Arial', size: 24 })] }),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: destCargo, font: 'Arial', size: 24, bold: true })] }),
+      ...(destNome ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: destNome, font: 'Arial', size: 24, bold: true })] })] : []),
+      ...(destEnder1 ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: destEnder1, font: 'Arial', size: 24 })] })] : []),
+      ...(destEnder2 ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 40, line: 276 }, children: [new TextRun({ text: destEnder2, font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })] })] : []),
+      pEmpty(),
+      // ASSUNTO
+      ...(assunto ? [new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240, line: 276 },
+        children: [
+          new TextRun({ text: 'ASSUNTO: ', font: 'Arial', size: 24, bold: true }),
+          new TextRun({ text: assunto, font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } }),
+        ],
+      })] : []),
+      pEmpty(),
+      // Saudação com indent
+      new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { after: 200, line: 276 }, indent: { firstLine: 1701 }, children: [new TextRun({ text: saudacao, font: 'Arial', size: 24 })] }),
+      pEmpty(),
+      // Corpo com indent
+      ...corpo.split('\n').map(l => new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 160, line: 276 },
+        indent: { firstLine: 1701 },
+        children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
+      })),
+      ...rodapeForum,
+      // Destinatário no rodapé
+      pEmpty(),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: 'Ao', font: 'Arial', size: 24 })] }),
+      ...(destCargo ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: destCargo, font: 'Arial', size: 24, bold: true })] })] : []),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: destNome.toUpperCase(), font: 'Arial', size: 24, bold: true, underline: { type: UnderlineType.SINGLE } })] }),
+      ...(destEnder2 ? [new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: destEnder2, font: 'Arial', size: 24 })] })] : []),
+    ];
+  };
+
   const children = modelo.id === 'comunicacao_rc' ? buildRC()
     : modelo.id === 'protesto'        ? buildProtesto()
+    : modelo.id === 'tabelionato'     ? buildTabelionato()
     : buildForum();
 
   const doc = new Document({
@@ -938,52 +950,11 @@ export default function ModelosOficio() {
                       <AutocompleteContato value={dados.vara||oficio?.destinatario||''} onChange={v => setD('vara',v)} tipoContato="cartorio_rc" placeholder="Ex: 1ª Vara Cível de Paranatinga" contatos={oficioContatos||[]} onSalvar={d => addOficioContato({...d, tipo:'cartorio_rc'})} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">{dados.situacao === 'corregedoria' ? 'Nome (Assina e dá a Ordem)' : 'Meritíssimo(a) Juiz(a)'}</label>
-                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
+                      <label className="form-label">Meritíssimo(a) Juiz(a)</label>
+                      <AutocompleteContato value={dados.juiz||''} onChange={v => setD('juiz',v)} tipoContato="juiz" placeholder="Nome do(a) Juiz(a)" contatos={oficioContatos||[]} onSalvar={d => addOficioContato(d)} onEditar={(id,d) => editOficioContato(id,d)} onDeletar={id => deleteOficioContato(id)} />
                     </div>
                   </div>
-                  {dados.situacao === 'corregedoria' && (
-                    <div style={{ marginTop: 10 }}>
-                      <label className="form-label">Cargo</label>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                        {['Juiz(a) Auxiliar', 'Desembargador(a)', 'Corregedor(a)-Geral', 'Outro'].map(c => (
-                          <div key={c} onClick={() => setD('cargo_ordem', c)}
-                            style={{ padding: '5px 12px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.cargo_ordem===c?'var(--color-accent)':'var(--color-border)'}`, background: dados.cargo_ordem===c?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer', fontSize: 12, fontWeight: dados.cargo_ordem===c?700:400, color: dados.cargo_ordem===c?'var(--color-accent)':'var(--color-text)' }}>
-                            {dados.cargo_ordem===c?'● ':'○ '}{c}
-                          </div>
-                        ))}
-                      </div>
-                      {dados.cargo_ordem === 'Outro' && (
-                        <input className="form-input" style={{ marginTop: 8 }} value={dados.cargo_outro||''} onChange={e => setD('cargo_outro', e.target.value)} placeholder="Descreva o cargo" />
-                      )}
-                    </div>
-                  )}
                 </div>
-
-                {/* Campos exclusivos da Corregedoria */}
-                {dados.situacao === 'corregedoria' && (
-                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Dados do Ofício Circular</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Nº do Ofício Circular</label>
-                        <input className="form-input" value={dados.nro_circular||''} onChange={e => setD('nro_circular', e.target.value)} placeholder="Ex: 012/2026/DFE/CGJ" />
-                      </div>
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Data do Ofício Circular</label>
-                        <input className="form-input" type="date" value={dados.dt_circular||''} onChange={e => setD('dt_circular', e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">CIA n.</label>
-                      <input className="form-input" value={dados.cia_n||''} onChange={e => setD('cia_n', e.target.value)} placeholder="Ex: 0000583-94.2026.8.11-0000" />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Assinado por</label>
-                      <input className="form-input" value={dados.assinante_circular||''} onChange={e => setD('assinante_circular', e.target.value)} placeholder="Nome de quem assinou o ofício circular" />
-                    </div>
-                  </div>
-                )}
 
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Referência e Processo</div>
@@ -1035,6 +1006,79 @@ export default function ModelosOficio() {
               </>)}
 
               {/* ── Protesto ── */}
+              {modelo.id === 'tabelionato' && (<>
+                {/* Situação */}
+                <div>
+                  <label className="form-label">Situação / Tipo do Comunicado</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {SITUACOES_TABELIONATO.map(s => (
+                      <div key={s.id} onClick={() => { setD('situacao', s.id); if (s.corpo) setD('corpo', s.corpo); }}
+                        style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', border: `2px solid ${dados.situacao===s.id?'var(--color-accent)':'var(--color-border)'}`, background: dados.situacao===s.id?'color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))':'var(--color-surface)', cursor: 'pointer' }}>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: dados.situacao===s.id?'var(--color-accent)':'var(--color-text)' }}>
+                          {dados.situacao===s.id?'●':'○'} {s.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Destinatário */}
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Destinatário</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Tratamento</label>
+                        <select className="form-input" value={dados.tratamento||'Ilmo. Sr.'} onChange={e => setD('tratamento', e.target.value)}>
+                          <option value="Ilmo. Sr.">Ilmo. Sr.</option>
+                          <option value="Ilma. Sra.">Ilma. Sra.</option>
+                          <option value="Ao">Ao</option>
+                          <option value="À">À</option>
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Cargo / Título</label>
+                        <input className="form-input" value={dados.dest_cargo||''} onChange={e => setD('dest_cargo', e.target.value)} placeholder="Ex: Sr. Titular do 2º Serviço Notarial..." />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Nome / Identificação</label>
+                      <input className="form-input" value={dados.dest_nome||''} onChange={e => setD('dest_nome', e.target.value)} placeholder="Ex: Serviço Notarial e Registral de Matupá/MT" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Endereço</label>
+                      <input className="form-input" value={dados.dest_ender1||''} onChange={e => setD('dest_ender1', e.target.value)} placeholder="Ex: Rua Dois, nº 333, setor ZCI-001" />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Cidade / CEP (negrito + sublinhado)</label>
+                      <input className="form-input" value={dados.dest_ender2||''} onChange={e => setD('dest_ender2', e.target.value)} placeholder="Ex: Matupá/MT – CEP 78.525-000." />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assunto e saudação */}
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Assunto (ASSUNTO: em negrito/sublinhado)</label>
+                    <input className="form-input" value={dados.assunto||''} onChange={e => setD('assunto', e.target.value)} placeholder="Ex: COMUNICADO DE SUBSTABELECIMENTO" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Saudação</label>
+                    <input className="form-input" value={dados.saudacao||'Prezado Senhor,'} onChange={e => setD('saudacao', e.target.value)} placeholder="Prezado Senhor," />
+                  </div>
+                </div>
+
+                {/* Corpo */}
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                  <label className="form-label">Corpo do Texto</label>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 6 }}>
+                    Variáveis: [LIVRO] [FOLHAS] [DATA_ATO] [OUTORGANTE] [OUTORGADO] [BENEFICIARIO] [FLS_SUBSTAB] [LIVRO_SUBSTAB] [DATA_SUBSTAB]
+                  </div>
+                  <textarea className="form-input" rows={10} value={dados.corpo||''} onChange={e => setD('corpo', e.target.value)}
+                    style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }} />
+                </div>
+              </>)}
+
               {modelo.id === 'protesto' && (<>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Situação / Tipo do Ofício</label>
