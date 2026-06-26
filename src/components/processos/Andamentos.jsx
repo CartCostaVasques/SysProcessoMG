@@ -6,7 +6,7 @@ const HOJE = () => new Date().toISOString().split('T')[0];
 const TIPOS_AND = ['Despacho', 'Nota Devolutiva', 'Minuta Enviada', 'Protocolo', 'Diligência', 'Certidão', 'Retificação', 'Arquivado', 'Outros'];
 
 export default function Andamentos() {
-  const { processos, andamentos, addAndamento, editAndamento, deleteAndamento, usuarios, usuario, addToast } = useApp();
+  const { processos, andamentos, addAndamento, editAndamento, deleteAndamento, editProcesso, usuarios, usuario, addToast } = useApp();
 
   // Filtros
   const [busca,        setBusca]        = useState('');
@@ -69,8 +69,25 @@ export default function Andamentos() {
   };
 
   const concluir = async (a) => {
-    await editAndamento(a.id, { concluido: !a.concluido });
-    addToast(a.concluido ? 'Reaberto.' : 'Concluído!', 'success');
+    const novoStatus = !a.concluido;
+    await editAndamento(a.id, { concluido: novoStatus });
+    if (novoStatus) {
+      // Verifica se todos os andamentos do processo estão concluídos
+      const irmãos = andamentos.filter(x => x.processo_id === a.processo_id && x.id !== a.id);
+      const todosConc = irmãos.every(x => x.concluido);
+      const proc = processos.find(p => p.id === a.processo_id);
+      if (todosConc && proc && proc.status !== 'Concluído') {
+        const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo vinculado também?');
+        if (confirmar) {
+          await editProcesso(proc.id, { status: 'Concluído', dt_conclusao: new Date().toISOString().split('T')[0] });
+          addToast('Andamento e processo concluídos!', 'success');
+          return;
+        }
+      }
+      addToast('Concluído!', 'success');
+    } else {
+      addToast('Reaberto.', 'success');
+    }
   };
 
   const excluir = async (a) => {
