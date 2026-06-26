@@ -425,7 +425,7 @@ function AbaCasamentos({ sb, addToast, usuarios, cartorio }) {
         status: form.status || 'agendado',
         observacao: form.observacao || null,
         juiz_paz: form.juiz_paz || null,
-        processo_id: form.processo_id ? parseInt(form.processo_id) : null,
+        processo_id: form.processo_id || null,
         atualizado_em: new Date().toISOString(),
       };
       if (form.id) {
