@@ -504,6 +504,7 @@ export default function Processos() {
   const setEd = (k, v) => setEditRow(p => ({ ...p, [k]: v }));
   const setNR = (k, v) => setNewRow(p => ({ ...p, [k]: v }));
   const getEspecies = (c) => servicos.filter(s => !c || s.categoria === c).map(s => s.subcategoria);
+  const serializarPartes = (sel) =>
     JSON.stringify((sel || []).map(i => ({ id: i.id, nome: i.nome, cpf: i.cpf || '', vinculo: i.vinculo || '' })));
 
   const saveEdit = async () => {
