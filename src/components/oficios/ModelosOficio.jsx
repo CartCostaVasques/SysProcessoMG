@@ -51,6 +51,15 @@ Informo ainda, que nos demais CNPJ das filiais não constam protestos em nossa S
     corpo: `Venho por meio do presente, em atendimento ao determinado no processo acima mencionado, informar a Vossa Excelência que em [DATA_HOJE], esta Serventia procedeu as baixas dos protestos em que figura como devedor a parte acima indicado, conforme certidão negativa de protesto anexa ao presente.`,
   },
   {
+    id: 'corregedoria',
+    label: 'Corregedoria-Geral de Justiça',
+    corpo: `Vimos pelo presente, em cumprimento ao Ofício Circular nº [Nº_OFÍCIO_CIRCULAR], datado de [DATA_CIA], CIA n. [CIA_N], encaminhar as informações solicitadas referentes a esta Serventia, conforme determinação da Corregedoria-Geral de Justiça do Estado de Mato Grosso.
+
+[CORPO DO OFÍCIO]
+
+Colocamo-nos à inteira disposição para quaisquer esclarecimentos que se fizerem necessários.`,
+  },
+  {
     id: 'livre',
     label: 'Texto Livre',
     corpo: '',
@@ -576,9 +585,72 @@ async function gerarDocx({ modelo, oficio, processo, cartorio, dados, assinante 
     ];
   };
 
+  const buildCorregedoria = () => {
+    const ofCircular   = dados.of_circular   || '';
+    const dataCia      = dados.data_cia      || '';
+    const ciaN         = dados.cia_n         || '';
+    const assinadoPor  = dados.assinado_por  || '';
+    const cargoAssina  = dados.cargo_assina  || 'Juiz(a) Auxiliar';
+    const porOrdem     = dados.por_ordem     || '';
+    const corpo        = dados.corpo         || '';
+    const referente    = dados.referente     || oficio.assunto || '';
+
+    const feminino = assinadoPor.trimStart().toLowerCase().startsWith('dra.');
+    const tratamentoAssina = feminino ? 'Dra.' : 'Dr.';
+    const saudacao = feminino ? 'Excelentíssima Senhora,' : 'Excelentíssimo Senhor,';
+    const artigoRodape = feminino ? 'À' : 'Ao';
+
+    return [
+      ...cabecalho,
+      pEmpty(),
+      ...(ofCircular || dataCia || ciaN ? [
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 80, line: 276 },
+          children: [
+            ...(ofCircular ? [new TextRun({ text: `Ofício Circular nº ${ofCircular}`, font: 'Arial', size: 24, bold: true })] : []),
+            ...(dataCia ? [new TextRun({ text: `  —  ${dataCia}`, font: 'Arial', size: 24 })] : []),
+            ...(ciaN ? [new TextRun({ text: `  —  CIA n. ${ciaN}`, font: 'Arial', size: 24 })] : []),
+          ],
+        }),
+      ] : []),
+      ...(referente ? [
+        pMixed([{ text: 'Referente: ', bold: true }, { text: referente, bold: true, underline: true }], { after: 240, align: AlignmentType.LEFT }),
+      ] : []),
+      pEmpty(),
+      pMixed([{ text: saudacao }], { after: 200 }),
+      pEmpty(),
+      ...corpo.split('\n').map(l => new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 160, line: 276 },
+        indent: { firstLine: 1701 },
+        children: [new TextRun({ text: l || '', font: 'Arial', size: 24 })],
+      })),
+      ...rodapeForum,
+      pEmpty(),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: artigoRodape, font: 'Arial', size: 24 })] }),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: 'Corregedoria-Geral de Justiça do Estado de Mato Grosso', font: 'Arial', size: 24, bold: true })] }),
+      ...(assinadoPor || porOrdem ? [
+        new Paragraph({
+          alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 },
+          children: [
+            new TextRun({ text: 'A/C ', font: 'Arial', size: 24 }),
+            new TextRun({ text: `${tratamentoAssina} ${assinadoPor}`, font: 'Arial', size: 24, bold: true }),
+            ...(cargoAssina ? [new TextRun({ text: ` — ${cargoAssina}`, font: 'Arial', size: 24 })] : []),
+          ],
+        }),
+      ] : []),
+      ...(porOrdem ? [
+        new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: `Por ordem ${feminino ? 'da' : 'do'}: ${porOrdem}`, font: 'Arial', size: 24 })] }),
+      ] : []),
+      new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 0, line: 276 }, children: [new TextRun({ text: 'Cuiabá-MT', font: 'Arial', size: 24 })] }),
+    ];
+  };
+
   const children = modelo.id === 'comunicacao_rc' ? buildRC()
     : modelo.id === 'protesto'        ? buildProtesto()
     : modelo.id === 'tabelionato'     ? buildTabelionato()
+    : (dados.situacao === 'corregedoria') ? buildCorregedoria()
     : buildForum();
 
   const doc = new Document({
@@ -956,8 +1028,48 @@ export default function ModelosOficio() {
                   </div>
                 </div>
 
+                {/* ── Campos específicos Corregedoria ── */}
+                {dados.situacao === 'corregedoria' && (
+                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Dados da Corregedoria</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Nº Ofício Circular</label>
+                        <input className="form-input" value={dados.of_circular||''} onChange={e => setD('of_circular',e.target.value)} placeholder="Ex: 001/2025" />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Data</label>
+                        <input className="form-input" type="date" value={dados.data_cia||''} onChange={e => setD('data_cia',e.target.value)} />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">CIA n.</label>
+                        <input className="form-input" value={dados.cia_n||''} onChange={e => setD('cia_n',e.target.value)} placeholder="Ex: 123" />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Assinado por (Dr./Dra. Nome)</label>
+                        <input className="form-input" value={dados.assinado_por||''} onChange={e => setD('assinado_por',e.target.value)} placeholder="Ex: Dra. Maria Silva" />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Cargo</label>
+                        <select className="form-input" value={dados.cargo_assina||'Juiz(a) Auxiliar'} onChange={e => setD('cargo_assina',e.target.value)}>
+                          <option>Juiz(a) Auxiliar</option>
+                          <option>Desembargador(a)</option>
+                          <option>Corregedor(a)-Geral</option>
+                          <option>Outro</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginTop: 10, marginBottom: 0 }}>
+                      <label className="form-label">Por ordem de (cargo superior — opcional)</label>
+                      <input className="form-input" value={dados.por_ordem||''} onChange={e => setD('por_ordem',e.target.value)} placeholder="Ex: Corregedor(a)-Geral de Justiça" />
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Referência e Processo</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Referência{dados.situacao !== 'corregedoria' ? ' e Processo' : ''}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Referente</label>
@@ -966,13 +1078,16 @@ export default function ModelosOficio() {
                         onChange={e => setD('referente', e.target.value)}
                         placeholder="Ex: Cumprimento ao Mandado de Retificação de Registro, extraído dos Autos nº 1000703-22..." />
                     </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Nº Processo Judicial</label>
-                      <input className="form-input" value={dados.proc_judicial||''} onChange={e => setD('proc_judicial',e.target.value)} placeholder="Nº do processo judicial" />
-                    </div>
+                    {dados.situacao !== 'corregedoria' && (
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label">Nº Processo Judicial</label>
+                        <input className="form-input" value={dados.proc_judicial||''} onChange={e => setD('proc_judicial',e.target.value)} placeholder="Nº do processo judicial" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
+                {dados.situacao !== 'corregedoria' && (
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Partes (opcional)</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -980,6 +1095,7 @@ export default function ModelosOficio() {
                     <div className="form-group" style={{ marginBottom: 0 }}><label className="form-label">Parte Requerente</label><input className="form-input" value={dados.parte2||''} onChange={e => setD('parte2',e.target.value)} placeholder="Nome da parte requerente" /></div>
                   </div>
                 </div>
+                )}
 
                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
