@@ -1191,7 +1191,7 @@ export default function ModelosOficio() {
                     Variáveis: [LIVRO] [FOLHAS] [DATA_ATO] [OUTORGANTE] [OUTORGADO] [BENEFICIARIO] [FLS_SUBSTAB] [LIVRO_SUBSTAB] [DATA_SUBSTAB]
                   </div>
                   <textarea className="form-input" rows={10} value={dados.corpo||''} onChange={e => setD('corpo', e.target.value)}
-                    style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }} />
+                    style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6, fontSize: 12, minHeight: 160 }} />
                 </div>
               </>)}
 
