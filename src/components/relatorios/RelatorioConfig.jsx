@@ -10,7 +10,10 @@ const TIPOS = [
   { id: 'andamento_reanalise_devolvido',  label: 'Em Andamento e Em Reanálise (com Devolvidos em quadro separado)' },
   { id: 'concluido',                      label: 'Apenas Concluídos' },
   { id: 'encerrado',                      label: 'Apenas Encerrados' },
+  { id: 'panoramico',                     label: '📊 Panorâmico — Sequência de meses comparativa' },
 ];
+
+const MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const EMPTY = {
   nome: '', ativo: true, destinatarios: '', tipo: 'ambos',
@@ -21,6 +24,11 @@ const EMPTY = {
   incluir_detalhado: true, incluir_categoria: false,
   incluir_agrupado_resp: false, incluir_individual_resp: false,
   destinatarios_individual: [],
+  // Campos exclusivos do Panorâmico
+  pan_mes_ini: String(new Date().getMonth() + 1).padStart(2, '0'),
+  pan_ano: String(new Date().getFullYear()),
+  pan_meses: 6,
+  pan_agrup: 'especie',
 };
 
 export default function RelatorioConfig() {
@@ -68,6 +76,10 @@ export default function RelatorioConfig() {
         incluir_categoria: config.incluir_categoria === true,
         periodo_mes: config.periodo_mes || '',
         periodo_ano: config.periodo_ano || '',
+        pan_mes_ini: config.pan_mes_ini || String(new Date().getMonth() + 1).padStart(2, '0'),
+        pan_ano:     config.pan_ano     || String(new Date().getFullYear()),
+        pan_meses:   config.pan_meses   || 6,
+        pan_agrup:   config.pan_agrup   || 'especie',
       });
     } else {
       setForm(EMPTY);
@@ -103,6 +115,10 @@ export default function RelatorioConfig() {
         incluir_agrupado_resp:    form.incluir_agrupado_resp === true,
         incluir_individual_resp:  form.incluir_individual_resp === true,
         destinatarios_individual: form.incluir_individual_resp ? (form.destinatarios_individual || []) : [],
+        pan_mes_ini: form.tipo === 'panoramico' ? form.pan_mes_ini : null,
+        pan_ano:     form.tipo === 'panoramico' ? form.pan_ano     : null,
+        pan_meses:   form.tipo === 'panoramico' ? Number(form.pan_meses || 6) : null,
+        pan_agrup:   form.tipo === 'panoramico' ? (form.pan_agrup || 'especie') : null,
       };
       if (modal === 'novo') {
         const { error } = await sb.from('relatorio_config').insert(payload);
@@ -292,7 +308,61 @@ export default function RelatorioConfig() {
                 </select>
               </div>
 
-              {/* Seções do e-mail */}
+              {/* ── Configurações exclusivas do Panorâmico ── */}
+              {form.tipo === 'panoramico' && (
+                <div style={{ background: 'color-mix(in srgb, var(--color-accent) 6%, var(--color-surface))', border: '1px solid color-mix(in srgb, var(--color-accent) 25%, var(--color-border))', borderRadius: 'var(--radius-md)', padding: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 12 }}>Configurações do Panorâmico</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Mês inicial</label>
+                      <select className="form-select" value={form.pan_mes_ini || '01'} onChange={e => setF('pan_mes_ini', e.target.value)}>
+                        {MESES_FULL.map((m, i) => <option key={i+1} value={String(i+1).padStart(2,'0')}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Ano</label>
+                      <select className="form-select" value={form.pan_ano || String(new Date().getFullYear())} onChange={e => setF('pan_ano', e.target.value)}>
+                        {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Nº de meses</label>
+                      <select className="form-select" value={form.pan_meses || 6} onChange={e => setF('pan_meses', Number(e.target.value))}>
+                        {[2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n} meses</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Agrupar por</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[['especie','Serviço (Espécie)'],['categoria','Categoria'],['setor','Setor']].map(([id, label]) => (
+                        <button key={id} type="button"
+                          className={`btn btn-sm ${(form.pan_agrup||'especie') === id ? 'btn-primary' : 'btn-secondary'}`}
+                          onClick={() => setF('pan_agrup', id)}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-text-muted)', background: 'var(--color-surface)', padding: '6px 10px', borderRadius: 'var(--radius-md)' }}>
+                    {(() => {
+                      const m = parseInt(form.pan_mes_ini || '1');
+                      const a = parseInt(form.pan_ano || String(new Date().getFullYear()));
+                      const n = form.pan_meses || 6;
+                      const cols = [];
+                      let cm = m, ca = a;
+                      for (let i = 0; i < n; i++) {
+                        cols.push(`${MESES_FULL[cm-1].substring(0,3)}/${ca}`);
+                        cm++; if (cm > 12) { cm = 1; ca++; }
+                      }
+                      return `Sequência: ${cols.join(' → ')}`;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Seções do e-mail — ocultas no modo Panorâmico */}
+              {form.tipo !== 'panoramico' && (
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Seções do E-mail</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
@@ -318,6 +388,7 @@ export default function RelatorioConfig() {
                   <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-danger)' }}>⚠ Selecione ao menos uma seção.</div>
                 )}
               </div>
+              )}
 
               {/* Seleção de responsáveis para e-mail individual */}
               {form.incluir_individual_resp && (
@@ -357,6 +428,7 @@ export default function RelatorioConfig() {
                   )}
                 </div>
               )}
+              {form.tipo !== 'panoramico' && (<>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Período de busca</label>
                 <select className="form-select" value={form.periodo_tipo||'dias'} onChange={e => {
@@ -435,6 +507,7 @@ export default function RelatorioConfig() {
                   ))}
                 </div>
               </div>
+              </>)}
 
               {/* Filtro de responsáveis */}
               <div className="form-group" style={{ marginBottom: 0 }}>
