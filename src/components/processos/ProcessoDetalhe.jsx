@@ -733,7 +733,7 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
 
 // ── Aba: Andamentos ───────────────────────────────────────────
 function TabAndamentos({ processoId, usuarios }) {
-  const { andamentos, addAndamento, editAndamento, deleteAndamento, editProcesso, usuario, addToast } = useApp();
+  const { andamentos, addAndamento, editAndamento, deleteAndamento, alterarStatusProcesso, usuario, addToast } = useApp();
   const lista = andamentos.filter(a => a.processo_id === processoId).sort((a, b) => b.dt_andamento.localeCompare(a.dt_andamento));
 
   const EMPTY_AND = { processo_id: processoId, dt_andamento: HOJE(), tipo: '', descricao: '', responsavel: usuario?.nome_simples || '', vencimento: '', concluido: false };
@@ -761,7 +761,7 @@ function TabAndamentos({ processoId, usuarios }) {
       if (todosConc && irmãos.length >= 0) {
         const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo também?');
         if (confirmar) {
-          await editProcesso(processoId, { status: 'Concluído', dt_conclusao: new Date().toISOString().split('T')[0] });
+          await alterarStatusProcesso(processoId, null, 'Concluído', 'Concluído via baixa de andamentos');
           addToast('Andamento e processo concluídos!', 'success');
           return;
         }
