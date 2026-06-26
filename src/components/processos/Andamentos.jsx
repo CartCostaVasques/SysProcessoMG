@@ -72,16 +72,18 @@ export default function Andamentos() {
     const novoStatus = !a.concluido;
     await editAndamento(a.id, { concluido: novoStatus });
     if (novoStatus) {
-      // Verifica se todos os andamentos do processo estão concluídos
-      const irmãos = andamentos.filter(x => x.processo_id === a.processo_id && x.id !== a.id);
-      const todosConc = irmãos.every(x => x.concluido);
       const proc = processos.find(p => p.id === a.processo_id);
-      if (todosConc && proc && proc.status !== 'Concluído') {
-        const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo vinculado também?');
-        if (confirmar) {
-          await alterarStatusProcesso(proc.id, proc.status, 'Concluído', 'Concluído via baixa de andamentos');
-          addToast('Andamento e processo concluídos!', 'success');
-          return;
+      if (proc && proc.status !== 'Concluído') {
+        // Considera o andamento atual já como concluído (estado pode não ter atualizado ainda)
+        const todosAndProc = andamentos.filter(x => x.processo_id === a.processo_id);
+        const todosConc = todosAndProc.every(x => x.id === a.id ? true : x.concluido);
+        if (todosConc) {
+          const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo vinculado também?');
+          if (confirmar) {
+            await alterarStatusProcesso(proc.id, proc.status, 'Concluído', 'Concluído via baixa de andamentos');
+            addToast('Andamento e processo concluídos!', 'success');
+            return;
+          }
         }
       }
       addToast('Concluído!', 'success');
