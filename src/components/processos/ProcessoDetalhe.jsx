@@ -756,9 +756,9 @@ function TabAndamentos({ processoId, usuarios }) {
     const novoStatus = !a.concluido;
     await editAndamento(a.id, { concluido: novoStatus });
     if (novoStatus) {
-      const irmãos = lista.filter(x => x.id !== a.id);
-      const todosConc = irmãos.every(x => x.concluido);
-      if (todosConc && irmãos.length >= 0) {
+      // Considera o andamento atual já como concluído (estado pode não ter atualizado ainda)
+      const todosConc = lista.every(x => x.id === a.id ? true : x.concluido);
+      if (todosConc) {
         const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo também?');
         if (confirmar) {
           await alterarStatusProcesso(processoId, null, 'Concluído', 'Concluído via baixa de andamentos');
