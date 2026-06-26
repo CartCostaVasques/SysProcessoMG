@@ -733,7 +733,7 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
 
 // ── Aba: Andamentos ───────────────────────────────────────────
 function TabAndamentos({ processoId, usuarios }) {
-  const { andamentos, addAndamento, editAndamento, deleteAndamento, usuario, addToast } = useApp();
+  const { andamentos, addAndamento, editAndamento, deleteAndamento, editProcesso, usuario, addToast } = useApp();
   const lista = andamentos.filter(a => a.processo_id === processoId).sort((a, b) => b.dt_andamento.localeCompare(a.dt_andamento));
 
   const EMPTY_AND = { processo_id: processoId, dt_andamento: HOJE(), tipo: '', descricao: '', responsavel: usuario?.nome_simples || '', vencimento: '', concluido: false };
@@ -753,8 +753,23 @@ function TabAndamentos({ processoId, usuarios }) {
   };
 
   const concluir = async (a) => {
-    await editAndamento(a.id, { concluido: !a.concluido });
-    addToast(a.concluido ? 'Reaberto.' : 'Concluído!', 'success');
+    const novoStatus = !a.concluido;
+    await editAndamento(a.id, { concluido: novoStatus });
+    if (novoStatus) {
+      const irmãos = lista.filter(x => x.id !== a.id);
+      const todosConc = irmãos.every(x => x.concluido);
+      if (todosConc && irmãos.length >= 0) {
+        const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo também?');
+        if (confirmar) {
+          await editProcesso(processoId, { status: 'Concluído', dt_conclusao: new Date().toISOString().split('T')[0] });
+          addToast('Andamento e processo concluídos!', 'success');
+          return;
+        }
+      }
+      addToast('Concluído!', 'success');
+    } else {
+      addToast('Reaberto.', 'success');
+    }
   };
 
   const excluir = async (a) => {
