@@ -34,13 +34,26 @@ const EMPTY = {
 export default function RelatorioConfig() {
   const { supabaseClient: sb, usuarios, processos, addToast } = useApp();
 
+  const [aba,        setAba]        = useState('relatorios'); // 'relatorios' | 'aniversarios'
   const [configs,    setConfigs]    = useState([]);
   const [envios,     setEnvios]     = useState([]);
-  const [modal,      setModal]      = useState(null); // null | 'novo' | objeto
+  const [modal,      setModal]      = useState(null);
   const [form,       setForm]       = useState(EMPTY);
   const [salvando,   setSalvando]   = useState(false);
-  const [enviando,   setEnviando]   = useState(null); // id da config enviando
+  const [enviando,   setEnviando]   = useState(null);
   const [carregando, setCarregando] = useState(true);
+
+  // Estado da aba Aniversários
+  const [anivConfig,    setAnivConfig]    = useState(null); // config salva no banco
+  const [anivForm,      setAnivForm]      = useState({
+    ativo: true,
+    dias_antecedencia: 0, // 0 = no dia, 1 = 1 dia antes, etc.
+    texto_aniversario: 'Desejamos a você um feliz aniversário! 🎉🎂\n\nQue este dia seja repleto de alegrias e realizações.\n\nCom carinho,\nEquipe do Cartório Costa Vasques',
+    assunto_email: '🎂 Feliz Aniversário, {NOME}!',
+  });
+  const [anivSalvando,  setAnivSalvando]  = useState(false);
+  const [anivEnviando,  setAnivEnviando]  = useState(false);
+  const [colaboradores, setColaboradores] = useState([]);
 
   // Categorias e anos únicos dos processos
   const categorias = useMemo(() => [...new Set(processos.map(p => p.categoria).filter(Boolean))].sort(), [processos]);
@@ -60,9 +73,25 @@ export default function RelatorioConfig() {
     const { data } = await sb.from('relatorio_envios').select('*').order('enviado_em', { ascending: false }).limit(50);
     if (data) setEnvios(data);
   };
+  const fetchAnivConfig = async () => {
+    const { data } = await sb.from('aniversario_config').select('*').eq('id', 1).maybeSingle();
+    if (data) {
+      setAnivConfig(data);
+      setAnivForm({
+        ativo:              data.ativo              ?? true,
+        dias_antecedencia:  data.dias_antecedencia  ?? 0,
+        texto_aniversario:  data.texto_aniversario  || anivForm.texto_aniversario,
+        assunto_email:      data.assunto_email       || anivForm.assunto_email,
+      });
+    }
+  };
+  const fetchColaboradores = async () => {
+    const { data } = await sb.from('colaboradores').select('id, nome_completo, email, dt_aniversario, sexo, ativo').eq('ativo', true).not('dt_aniversario', 'is', null).not('email', 'is', null).order('nome_completo');
+    if (data) setColaboradores(data);
+  };
 
   useEffect(() => {
-    Promise.all([fetchConfigs(), fetchEnvios()]).finally(() => setCarregando(false));
+    Promise.all([fetchConfigs(), fetchEnvios(), fetchAnivConfig(), fetchColaboradores()]).finally(() => setCarregando(false));
   }, []);
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -176,6 +205,48 @@ export default function RelatorioConfig() {
     return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
   };
 
+  const handleSalvarAniv = async () => {
+    setAnivSalvando(true);
+    try {
+      const payload = {
+        id: 1,
+        ativo:             anivForm.ativo,
+        dias_antecedencia: Number(anivForm.dias_antecedencia),
+        texto_aniversario: anivForm.texto_aniversario,
+        assunto_email:     anivForm.assunto_email,
+        atualizado_em:     new Date().toISOString(),
+      };
+      const { error } = await sb.from('aniversario_config').upsert(payload, { onConflict: 'id' });
+      if (error) throw error;
+      await fetchAnivConfig();
+      addToast('Configuração de aniversário salva!', 'success');
+    } catch (e) {
+      addToast(e.message, 'error');
+    } finally {
+      setAnivSalvando(false);
+    }
+  };
+
+  const handleEnviarAnivAgora = async () => {
+    setAnivEnviando(true);
+    try {
+      const supabaseUrl = sb.supabaseUrl;
+      const { data: { session } } = await sb.auth.getSession();
+      const resp = await fetch(`${supabaseUrl}/functions/v1/enviar-relatorio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ acao: 'alerta_aniversario' }),
+      });
+      const result = await resp.json();
+      if (result.ok) addToast(result.msg || 'Verificação de aniversários concluída!', 'success');
+      else addToast(result.erro || 'Erro ao enviar', 'error');
+    } catch (e) {
+      addToast(e.message, 'error');
+    } finally {
+      setAnivEnviando(false);
+    }
+  };
+
   if (carregando) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-faint)' }}>Carregando...</div>;
 
   return (
@@ -185,10 +256,26 @@ export default function RelatorioConfig() {
           <div className="page-title">Relatórios Automáticos</div>
           <div className="page-sub">Configure envios periódicos por e-mail</div>
         </div>
-        <button className="btn btn-primary" onClick={() => abrirModal()}>+ Nova Configuração</button>
+        {aba === 'relatorios' && (
+          <button className="btn btn-primary" onClick={() => abrirModal()}>+ Nova Configuração</button>
+        )}
       </div>
 
-      {/* Lista de configurações */}
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid var(--color-border)', marginBottom: 20 }}>
+        {[
+          { id: 'relatorios',   label: '📊 Relatórios de Processos' },
+          { id: 'aniversarios', label: '🎂 Aniversários dos Colaboradores' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setAba(t.id)}
+            style={{ padding: '8px 18px', fontSize: 13, fontWeight: aba === t.id ? 700 : 400, border: 'none', background: 'transparent', borderBottom: `3px solid ${aba === t.id ? 'var(--color-accent)' : 'transparent'}`, color: aba === t.id ? 'var(--color-accent)' : 'var(--color-text-muted)', cursor: 'pointer', marginBottom: -2, borderRadius: '4px 4px 0 0', transition: 'all .15s' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ABA: Relatórios de Processos ── */}
+      {aba === 'relatorios' && (<>
       {configs.length === 0
         ? <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-faint)' }}>
             Nenhuma configuração ainda. Crie uma para começar.
@@ -583,6 +670,132 @@ export default function RelatorioConfig() {
         </div>
         </Portal>
       )}
+      </>)}
+
+      {/* ── ABA: Aniversários dos Colaboradores ── */}
+      {aba === 'aniversarios' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Card de configuração */}
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Configuração do E-mail de Aniversário</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Ativo</span>
+                <div onClick={() => setAnivForm(p => ({ ...p, ativo: !p.ativo }))}
+                  style={{ width: 40, height: 22, borderRadius: 11, background: anivForm.ativo ? 'var(--color-success)' : 'var(--color-border)', cursor: 'pointer', position: 'relative', transition: 'background .2s' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: anivForm.ativo ? 20 : 2, transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Assunto do e-mail</label>
+                <input className="form-input" value={anivForm.assunto_email} onChange={e => setAnivForm(p => ({ ...p, assunto_email: e.target.value }))}
+                  placeholder="Ex: 🎂 Feliz Aniversário, {NOME}!" />
+                <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>Use <code style={{ fontSize: 10 }}>{'{NOME}'}</code> para o primeiro nome do colaborador</div>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Enviar com antecedência</label>
+                <select className="form-select" value={anivForm.dias_antecedencia} onChange={e => setAnivForm(p => ({ ...p, dias_antecedencia: Number(e.target.value) }))}>
+                  <option value={0}>No dia do aniversário</option>
+                  <option value={1}>1 dia antes</option>
+                  <option value={2}>2 dias antes</option>
+                  <option value={3}>3 dias antes</option>
+                  <option value={7}>1 semana antes</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Texto do e-mail</label>
+              <textarea className="form-input" rows={7} value={anivForm.texto_aniversario}
+                onChange={e => setAnivForm(p => ({ ...p, texto_aniversario: e.target.value }))}
+                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7, fontSize: 13, minHeight: 140 }} />
+              <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
+                Variáveis disponíveis: <code style={{ fontSize: 10 }}>{'{NOME}'}</code> = primeiro nome · <code style={{ fontSize: 10 }}>{'{NOME_COMPLETO}'}</code> = nome completo · <code style={{ fontSize: 10 }}>{'{DATA}'}</code> = data de hoje
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary" onClick={handleSalvarAniv} disabled={anivSalvando}>
+                {anivSalvando ? '⏳ Salvando...' : '💾 Salvar Configuração'}
+              </button>
+              <button className="btn btn-secondary" onClick={handleEnviarAnivAgora} disabled={anivEnviando}
+                title="Verifica quais colaboradores fazem aniversário hoje (ou com a antecedência configurada) e envia o e-mail">
+                {anivEnviando ? '⏳ Verificando...' : '📧 Executar Verificação Agora'}
+              </button>
+            </div>
+          </div>
+
+          {/* Prévia do e-mail */}
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Prévia do E-mail</div>
+            <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 4 }}>
+                <strong>Assunto:</strong> {(anivForm.assunto_email || '').replace('{NOME}', 'Maria')}
+              </div>
+              <div style={{ fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.7, color: 'var(--color-text)', marginTop: 10, borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
+                {(anivForm.texto_aniversario || '')
+                  .replace(/\{NOME\}/g, 'Maria')
+                  .replace(/\{NOME_COMPLETO\}/g, 'Maria da Silva')
+                  .replace(/\{DATA\}/g, new Date().toLocaleDateString('pt-BR'))}
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de colaboradores com aniversário e e-mail */}
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-header">
+              <div className="card-title">Colaboradores Ativos com Aniversário Cadastrado</div>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{colaboradores.length} colaborador(es)</span>
+            </div>
+            {colaboradores.length === 0
+              ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-faint)', fontSize: 13 }}>
+                  Nenhum colaborador ativo com data de aniversário e e-mail cadastrados.
+                </div>
+              : <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead><tr>
+                      <th>Nome</th>
+                      <th>Aniversário</th>
+                      <th>Próximo</th>
+                      <th>E-mail</th>
+                    </tr></thead>
+                    <tbody>
+                      {colaboradores.map(c => {
+                        const hoje = new Date();
+                        const aniv = c.dt_aniversario ? new Date(c.dt_aniversario + 'T12:00:00') : null;
+                        let proximoLabel = '—';
+                        let proximoCor = 'var(--color-text-muted)';
+                        if (aniv) {
+                          const proximo = new Date(hoje.getFullYear(), aniv.getMonth(), aniv.getDate());
+                          if (proximo < hoje) proximo.setFullYear(hoje.getFullYear() + 1);
+                          const diffDias = Math.round((proximo - hoje) / 86400000);
+                          if (diffDias === 0) { proximoLabel = '🎂 Hoje!'; proximoCor = 'var(--color-success)'; }
+                          else if (diffDias <= 7) { proximoLabel = `Em ${diffDias} dia(s)`; proximoCor = 'var(--color-warning)'; }
+                          else { proximoLabel = proximo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); }
+                        }
+                        return (
+                          <tr key={c.id}>
+                            <td style={{ fontWeight: 600 }}>{c.nome_completo}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                              {aniv ? aniv.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' }) : '—'}
+                            </td>
+                            <td style={{ fontSize: 12, fontWeight: 600, color: proximoCor }}>{proximoLabel}</td>
+                            <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{c.email}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+            }
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
