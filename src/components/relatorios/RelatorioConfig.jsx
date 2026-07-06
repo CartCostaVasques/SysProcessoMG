@@ -734,51 +734,6 @@ export default function RelatorioConfig() {
             </button>
           </div>
 
-          {/* Card de pg_cron */}
-          <div className="card" style={{ padding: 16, borderLeft: '3px solid var(--color-accent)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 16 }}>⚙️</span>
-              <div style={{ fontSize: 13, fontWeight: 700 }}>Envio Automático via pg_cron</div>
-              <span className="badge badge-warning" style={{ fontSize: 10 }}>Requer configuração no Supabase</span>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 10, lineHeight: 1.6 }}>
-              O envio automático funciona todos os dias — <strong>incluindo sábados, domingos e feriados</strong>.
-              Execute o SQL abaixo no <strong>Supabase → SQL Editor</strong>. Sempre que mudar a hora, salve e rode novamente.
-            </div>
-            {(() => {
-              const hora = anivForm.hora_envio || '08:00';
-              const horaUtc = String(parseInt(hora.split(':')[0]) + 3).padStart(2, '0');
-              const linhasSql = [
-                "SELECT cron.unschedule('alerta-aniversario-diario');",
-                "SELECT cron.schedule(",
-                "  'alerta-aniversario-diario',",
-                "  '0 " + horaUtc + " * * *',",
-                "  $$",
-                "    SELECT net.http_post(",
-                "      url := 'https://rriienkhlofjlvsxdkur.supabase.co/functions/v1/enviar-relatorio',",
-                `      headers := '{"Content-Type":"application/json","Authorization":"Bearer SUA_SERVICE_ROLE_KEY"}'::jsonb,`,
-                `      body := '{"acao":"alerta_aniversario"}'::jsonb`,
-                "    );",
-                "  $$",
-                ");"
-              ];
-              const sql = linhasSql.join('\n');
-              return (
-                <div style={{ position: 'relative' }}>
-                  <pre style={{ fontSize: 11, background: 'var(--color-surface-2)', padding: '10px 14px', borderRadius: 'var(--radius-md)', overflowX: 'auto', color: 'var(--color-text)', lineHeight: 1.8, margin: 0 }}>{sql}</pre>
-                  <button className="btn btn-secondary btn-sm" style={{ position: 'absolute', top: 8, right: 8, fontSize: 11 }}
-                    onClick={() => { navigator.clipboard.writeText(sql); addToast('SQL copiado!', 'success'); }}>
-                    📋 Copiar
-                  </button>
-                </div>
-              );
-            })()}
-            <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 8 }}>
-              Substitua <code style={{ fontSize: 10 }}>SUA_SERVICE_ROLE_KEY</code> pela chave service_role (Supabase → Settings → API).
-              Hora: {anivForm.hora_envio || '08:00'} (Brasília) = {String(parseInt((anivForm.hora_envio || '08:00').split(':')[0]) + 3).padStart(2, '0')}:00 UTC.
-            </div>
-          </div>
-
           {/* Envio manual por data */}
           <div className="card" style={{ padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>📧 Envio Manual por Data</div>
