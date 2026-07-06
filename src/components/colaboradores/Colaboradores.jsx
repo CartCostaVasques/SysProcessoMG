@@ -391,6 +391,7 @@ export default function Colaboradores() {
         celular: form.celular || null,
         endereco: form.endereco || null,
         cidade: form.cidade || null,
+        msg_aniversario: form.msg_aniversario || null,
         foto_url,
         ativo: !form.dt_demissao,
         atualizado_em: new Date().toISOString(),
@@ -654,6 +655,14 @@ export default function Colaboradores() {
                   <div className="form-group">
                     <label className="form-label">Cidade</label>
                     <input className="form-input" value={form.cidade || ''} onChange={e => set('cidade', e.target.value)} />
+                  </div>
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">🎉 Mensagem de aniversário personalizada</label>
+                    <textarea className="form-input" rows={4} value={form.msg_aniversario || ''}
+                      onChange={e => set('msg_aniversario', e.target.value)}
+                      placeholder="Deixe em branco para usar o texto padrão configurado em Relatórios. Se preenchido, este texto será usado exclusivamente para este colaborador."
+                      style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.6 }} />
+                    <div className="form-hint">Variáveis: {'{NOME}'} = primeiro nome · {'{NOME_COMPLETO}'} = nome completo · {'{DATA}'} = data de hoje</div>
                   </div>
                 </div>
               </div>
