@@ -52,6 +52,7 @@ export default function RelatorioConfig() {
     texto_aniversario: 'Desejamos a você um feliz aniversário! 🎉🎂\n\nQue este dia seja repleto de alegrias e realizações.\n\nCom carinho,\nEquipe do Cartório Costa Vasques',
     assunto_email: '🎂 Feliz Aniversário, {NOME}!',
     email_confirmacao: '',
+    msg_tabelionato: '',
   });
   const [anivSalvando,  setAnivSalvando]  = useState(false);
   const [anivEnviando,  setAnivEnviando]  = useState(false);
@@ -87,6 +88,7 @@ export default function RelatorioConfig() {
         texto_aniversario:  data.texto_aniversario  || anivForm.texto_aniversario,
         assunto_email:      data.assunto_email       || anivForm.assunto_email,
         email_confirmacao:  data.email_confirmacao   || '',
+        msg_tabelionato:    data.msg_tabelionato     || '',
       });
     }
   };
@@ -227,6 +229,7 @@ export default function RelatorioConfig() {
         texto_aniversario:  anivForm.texto_aniversario,
         assunto_email:      anivForm.assunto_email,
         email_confirmacao:  anivForm.email_confirmacao || null,
+        msg_tabelionato:    anivForm.msg_tabelionato   || null,
         atualizado_em:      new Date().toISOString(),
       };
       const { error } = await sb.from('aniversario_config').upsert(payload, { onConflict: 'id' });
@@ -736,6 +739,17 @@ export default function RelatorioConfig() {
                 style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7, fontSize: 13, minHeight: 130 }} />
               <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
                 Variáveis: <code style={{ fontSize: 10 }}>{'{NOME}'}</code> · <code style={{ fontSize: 10 }}>{'{NOME_COMPLETO}'}</code> · <code style={{ fontSize: 10 }}>{'{DATA}'}</code>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">🏛 Texto especial para Tabeliã / Tabelião</label>
+              <textarea className="form-input" rows={5} value={anivForm.msg_tabelionato || ''}
+                onChange={e => setAnivForm(p => ({ ...p, msg_tabelionato: e.target.value }))}
+                placeholder="Deixe em branco para usar o texto padrão. Este texto será usado quando o colaborador tiver &quot;Tabeliã&quot; ou &quot;Tabelião&quot; na função."
+                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7, fontSize: 13, minHeight: 110 }} />
+              <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
+                Aplicado automaticamente a colaboradores cuja função contém <strong>Tabeliã</strong> ou <strong>Tabelião</strong>. Mesmas variáveis disponíveis.
               </div>
             </div>
 
