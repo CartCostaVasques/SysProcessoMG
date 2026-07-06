@@ -756,8 +756,8 @@ export default function RelatorioConfig() {
                 "  $$",
                 "    SELECT net.http_post(",
                 "      url := 'https://rriienkhlofjlvsxdkur.supabase.co/functions/v1/enviar-relatorio',",
-                '      headers := '{"Content-Type":"application/json","Authorization":"Bearer SUA_SERVICE_ROLE_KEY"}'::jsonb,',
-                '      body := '{"acao":"alerta_aniversario"}'::jsonb',
+                `      headers := '{"Content-Type":"application/json","Authorization":"Bearer SUA_SERVICE_ROLE_KEY"}'::jsonb,`,
+                `      body := '{"acao":"alerta_aniversario"}'::jsonb`,
                 "    );",
                 "  $$",
                 ");"
