@@ -51,6 +51,7 @@ export default function RelatorioConfig() {
     hora_envio: '08:00',
     texto_aniversario: 'Desejamos a você um feliz aniversário! 🎉🎂\n\nQue este dia seja repleto de alegrias e realizações.\n\nCom carinho,\nEquipe do Cartório Costa Vasques',
     assunto_email: '🎂 Feliz Aniversário, {NOME}!',
+    email_confirmacao: '',
   });
   const [anivSalvando,  setAnivSalvando]  = useState(false);
   const [anivEnviando,  setAnivEnviando]  = useState(false);
@@ -85,12 +86,18 @@ export default function RelatorioConfig() {
         hora_envio:         data.hora_envio          || '08:00',
         texto_aniversario:  data.texto_aniversario  || anivForm.texto_aniversario,
         assunto_email:      data.assunto_email       || anivForm.assunto_email,
+        email_confirmacao:  data.email_confirmacao   || '',
       });
     }
   };
+  const [todosColaboradores, setTodosColaboradores] = useState([]);
+
   const fetchColaboradores = async () => {
     const { data } = await sb.from('colaboradores').select('id, nome_completo, email, dt_aniversario, sexo, ativo').eq('ativo', true).not('dt_aniversario', 'is', null).not('email', 'is', null).order('nome_completo');
     if (data) setColaboradores(data);
+    // Buscar todos ativos com email para o seletor de confirmação
+    const { data: todos } = await sb.from('colaboradores').select('id, nome_completo, email').eq('ativo', true).not('email', 'is', null).order('nome_completo');
+    if (todos) setTodosColaboradores(todos);
   };
 
   useEffect(() => {
@@ -211,19 +218,22 @@ export default function RelatorioConfig() {
   const handleSalvarAniv = async () => {
     setAnivSalvando(true);
     try {
+      const hora = anivForm.hora_envio || '08:00';
       const payload = {
         id: 1,
-        ativo:             anivForm.ativo,
-        dias_antecedencia: Number(anivForm.dias_antecedencia),
-        hora_envio:        anivForm.hora_envio || '08:00',
-        texto_aniversario: anivForm.texto_aniversario,
-        assunto_email:     anivForm.assunto_email,
-        atualizado_em:     new Date().toISOString(),
+        ativo:              anivForm.ativo,
+        dias_antecedencia:  Number(anivForm.dias_antecedencia),
+        hora_envio:         hora,
+        texto_aniversario:  anivForm.texto_aniversario,
+        assunto_email:      anivForm.assunto_email,
+        email_confirmacao:  anivForm.email_confirmacao || null,
+        atualizado_em:      new Date().toISOString(),
       };
       const { error } = await sb.from('aniversario_config').upsert(payload, { onConflict: 'id' });
       if (error) throw error;
       await fetchAnivConfig();
-      addToast('Configuração de aniversário salva!', 'success');
+      const horaUtc = String(parseInt(hora.split(':')[0]) + 4).padStart(2, '0');
+      addToast(`Configuração salva! Lembre de atualizar o pg_cron para 0 ${horaUtc} * * * se mudou a hora.`, 'success');
     } catch (e) {
       addToast(e.message, 'error');
     } finally {
@@ -726,6 +736,19 @@ export default function RelatorioConfig() {
                 style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7, fontSize: 13, minHeight: 130 }} />
               <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
                 Variáveis: <code style={{ fontSize: 10 }}>{'{NOME}'}</code> · <code style={{ fontSize: 10 }}>{'{NOME_COMPLETO}'}</code> · <code style={{ fontSize: 10 }}>{'{DATA}'}</code>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Quem recebe a confirmação de envio</label>
+              <select className="form-select" value={anivForm.email_confirmacao || ''} onChange={e => setAnivForm(p => ({ ...p, email_confirmacao: e.target.value }))}>
+                <option value="">Ninguém (não enviar confirmação)</option>
+                {todosColaboradores.map(c => (
+                  <option key={c.id} value={c.email}>{c.nome_completo.split(' ').slice(0,2).join(' ')} — {c.email}</option>
+                ))}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4 }}>
+                Quando felicitações forem enviadas, esta pessoa receberá um aviso com os nomes dos aniversariantes.
               </div>
             </div>
 
