@@ -901,11 +901,19 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   }).join('');
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
+<html><head><meta charset="UTF-8"><title>Requerimento - Pedido de Certidão</title>
 <style>
   @page { size: A4 portrait; margin: 16mm 18mm 16mm 18mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
+  /* Remove cabeçalho e rodapé do navegador (about:blank, data/hora) */
+  @page { margin-top: 16mm; margin-bottom: 16mm; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Força remoção do header/footer no Chrome/Edge */
+  @media print {
+    @page { margin: 16mm 18mm; }
+    body::before, body::after { display: none !important; content: none !important; }
+  }
   .cab { text-align: center; border: 1px solid #000; padding: 10px 14px; margin-bottom: 10px; }
   .cab h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 4px; }
   .cab-info { font-size: 11px; line-height: 1.6; }
@@ -952,7 +960,7 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
 
 <!-- Requerente -->
 <table class="campo-bloco"><tr>
-  <td style="width:100%;"><span class="flabel">Requerente</span><span class="fval">${req.nome||''}</span></td>
+  <td style="width:100%;"><span class="flabel">Requerente</span><span class="fval" style="font-weight:bold;">${req.nome||''}</span></td>
 </tr></table>
 
 <table class="campo-bloco"><tr>
@@ -992,7 +1000,7 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   <div style="flex:1;border-bottom:1px solid #000;min-height:18px;"></div>
 </div>
 <div class="linha-info" style="margin-top:8px;">
-  <span>Finalidade:</span><div></div>
+  <span>Finalidade:</span><div style="padding-left:4px;">${certidoes[0]?.finalidade || ''}</div>
 </div>
 
 <div style="font-size:12px;margin-top:20px;">${cidadeData}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
@@ -1016,7 +1024,10 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write(html);
   w.document.close();
-  setTimeout(() => w.print(), 600);
+  setTimeout(() => {
+    // Instrui o usuário a desmarcar cabeçalhos/rodapés no diálogo de impressão
+    w.print();
+  }, 600);
 }
 
 // ── Modal de configuração do cabeçalho do requerimento ────────
@@ -1146,12 +1157,12 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
       {certLocal.length > 0 && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 160px 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span>Finalidade</span><span></span><span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {certLocal.map((c, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 160px 110px 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
                 <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
                 <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
                   <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
@@ -1166,6 +1177,8 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
                   onBlur={flush}
                 />
+                <input className="form-input" value={c.finalidade || ''} onChange={e => updateLocal(idx, 'finalidade', e.target.value)} onBlur={flush}
+                  placeholder="Finalidade..." style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
                 <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
                   onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
                   🖨 Imprimir
