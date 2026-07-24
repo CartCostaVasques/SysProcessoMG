@@ -853,6 +853,114 @@ function TabAndamentos({ processoId, usuarios }) {
   );
 }
 
+function gerarArquivoAtos(proc, interessados, cartorio) {
+  const partes      = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const nomeSimples = cartorio?.nome_simples || cartorio?.nome || '';
+  const endereco    = cartorio?.endereco || '';
+  const cidade      = cartorio?.cidade   || '';
+  const telefone    = cartorio?.telefone || '';
+  const email       = cartorio?.email    || '';
+  const logo        = cartorio?.logo_url || cartorio?.logo || '';
+  const dtConc      = proc.dt_conclusao
+    ? new Date(proc.dt_conclusao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+
+  const linhasPartes = partes.map(p => {
+    const int     = interessados.find(i => String(i.id) === String(p.id));
+    const nome    = int?.nome || p.nome || '';
+    const vinculo = p.vinculo || 'Parte';
+    return `<tr>
+      <td style="width:130px;padding:5px 10px;border:1px solid #aaa;background:#f0f0f0;font-size:12px;">${vinculo}</td>
+      <td style="padding:5px 10px;border:1px solid #aaa;font-size:12px;">${nome}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A4 portrait; margin: 20mm 20mm 20mm 20mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; }
+  .cab { display: flex; align-items: center; gap: 18px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+  .logo-box { width: 88px; height: 68px; border: 1px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .logo-txt { font-size: 9px; color: #aaa; }
+  .cab-info { flex: 1; text-align: center; }
+  .cab-nome { font-size: 17px; font-weight: bold; line-height: 1.2; margin-bottom: 4px; }
+  .cab-sub  { font-size: 11px; color: #222; line-height: 1.6; }
+  .titulo { margin-top: 1.5cm; background: #b8cce4; text-align: center; font-size: 13px; font-weight: bold; letter-spacing: 3px; padding: 6px 0; }
+  .sep { border: none; border-top: 1px solid #888; margin: 3px 0; }
+  .proc-row { margin-top: 1.25cm; display: flex; justify-content: flex-end; }
+  .proc-box { border: 1px solid #888; padding: 4px 16px 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 10px; }
+  .proc-box strong { font-size: 18px; font-weight: bold; }
+  .bloco-especie { margin-top: 1.5cm; }
+  .label { font-size: 10px; color: #555; margin-bottom: 3px; }
+  .caixa { border: 1px solid #888; padding: 5px 10px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; }
+  .bloco-partes { margin-top: 1.25cm; }
+  .tab-partes { width: 100%; border-collapse: collapse; }
+  .bloco-desc { margin-top: 1.5cm; }
+  .desc-box { border: 1px solid #888; padding: 7px 10px; font-size: 12px; min-height: 48px; width: 100%; }
+  .bloco-ato { margin-top: 1.75cm; display: flex; justify-content: flex-end; }
+  .livro-tab { border-collapse: collapse; }
+  .livro-tab td { border: 1px solid #888; padding: 5px 14px; font-size: 12px; }
+  .livro-tab .lbl { background: #f0f0f0; width: 80px; }
+  .livro-tab .val { font-weight: bold; min-width: 110px; text-align: right; }
+  .rodape { clear: both; border-top: 1px solid #888; margin-top: 40px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head><body>
+
+<div class="cab">
+  <div class="logo-box">
+    ${logo ? `<img src="${logo}" alt="Logo">` : '<span class="logo-txt">Logo</span>'}
+  </div>
+  <div class="cab-info">
+    <div class="cab-nome">${nomeSimples}</div>
+    <div class="cab-sub">
+      ${endereco}<br>
+      ${[telefone, email].filter(Boolean).join(' - ')}<br>
+      ${cidade}
+    </div>
+  </div>
+</div>
+
+<div class="titulo">Controle de Acervo Extrajudicial</div>
+<hr class="sep"><hr class="sep" style="margin-top:2px;">
+
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno || ''}</strong></div>
+</div>
+
+<div class="bloco-especie">
+  <div class="label">Especie</div>
+  <div class="caixa">${proc.especie || ''}</div>
+</div>
+
+<div class="bloco-partes">
+  <table class="tab-partes">${linhasPartes}</table>
+</div>
+
+<div class="bloco-desc">
+  <div class="label">Descrição Ato</div>
+  <div class="desc-box">${proc.esc_descricao || proc.obs || ''}</div>
+</div>
+
+<div class="bloco-ato">
+  <table class="livro-tab">
+    <tr><td class="lbl">Livro Ato</td><td class="val">${proc.livro_ato   || ''}</td></tr>
+    <tr><td class="lbl">Folhas Ato</td><td class="val">${proc.folhas_ato || ''}</td></tr>
+    <tr><td class="lbl">Data</td><td class="val">${dtConc}</td></tr>
+  </table>
+</div>
+
+<div class="rodape"></div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=840,height=1150');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
 // ── Aba: Pedido de Certidões ──────────────────────────────────
 function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, reqConfig = {}) {
   const req = usuarioLogado
@@ -927,16 +1035,31 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Requerimento - Pedido de Certidão</title>
 <style>
-  @page { size: A4 portrait; margin: 16mm 18mm 16mm 18mm; }
+  @page {
+    size: A4 portrait;
+    margin: 16mm 18mm 16mm 18mm;
+    /* Tenta suprimir cabeçalho/rodapé do navegador */
+    margin-header: 0;
+    margin-footer: 0;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
-  /* Remove cabeçalho e rodapé do navegador (about:blank, data/hora) */
-  @page { margin-top: 16mm; margin-bottom: 16mm; }
-  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  /* Força remoção do header/footer no Chrome/Edge */
+  /* Aviso para desmarcar cabeçalhos — visível apenas na tela, não imprime */
+  .aviso-impressao {
+    display: block;
+    background: #fff3cd;
+    border: 2px solid #f59e0b;
+    color: #92400e;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    text-align: center;
+  }
   @media print {
-    @page { margin: 16mm 18mm; }
-    body::before, body::after { display: none !important; content: none !important; }
+    .aviso-impressao { display: none !important; }
+    @page { margin-header: 0; margin-footer: 0; }
   }
   .cab { text-align: center; border: 1px solid #000; padding: 10px 14px; margin-bottom: 10px; }
   .cab h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 4px; }
@@ -965,6 +1088,10 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head><body>
+
+<div class="aviso-impressao">
+  ⚠️ Para remover a data/hora e "about:blank": no diálogo de impressão clique em <strong>"Mais configurações"</strong> e desmarque <strong>"Cabeçalhos e rodapés"</strong>
+</div>
 
 <div class="cab">
   <h2>${nomeCartorio}</h2>
@@ -1048,10 +1175,7 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   const w = window.open('', '_blank', 'width=820,height=1100');
   w.document.write(html);
   w.document.close();
-  setTimeout(() => {
-    // Instrui o usuário a desmarcar cabeçalhos/rodapés no diálogo de impressão
-    w.print();
-  }, 600);
+  setTimeout(() => w.print(), 600);
 }
 
 // ── Modal de configuração do cabeçalho do requerimento ────────
