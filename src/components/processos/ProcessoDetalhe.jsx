@@ -880,24 +880,48 @@ function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, r
   const cargoResponsavel = reqConfig.cargo_responsavel || 'Oficial Registradora';
 
   const linhasCert = certidoes.map(c => {
-    const matriculas = (c.descricao || c.obs || '').split('\n').filter(l => l.trim());
-    const totalLinhas = Math.max(1, matriculas.length);
-    if (totalLinhas <= 1) {
-      return `<tr>
-        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
-        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
+    // Suporte ao novo formato com itens e ao formato antigo
+    const itens = Array.isArray(c.itens) && c.itens.length > 0
+      ? c.itens
+      : [{ tipo: c.tipo || '', descricao: c.descricao || '' }];
+
+    const dtStr = c.dt_pedido ? new Date(c.dt_pedido + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+
+    return itens.map((it, idx) => {
+      const matriculas = (it.descricao || '').split('\n').filter(l => l.trim());
+      const totalLinhas = Math.max(1, matriculas.length);
+      const totalItensLinhas = itens.reduce((s, item) => s + Math.max(1, (item.descricao || '').split('\n').filter(l => l.trim()).length), 0);
+
+      if (idx === 0 && totalLinhas <= 1) {
+        return `<tr>
+          <td rowspan="${totalItensLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${dtStr}</td>
+          <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${it.tipo||''}</td>
+          <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+        </tr>`;
+      }
+      if (idx === 0) {
+        const primeiraLinha = `<tr>
+          <td rowspan="${totalItensLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${dtStr}</td>
+          <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${it.tipo||''}</td>
+          <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+        </tr>`;
+        const demais = matriculas.slice(1).map(m => `<tr><td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td></tr>`).join('');
+        return primeiraLinha + demais;
+      }
+      // demais itens do mesmo pedido — sem coluna de data
+      if (totalLinhas <= 1) {
+        return `<tr>
+          <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${it.tipo||''}</td>
+          <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+        </tr>`;
+      }
+      const primeiraLinha = `<tr>
+        <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${it.tipo||''}</td>
         <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
       </tr>`;
-    }
-    const primeiraLinha = `<tr>
-      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
-      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${c.tipo||''}</td>
-      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]}</td>
-    </tr>`;
-    const demaisLinhas = matriculas.slice(1).map(m => `<tr>
-      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td>
-    </tr>`).join('');
-    return primeiraLinha + demaisLinhas;
+      const demais = matriculas.slice(1).map(m => `<tr><td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td></tr>`).join('');
+      return primeiraLinha + demais;
+    }).join('');
   }).join('');
 
   const html = `<!DOCTYPE html>
@@ -1100,38 +1124,62 @@ function ModalConfRequerimento({ onClose, sb, addToast }) {
 }
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso, usuario }) {
   const { supabaseClient: sb, addToast } = useApp();
-  const [certLocal, setCertLocal] = useState(
-    () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
-  );
+
+  // Cada certidão: { dt_pedido, finalidade, itens: [{tipo, descricao}] }
+  // Compatibilidade com formato antigo (sem itens)
+  const parseComp = (raw) => {
+    try {
+      const arr = JSON.parse(raw || '[]');
+      return arr.map(c => ({
+        dt_pedido:  c.dt_pedido  || HOJE(),
+        finalidade: c.finalidade || '',
+        itens: Array.isArray(c.itens) && c.itens.length > 0
+          ? c.itens
+          : [{ tipo: c.tipo || '', descricao: c.descricao || '' }],
+      }));
+    } catch { return []; }
+  };
+
+  const [certLocal, setCertLocal] = useState(() => parseComp(proc.certidoes));
   const [reqConfig, setReqConfig] = useState({});
   const [modalConf, setModalConf] = useState(false);
 
-  // Carregar configuração do cabeçalho
   useEffect(() => {
     sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
       if (data) setReqConfig(data);
     });
   }, []);
 
-  // Sincroniza quando proc.certidoes muda externamente
   useEffect(() => {
-    try { setCertLocal(JSON.parse(proc.certidoes || '[]')); } catch { setCertLocal([]); }
+    setCertLocal(parseComp(proc.certidoes));
   }, [proc.certidoes]);
 
-  const EMPTY_CERT = { dt_pedido: HOJE(), tipo: '', descricao: '', concluido: false };
-
-  const salvarCertidoes = (nova) => {
+  const salvar = (nova) => {
     setCertLocal(nova);
     const json = JSON.stringify(nova);
     onChange('certidoes', json);
     editProcesso(processoId, { ...proc, certidoes: json });
   };
 
-  const add    = () => salvarCertidoes([...certLocal, { ...EMPTY_CERT }]);
-  const remove = (idx) => salvarCertidoes(certLocal.filter((_, i) => i !== idx));
+  const addPedido = () => salvar([...certLocal, { dt_pedido: HOJE(), finalidade: '', itens: [{ tipo: '', descricao: '' }] }]);
+  const removePedido = (pi) => salvar(certLocal.filter((_, i) => i !== pi));
 
-  const updateLocal = (idx, k, v) => {
-    setCertLocal(prev => prev.map((c, i) => i === idx ? { ...c, [k]: v } : c));
+  const addItem = (pi) => {
+    const nova = certLocal.map((c, i) => i === pi ? { ...c, itens: [...c.itens, { tipo: '', descricao: '' }] } : c);
+    salvar(nova);
+  };
+  const removeItem = (pi, ii) => {
+    const nova = certLocal.map((c, i) => i === pi ? { ...c, itens: c.itens.filter((_, j) => j !== ii) } : c);
+    salvar(nova);
+  };
+
+  const updatePedido = (pi, k, v) => {
+    setCertLocal(prev => prev.map((c, i) => i === pi ? { ...c, [k]: v } : c));
+  };
+  const updateItem = (pi, ii, k, v) => {
+    setCertLocal(prev => prev.map((c, i) => i === pi
+      ? { ...c, itens: c.itens.map((it, j) => j === ii ? { ...it, [k]: v } : it) }
+      : c));
   };
   const flush = () => {
     const json = JSON.stringify(certLocal);
@@ -1144,69 +1192,79 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certLocal.length} pedido(s) de certidão</span>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)} title="Configurar cabeçalho do requerimento">⚙️ Cabeçalho</button>
-          <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
+          <button className="btn btn-primary btn-sm" onClick={addPedido}>+ Novo Pedido</button>
         </div>
       </div>
 
       {certLocal.length === 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
-          Clique em "+ Adicionar" para registrar um pedido.
+          Clique em "+ Novo Pedido" para registrar um pedido de certidão.
         </div>
       )}
 
-      {certLocal.length > 0 && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {certLocal.map((c, idx) => (
-              <div key={idx} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {/* Linha 1: data, tipo, matrícula, botões */}
-                <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, alignItems: 'start' }}>
-                  <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
-                  <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {certLocal.map((c, pi) => (
+          <div key={pi} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+
+            {/* Linha do pedido: data + botões */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Dt. Pedido</span>
+              <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updatePedido(pi, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28, width: 130 }} />
+              <div style={{ flex: 1 }} />
+              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
+                onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
+                🖨 Imprimir
+              </button>
+              <button onClick={() => removePedido(pi)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
+            </div>
+
+            {/* Cabeçalho das colunas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 24px', gap: 6, padding: '4px 6px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>
+              <span>Tipo</span><span>Descrição / Matrícula</span><span></span>
+            </div>
+
+            {/* Itens: tipo + matrícula */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {c.itens.map((it, ii) => (
+                <div key={ii} style={{ display: 'grid', gridTemplateColumns: '180px 1fr 24px', gap: 6, alignItems: 'start' }}>
+                  <select className="form-select" value={it.tipo || ''} onChange={e => { updateItem(pi, ii, 'tipo', e.target.value); flush(); }} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
                     <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
                   </select>
-                  <textarea
-                    className="form-input"
-                    value={c.descricao || ''}
-                    onChange={e => updateLocal(idx, 'descricao', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + String.fromCharCode(10)); } }}
-                    rows={Math.max(1, (c.descricao || '').split(String.fromCharCode(10)).length)}
-                    style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
-                    placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
+                  <textarea className="form-input" value={it.descricao || ''}
+                    onChange={e => updateItem(pi, ii, 'descricao', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateItem(pi, ii, 'descricao', (it.descricao || '') + '\n'); } }}
+                    rows={Math.max(1, (it.descricao || '').split('\n').length)}
                     onBlur={flush}
-                  />
-                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
-                    onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
-                    🖨 Imprimir
-                  </button>
-                  <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
+                    style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: 1.6, minHeight: 28 }}
+                    placeholder="Matrícula nº, livro, data — Enter para nova linha" />
+                  {c.itens.length > 1 && (
+                    <button onClick={() => removeItem(pi, ii)} style={{ background: 'none', border: 'none', color: 'var(--color-text-faint)', cursor: 'pointer', fontSize: 14, padding: 0, marginTop: 6 }}>✕</button>
+                  )}
                 </div>
-                {/* Linha 2: Finalidade */}
-                <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', background: 'var(--color-surface)' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Finalidade</div>
-                  <input className="form-input" value={c.finalidade || ''} onChange={e => updateLocal(idx, 'finalidade', e.target.value)} onBlur={flush}
-                    placeholder="Informe a finalidade do pedido..."
-                    style={{ fontSize: 11, padding: '2px 0', border: 'none', background: 'transparent', fontWeight: 700, width: '100%', outline: 'none' }} />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Botão adicionar tipo */}
+            <button className="btn btn-ghost btn-sm" onClick={() => addItem(pi)} style={{ marginTop: 6, fontSize: 11, color: 'var(--color-accent)' }}>
+              + Tipo de Certidão
+            </button>
+
+            {/* Finalidade */}
+            <div style={{ marginTop: 8, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', background: 'var(--color-surface)' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 2 }}>Finalidade</div>
+              <input className="form-input" value={c.finalidade || ''} onChange={e => updatePedido(pi, 'finalidade', e.target.value)} onBlur={flush}
+                placeholder="Informe a finalidade do pedido..."
+                style={{ fontSize: 11, padding: '2px 0', border: 'none', background: 'transparent', fontWeight: 700, width: '100%', outline: 'none' }} />
+            </div>
+
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {modalConf && (
-        <ModalConfRequerimento
-          sb={sb}
-          addToast={addToast}
-          onClose={(novoConfig) => {
-            if (novoConfig) setReqConfig(novoConfig);
-            setModalConf(false);
-          }}
-        />
+        <ModalConfRequerimento sb={sb} addToast={addToast}
+          onClose={(novoConfig) => { if (novoConfig) setReqConfig(novoConfig); setModalConf(false); }} />
       )}
     </div>
   );
