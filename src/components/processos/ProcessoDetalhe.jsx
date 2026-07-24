@@ -1400,6 +1400,266 @@ const TIPOS_DOC = ['RG', 'CNH', 'CPF', 'Certidão de Nascimento', 'Certidão de 
 function TabMinuta({ proc, interessados }) {
   const { addToast } = useApp();
 
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const partesComNome = partes.map(p => {
+    const int = interessados.find(i => String(i.id) === String(p.id));
+    return { ...p, nomeCompleto: int?.nome || p.nome || '', dados: int || {} };
+  });
+
+  const [parteIdx,      setParteIdx]      = useState(0);
+  const [documentos,    setDocumentos]    = useState([]); // [{tipo, arquivo, preview, mediaType}]
+  const [extraindo,     setExtraindo]     = useState(false);
+  const [qualificacoes, setQualificacoes] = useState({});
+  const [editando,      setEditando]      = useState(null);
+  const [textoEdit,     setTextoEdit]     = useState('');
+  const [copiado,       setCopiado]       = useState(null);
+
+  const parteAtual = partesComNome[parteIdx];
+
+  const adicionarDocumento = (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setDocumentos(prev => [...prev, {
+          tipo: 'RG',
+          arquivo: file,
+          preview: ev.target.result,
+          mediaType: file.type || 'image/jpeg',
+          nome: file.name,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const removerDoc = (idx) => setDocumentos(prev => prev.filter((_, i) => i !== idx));
+  const setTipoDoc = (idx, tipo) => setDocumentos(prev => prev.map((d, i) => i === idx ? { ...d, tipo } : d));
+
+  const extrairQualificacao = async () => {
+    if (documentos.length === 0) { addToast('Adicione pelo menos um documento.', 'error'); return; }
+    setExtraindo(true);
+    try {
+      // Monta o conteúdo com todos os documentos + instrução
+      const content = [
+        ...documentos.map(d => ({
+          type: 'image',
+          source: { type: 'base64', media_type: d.mediaType.startsWith('image/') ? d.mediaType : 'image/jpeg', data: d.preview.split(',')[1] },
+        })),
+        {
+          type: 'text',
+          text: `Você é um assistente de cartório especializado em escrituras públicas.
+
+Os documentos acima pertencem à mesma pessoa: ${parteAtual?.nomeCompleto || 'parte não identificada'} (${parteAtual?.vinculo || 'Parte'}).
+
+Os tipos de documentos enviados são: ${documentos.map(d => d.tipo).join(', ')}.
+
+Analise TODOS os documentos e extraia os dados complementares entre si para montar a qualificação jurídica completa desta parte para uma escritura pública brasileira.
+
+A qualificação deve seguir este formato:
+[NOME COMPLETO EM MAIÚSCULAS], [nacionalidade], [estado civil], [profissão/ocupação], portador(a) do RG nº [número] [órgão]/[UF], inscrito(a) no CPF sob o nº [CPF formatado], residente e domiciliado(a) na [endereço completo], CEP [CEP], [cidade]-[UF].
+
+Regras:
+- Se for casado(a): inclua "casado(a) sob o regime de [regime de bens] com [NOME DO CÔNJUGE]"
+- Se for viúvo(a) ou divorciado(a): mencione
+- Coloque o nome em MAIÚSCULAS
+- Use os dados mais completos encontrados entre todos os documentos
+- Se algum dado não estiver em nenhum documento, use [DADO NÃO ENCONTRADO]
+- Retorne APENAS o texto da qualificação, sem títulos, sem explicações`,
+        },
+      ];
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content }],
+        }),
+      });
+
+      const data = await response.json();
+      const texto = data.content?.[0]?.text?.trim() || '';
+      if (!texto) throw new Error('Não foi possível extrair os dados.');
+
+      setQualificacoes(prev => ({ ...prev, [parteIdx]: texto }));
+      setDocumentos([]);
+      addToast('Qualificação gerada com sucesso!', 'success');
+    } catch (e) {
+      addToast('Erro ao extrair: ' + e.message, 'error');
+    } finally {
+      setExtraindo(false);
+    }
+  };
+
+  const copiar = (idx, texto) => {
+    navigator.clipboard.writeText(texto);
+    setCopiado(idx);
+    setTimeout(() => setCopiado(null), 2000);
+    addToast('Copiado!', 'success');
+  };
+
+  const copiarTodas = () => {
+    const todas = partesComNome
+      .map((p, i) => qualificacoes[i] ? `${p.vinculo?.toUpperCase() || 'PARTE'}:\n${qualificacoes[i]}` : null)
+      .filter(Boolean).join('\n\n');
+    if (!todas) { addToast('Nenhuma qualificação gerada ainda.', 'error'); return; }
+    navigator.clipboard.writeText(todas);
+    addToast('Todas as qualificações copiadas!', 'success');
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Qualificação das Partes via IA</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            Selecione a parte, envie todos os documentos de uma vez e a IA monta a qualificação completa.
+          </div>
+        </div>
+        {Object.keys(qualificacoes).length > 0 && (
+          <button className="btn btn-secondary btn-sm" onClick={copiarTodas}>📋 Copiar Todas</button>
+        )}
+      </div>
+
+      {partesComNome.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
+          Nenhuma parte cadastrada. Adicione os interessados na aba "Dados do Processo".
+        </div>
+      )}
+
+      {partesComNome.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Seletor de parte */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>Qualificando</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {partesComNome.map((p, i) => (
+                <button key={i} onClick={() => { setParteIdx(i); setDocumentos([]); }}
+                  className={`btn btn-sm ${parteIdx === i ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ position: 'relative' }}>
+                  {p.nomeCompleto.split(' ')[0]}
+                  <span style={{ opacity: .6, fontSize: 10, marginLeft: 4 }}>({p.vinculo || 'Parte'})</span>
+                  {qualificacoes[i] && (
+                    <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, borderRadius: '50%', background: 'var(--color-success)', border: '2px solid var(--color-surface)' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Upload de documentos */}
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
+              Documentos de <span style={{ color: 'var(--color-accent)' }}>{parteAtual?.nomeCompleto}</span>
+              <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 6, fontSize: 11 }}>
+                — envie todos os documentos desta parte de uma vez
+              </span>
+            </div>
+
+            {/* Botão de upload */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', marginBottom: 12, color: 'var(--color-text-muted)', fontSize: 12, transition: 'border-color .15s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-accent)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}>
+              <span style={{ fontSize: 20 }}>📎</span>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>Clique para adicionar documentos</div>
+                <div style={{ fontSize: 11 }}>RG, CNH, CPF, Certidão — imagens ou PDF — pode selecionar vários</div>
+              </div>
+              <input type="file" accept="image/*,application/pdf" multiple onChange={adicionarDocumento} style={{ display: 'none' }} />
+            </label>
+
+            {/* Lista de documentos adicionados */}
+            {documentos.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                {documentos.map((d, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', background: 'var(--color-surface-2)', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                    {d.mediaType?.startsWith('image/') ? (
+                      <img src={d.preview} alt={d.nome} style={{ width: 52, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--color-border)' }} />
+                    ) : (
+                      <div style={{ width: 52, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface)', borderRadius: 4, flexShrink: 0, fontSize: 20 }}>📄</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.nome}</div>
+                      <select value={d.tipo} onChange={e => setTipoDoc(i, e.target.value)}
+                        className="form-select" style={{ fontSize: 11, padding: '2px 6px', height: 24, marginTop: 2 }}>
+                        {TIPOS_DOC.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <button onClick={() => removerDoc(i)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, flexShrink: 0 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button className="btn btn-primary" onClick={extrairQualificacao}
+              disabled={extraindo || documentos.length === 0}
+              style={{ width: '100%', fontSize: 13 }}>
+              {extraindo
+                ? `🔍 Analisando ${documentos.length} documento(s) com IA...`
+                : `🤖 Gerar Qualificação com IA${documentos.length > 0 ? ` (${documentos.length} doc${documentos.length > 1 ? 's' : ''})` : ''}`}
+            </button>
+          </div>
+
+          {/* Qualificações geradas */}
+          {partesComNome.map((p, i) => {
+            const qual = qualificacoes[i];
+            if (!qual) return null;
+            return (
+              <div key={i} className="card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>
+                    {p.nomeCompleto}
+                    <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: 11, marginLeft: 6 }}>{p.vinculo || 'Parte'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
+                      onClick={() => { setEditando(i); setTextoEdit(qual); }}>✏️ Editar</button>
+                    <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
+                      onClick={() => copiar(i, qual)}>
+                      {copiado === i ? '✅ Copiado!' : '📋 Copiar'}
+                    </button>
+                  </div>
+                </div>
+
+                {editando === i ? (
+                  <div>
+                    <textarea className="form-input" value={textoEdit} onChange={e => setTextoEdit(e.target.value)}
+                      rows={5} style={{ width: '100%', fontSize: 12, lineHeight: 1.8, resize: 'vertical', fontFamily: 'Georgia, serif' }} />
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => { setQualificacoes(prev => ({ ...prev, [i]: textoEdit })); setEditando(null); }}>Salvar</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setEditando(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, lineHeight: 1.9, color: 'var(--color-text)', background: 'var(--color-surface-2)', padding: '12px 16px', borderRadius: 'var(--radius-md)', fontFamily: 'Georgia, serif', borderLeft: '3px solid var(--color-accent)' }}>
+                    {qual}
+                  </div>
+                )}
+
+                {/* Botão para regerar com novos docs */}
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-muted)' }}
+                  onClick={() => { setParteIdx(i); setDocumentos([]); window.scrollTo(0, 0); }}>
+                  🔄 Refazer com novos documentos
+                </button>
+              </div>
+            );
+          })}
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Modal Principal ───────────────────────────────────────────
+
+function TabMinuta({ proc, interessados }) {
+  const { addToast } = useApp();
+
   // Partes do processo
   const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
   const partesComNome = partes.map(p => {
