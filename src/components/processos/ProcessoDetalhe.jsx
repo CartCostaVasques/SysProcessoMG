@@ -1394,6 +1394,216 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
   );
 }
 
+// ── Aba: Minuta — Qualificação das Partes ────────────────────
+const TIPOS_DOC = ['RG', 'CNH', 'CPF', 'Certidão de Nascimento', 'Certidão de Casamento'];
+
+function TabMinuta({ proc, interessados }) {
+  const { addToast } = useApp();
+
+  // Partes do processo
+  const partes = (() => { try { return JSON.parse(proc.partes || '[]'); } catch { return []; } })();
+  const partesComNome = partes.map(p => {
+    const int = interessados.find(i => String(i.id) === String(p.id));
+    return { ...p, nomeCompleto: int?.nome || p.nome || '', dados: int || {} };
+  });
+
+  const [parteIdx,       setParteIdx]       = useState(0);
+  const [tipoDoc,        setTipoDoc]        = useState('RG');
+  const [arquivo,        setArquivo]        = useState(null);
+  const [preview,        setPreview]        = useState(null);
+  const [extraindo,      setExtraindo]      = useState(false);
+  const [qualificacoes,  setQualificacoes]  = useState({}); // { parteIdx: texto }
+  const [editando,       setEditando]       = useState(null);
+  const [textoEdit,      setTextoEdit]      = useState('');
+  const [copiado,        setCopiado]        = useState(null);
+
+  const parteAtual = partesComNome[parteIdx];
+
+  const handleArquivo = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setArquivo(file);
+    const reader = new FileReader();
+    reader.onload = ev => setPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const extrairDados = async () => {
+    if (!arquivo || !preview) { addToast('Selecione um documento primeiro.', 'error'); return; }
+    setExtraindo(true);
+    try {
+      const base64 = preview.split(',')[1];
+      const mediaType = arquivo.type || 'image/jpeg';
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: { type: 'base64', media_type: mediaType, data: base64 },
+              },
+              {
+                type: 'text',
+                text: `Você é um assistente de cartório. Analise este documento (${tipoDoc}) e extraia os dados pessoais para montar a qualificação jurídica da parte em uma escritura pública.
+
+Monte a qualificação no seguinte formato (adapte conforme os dados disponíveis no documento):
+[NOME COMPLETO], [nacionalidade], [estado civil], [profissão], portador(a) do RG nº [RG] [órgão emissor]/[UF], inscrito(a) no CPF sob o nº [CPF], residente e domiciliado(a) na [endereço completo], CEP [CEP], [cidade]-[UF].
+
+Se for Certidão de Casamento, inclua também o regime de bens e o nome do cônjuge.
+Se faltar algum dado no documento, deixe [DADO NÃO ENCONTRADO] no lugar.
+Retorne APENAS o texto da qualificação, sem explicações adicionais.`,
+              },
+            ],
+          }],
+        }),
+      });
+
+      const data = await response.json();
+      const texto = data.content?.[0]?.text || '';
+      if (!texto) throw new Error('Não foi possível extrair os dados.');
+
+      setQualificacoes(prev => ({ ...prev, [parteIdx]: texto }));
+      setArquivo(null);
+      setPreview(null);
+      addToast('Qualificação extraída com sucesso!', 'success');
+    } catch (e) {
+      addToast('Erro ao extrair: ' + e.message, 'error');
+    } finally {
+      setExtraindo(false);
+    }
+  };
+
+  const copiar = (idx, texto) => {
+    navigator.clipboard.writeText(texto);
+    setCopiado(idx);
+    setTimeout(() => setCopiado(null), 2000);
+    addToast('Texto copiado!', 'success');
+  };
+
+  const copiarTodas = () => {
+    const todas = partesComNome.map((p, i) => {
+      const qual = qualificacoes[i];
+      return qual ? `— ${p.nomeCompleto} (${p.vinculo || 'Parte'}):\n${qual}` : null;
+    }).filter(Boolean).join('\n\n');
+    if (!todas) { addToast('Nenhuma qualificação gerada ainda.', 'error'); return; }
+    navigator.clipboard.writeText(todas);
+    addToast('Todas as qualificações copiadas!', 'success');
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Qualificação das Partes</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>Faça upload do documento de cada parte para gerar a qualificação automaticamente via IA.</div>
+        </div>
+        {Object.keys(qualificacoes).length > 0 && (
+          <button className="btn btn-secondary btn-sm" onClick={copiarTodas}>📋 Copiar Todas</button>
+        )}
+      </div>
+
+      {partesComNome.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
+          Nenhuma parte cadastrada neste processo. Adicione os interessados na aba "Dados do Processo".
+        </div>
+      )}
+
+      {partesComNome.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Seletor de parte */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {partesComNome.map((p, i) => (
+              <button key={i} onClick={() => { setParteIdx(i); setArquivo(null); setPreview(null); }}
+                className={`btn btn-sm ${parteIdx === i ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ position: 'relative' }}>
+                {p.nomeCompleto.split(' ')[0]} <span style={{ opacity: .6, fontSize: 10 }}>({p.vinculo || 'Parte'})</span>
+                {qualificacoes[i] && <span style={{ position: 'absolute', top: -4, right: -4, width: 10, height: 10, borderRadius: '50%', background: 'var(--color-success)', border: '2px solid var(--color-surface)' }} />}
+              </button>
+            ))}
+          </div>
+
+          {/* Upload do documento */}
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+              Documento de <span style={{ color: 'var(--color-accent)' }}>{parteAtual?.nomeCompleto}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Tipo do documento</label>
+                <select className="form-select" value={tipoDoc} onChange={e => setTipoDoc(e.target.value)} style={{ minWidth: 200 }}>
+                  {TIPOS_DOC.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Arquivo (imagem ou PDF)</label>
+                <input type="file" accept="image/*,application/pdf" onChange={handleArquivo} className="form-input" style={{ paddingTop: 4 }} />
+              </div>
+            </div>
+
+            {preview && (
+              <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-surface-2)' }}>
+                {arquivo?.type?.startsWith('image/') ? (
+                  <img src={preview} alt="documento" style={{ maxHeight: 220, maxWidth: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <div style={{ padding: 20, fontSize: 13, color: 'var(--color-text-muted)' }}>📄 {arquivo?.name}</div>
+                )}
+              </div>
+            )}
+
+            <button className="btn btn-primary" onClick={extrairDados} disabled={extraindo || !arquivo}
+              style={{ width: '100%' }}>
+              {extraindo ? '🔍 Extraindo dados com IA...' : '🤖 Extrair Qualificação com IA'}
+            </button>
+          </div>
+
+          {/* Qualificações geradas */}
+          {partesComNome.map((p, i) => {
+            const qual = qualificacoes[i];
+            if (!qual) return null;
+            return (
+              <div key={i} className="card" style={{ padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>
+                    {p.nomeCompleto} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>— {p.vinculo || 'Parte'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditando(i); setTextoEdit(qual); }} style={{ fontSize: 11 }}>✏️ Editar</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => copiar(i, qual)} style={{ fontSize: 11 }}>
+                      {copiado === i ? '✅ Copiado!' : '📋 Copiar'}
+                    </button>
+                  </div>
+                </div>
+                {editando === i ? (
+                  <div>
+                    <textarea className="form-input" value={textoEdit} onChange={e => setTextoEdit(e.target.value)}
+                      rows={6} style={{ width: '100%', fontSize: 12, lineHeight: 1.7, resize: 'vertical' }} />
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => { setQualificacoes(prev => ({ ...prev, [i]: textoEdit })); setEditando(null); }}>Salvar</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setEditando(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, lineHeight: 1.8, color: 'var(--color-text)', background: 'var(--color-surface-2)', padding: '10px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'Georgia, serif' }}>
+                    {qual}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Modal Principal ───────────────────────────────────────────
 export { ModalTelaAndamento };
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
@@ -1486,6 +1696,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               ['historico', `Histórico${qtdHistorico > 0 ? ` (${qtdHistorico})` : ''}`],
               ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
               ['certidoes', 'Pedido de Certidões'],
+              ['minuta', '📝 Minuta'],
             ].map(([id, label]) => (
               <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
             ))}
@@ -1515,6 +1726,9 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             )}
             {aba === 'certidoes' && (
               <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} usuario={usuario} />
+            )}
+            {aba === 'minuta' && (
+              <TabMinuta proc={form} interessados={interessados} />
             )}
           </div>
 
