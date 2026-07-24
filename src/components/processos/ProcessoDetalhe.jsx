@@ -733,7 +733,7 @@ function TabDados({ proc, editando, onChange, servicos, usuarios, interessados, 
 
 // ── Aba: Andamentos ───────────────────────────────────────────
 function TabAndamentos({ processoId, usuarios }) {
-  const { andamentos, addAndamento, editAndamento, deleteAndamento, alterarStatusProcesso, usuario, addToast } = useApp();
+  const { andamentos, addAndamento, editAndamento, deleteAndamento, usuario, addToast } = useApp();
   const lista = andamentos.filter(a => a.processo_id === processoId).sort((a, b) => b.dt_andamento.localeCompare(a.dt_andamento));
 
   const EMPTY_AND = { processo_id: processoId, dt_andamento: HOJE(), tipo: '', descricao: '', responsavel: usuario?.nome_simples || '', vencimento: '', concluido: false };
@@ -753,23 +753,8 @@ function TabAndamentos({ processoId, usuarios }) {
   };
 
   const concluir = async (a) => {
-    const novoStatus = !a.concluido;
-    await editAndamento(a.id, { concluido: novoStatus });
-    if (novoStatus) {
-      // Considera o andamento atual já como concluído (estado pode não ter atualizado ainda)
-      const todosConc = lista.every(x => x.id === a.id ? true : x.concluido);
-      if (todosConc) {
-        const confirmar = window.confirm('Todos os andamentos estão concluídos!\n\nDeseja concluir o processo também?');
-        if (confirmar) {
-          await alterarStatusProcesso(processoId, null, 'Concluído', 'Concluído via baixa de andamentos');
-          addToast('Andamento e processo concluídos!', 'success');
-          return;
-        }
-      }
-      addToast('Concluído!', 'success');
-    } else {
-      addToast('Reaberto.', 'success');
-    }
+    await editAndamento(a.id, { concluido: !a.concluido });
+    addToast(a.concluido ? 'Reaberto.' : 'Concluído!', 'success');
   };
 
   const excluir = async (a) => {
@@ -869,9 +854,239 @@ function TabAndamentos({ processoId, usuarios }) {
 }
 
 // ── Aba: Pedido de Certidões ──────────────────────────────────
-function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado) {
-  // Usa o usuário logado como requerente (quem assina o requerimento)
+function gerarRequerimento(proc, certidoes, usuarios, cartorio, usuarioLogado, reqConfig = {}) {
   const req = usuarioLogado
+    ? {
+        nome:     usuarioLogado.nome_completo || usuarioLogado.nome_simples || '',
+        cpf:      usuarioLogado.cpf      || '',
+        rg:       usuarioLogado.rg       || '',
+        endereco: usuarioLogado.endereco || '',
+        cidade:   usuarioLogado.cidade   || 'Paranatinga - MT',
+        cep:      usuarioLogado.cep      || '',
+        email:    usuarioLogado.email    || '',
+        telefone: usuarioLogado.celular  || '',
+      }
+    : { nome: '', cpf: '', rg: '', endereco: '', cidade: 'Paranatinga - MT', cep: '', email: '', telefone: '' };
+
+  const hoje         = new Date().toLocaleDateString('pt-BR');
+  const cidadeData   = cartorio?.cidade || 'Paranatinga-MT';
+
+  // Dados do cabeçalho — usa reqConfig se disponível, senão usa cartorio
+  const nomeCartorio   = reqConfig.nome_cartorio   || cartorio?.nome   || '';
+  const enderecoCart   = reqConfig.endereco        || cartorio?.endereco || '';
+  const telefoneCart   = reqConfig.telefone        || cartorio?.telefone || '';
+  const emailCart      = reqConfig.email           || cartorio?.email   || '';
+  const nomeResponsavel = reqConfig.nome_responsavel || '';
+  const cargoResponsavel = reqConfig.cargo_responsavel || 'Oficial Registradora';
+
+  const linhasCert = certidoes.map(c => {
+    const matriculas = (c.descricao || c.obs || '').split('\n').filter(l => l.trim());
+    const totalLinhas = Math.max(1, matriculas.length);
+    if (totalLinhas <= 1) {
+      return `<tr>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;">${c.tipo||''}</td>
+        <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]||''}</td>
+      </tr>`;
+    }
+    const primeiraLinha = `<tr>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:90px;vertical-align:middle;">${c.dt_pedido ? new Date(c.dt_pedido+'T12:00:00').toLocaleDateString('pt-BR') : ''}</td>
+      <td rowspan="${totalLinhas}" style="border:1px solid #aaa;padding:4px 8px;font-size:11px;width:170px;vertical-align:middle;">${c.tipo||''}</td>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${matriculas[0]}</td>
+    </tr>`;
+    const demaisLinhas = matriculas.slice(1).map(m => `<tr>
+      <td style="border:1px solid #aaa;padding:4px 8px;font-size:11px;">${m}</td>
+    </tr>`).join('');
+    return primeiraLinha + demaisLinhas;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  @page { size: A4 portrait; margin: 16mm 18mm 16mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; width: 100%; }
+  .cab { text-align: center; border: 1px solid #000; padding: 10px 14px; margin-bottom: 10px; }
+  .cab h2 { font-size: 13px; font-weight: bold; text-transform: uppercase; line-height: 1.4; margin-bottom: 4px; }
+  .cab-info { font-size: 11px; line-height: 1.6; }
+  .cab-sep { border: none; border-top: 1px solid #000; width: 55%; margin: 6px auto; }
+  .cab h3 { font-size: 12px; font-weight: bold; }
+  .cab h4 { font-size: 11px; font-weight: normal; }
+  .titulo-req { background: #ddd; text-align: center; font-size: 15px; font-weight: bold; padding: 6px; margin-bottom: 10px; }
+  .proc-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .proc-box { border: 1px solid #888; padding: 3px 14px 3px 10px; font-size: 11px; display: flex; align-items: center; gap: 8px; }
+  .proc-box strong { font-size: 16px; }
+  .campo-bloco { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .campo-bloco td { border: 1px solid #999; padding: 3px 8px; vertical-align: top; }
+  .flabel { font-size: 9px; color: #555; display: block; margin-bottom: 1px; }
+  .fval   { font-size: 12px; min-height: 17px; display: block; }
+  .tab-cert { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .tab-cert th { border: 1px solid #aaa; padding: 4px 8px; background: #eee; font-size: 11px; text-align: left; }
+  .linha-info { display: flex; align-items: flex-end; gap: 6px; margin-bottom: 8px; font-size: 12px; }
+  .linha-info span { white-space: nowrap; }
+  .linha-info div { flex: 1; border-bottom: 1px solid #000; min-height: 18px; }
+  .assin-area { margin-top: 28px; text-align: center; }
+  .assin-linha { display: inline-block; border-top: 1px solid #000; padding-top: 4px; min-width: 240px; text-align: center; font-size: 12px; }
+  .declaracao { border: 1px solid #ccc; padding: 9px 12px; margin-top: 18px; font-size: 9px; line-height: 1.55; text-align: justify; }
+  .declaracao p { margin-bottom: 5px; }
+  .declaracao p:last-child { margin-bottom: 0; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head><body>
+
+<div class="cab">
+  <h2>${nomeCartorio}</h2>
+  <div class="cab-info">${enderecoCart}</div>
+  <div class="cab-info">Fone: ${telefoneCart}</div>
+  <div class="cab-info">E-mail: ${emailCart}</div>
+  <hr class="cab-sep">
+  <h3>${nomeResponsavel}</h3>
+  <h4>${cargoResponsavel}</h4>
+</div>
+
+<div class="titulo-req">Requerimento - Pedido de Certidão</div>
+
+<div class="proc-row">
+  <div class="proc-box">Processo Interno <strong>${proc.numero_interno||''}</strong></div>
+</div>
+
+<!-- Requerente -->
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Requerente</span><span class="fval">${req.nome||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:50%;"><span class="flabel">CPF</span><span class="fval">${req.cpf||''}</span></td>
+  <td style="width:50%;"><span class="flabel">Registro Geral</span><span class="fval">${req.rg||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:100%;"><span class="flabel">Endereço</span><span class="fval">${req.endereco||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Cidade</span><span class="fval">${req.cidade||cidadeData}</span></td>
+  <td style="width:40%;"><span class="flabel">CEP</span><span class="fval">${req.cep||''}</span></td>
+</tr></table>
+
+<table class="campo-bloco"><tr>
+  <td style="width:60%;"><span class="flabel">Email</span><span class="fval">${req.email||''}</span></td>
+  <td style="width:40%;"><span class="flabel">Celular</span><span class="fval">${req.telefone||''}</span></td>
+</tr></table>
+
+<!-- Certidões -->
+<table class="tab-cert">
+  <thead><tr>
+    <th style="width:90px;">Dt Pedido</th>
+    <th style="width:170px;">Tipo Certidão</th>
+    <th>Detalhes do Pedido - Matrícula</th>
+  </tr></thead>
+  <tbody>${linhasCert}</tbody>
+</table>
+
+<!-- Observações e Finalidade -->
+<div class="linha-info" style="margin-top:16px;">
+  <span>Observações:</span><div></div>
+</div>
+<div class="linha-info">
+  <div style="flex:1;border-bottom:1px solid #000;min-height:18px;"></div>
+</div>
+<div class="linha-info" style="margin-top:8px;">
+  <span>Finalidade:</span><div></div>
+</div>
+
+<div style="font-size:12px;margin-top:20px;">${cidadeData}, &nbsp;&nbsp;&nbsp; ${hoje}</div>
+
+<div class="assin-area">
+  <div class="assin-linha">
+    <div>${req.nome||''}</div>
+    <div style="font-size:10px;color:#555;">Requerente</div>
+  </div>
+</div>
+
+<div class="declaracao">
+  <p><strong>DECLARAÇÃO:</strong> Para cumprimento dos princípios da Lei nº 13.709/2018 e do Provimento 15/2021 CGJ, as certidões ou informações restritas somente podem ser fornecidas a terceiros mediante análise do legítimo interesse do solicitante por escrito em prontuário conforme exige o Art. 31 do provimento 15/2021 CGJ. Ciente que os dados informados são tratados de acordo com o ordenamento jurídico e Lei Federal 13.709/2018 LGPD.</p>
+  <p>Para pedidos por meio eletrônico é necessária a identificação por assinatura digital do formulário preenchido. Pedido também pode ser realizado pela plataforma da ONR (Operador Nacional do Sistema de Registro Eletrônico de Imóveis) https://www.onr.org.br mediante cadastro.</p>
+  <p>Serão negadas, por meio de nota fundamentada, as solicitações de certidões que visem informações em bloco (de mais de um ato notarial ou registro), ou agrupadas, ou segundo critérios não comuns de pesquisa, ainda que relativas a registros e atos notariais envolvendo titulares distintos de dados pessoais, quando não presente o legítimo interesse do solicitante.</p>
+  <p>Por execução de obrigação legal, conforme Art. 7 da Lei nº 13.709/2018, esses dados serão compartilhados com as Centrais Eletrônicas de Serviços Compartilhados e Conselho de Justiça.</p>
+  <p>DECLARO ainda, estar ciente de que, comprovada a falsidade nessa declaração, estarei sujeito às penas previstas na Lei, conforme Art. 299 do Código Penal Brasileiro.</p>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=1100');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+// ── Modal de configuração do cabeçalho do requerimento ────────
+function ModalConfRequerimento({ onClose, sb, addToast }) {
+  const [form, setForm] = useState({
+    nome_cartorio: '', endereco: '', telefone: '', email: '',
+    nome_responsavel: '', cargo_responsavel: 'Oficial Registradora',
+  });
+  const [salvando, setSalvando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
+      if (data) setForm({
+        nome_cartorio:     data.nome_cartorio     || '',
+        endereco:          data.endereco          || '',
+        telefone:          data.telefone          || '',
+        email:             data.email             || '',
+        nome_responsavel:  data.nome_responsavel  || '',
+        cargo_responsavel: data.cargo_responsavel || 'Oficial Registradora',
+      });
+      setCarregando(false);
+    });
+  }, []);
+
+  const salvar = async () => {
+    setSalvando(true);
+    const { error } = await sb.from('requerimento_config').upsert({ id: 1, ...form }, { onConflict: 'id' });
+    if (error) addToast(error.message, 'error');
+    else { addToast('Cabeçalho salvo!', 'success'); onClose(form); }
+    setSalvando(false);
+  };
+
+  if (carregando) return null;
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose(null)}>
+      <div className="modal" style={{ width: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="modal-header">
+          <span className="modal-title">⚙️ Configurar Cabeçalho do Requerimento</span>
+          <button className="modal-close" onClick={() => onClose(null)}>✕</button>
+        </div>
+        <div className="modal-body" style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'var(--color-surface-2)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+            Estes dados aparecem no cabeçalho impresso do Requerimento de Certidão. Altere sempre que houver mudança no cartório.
+          </div>
+          {[
+            { k: 'nome_cartorio',     label: 'Nome do Cartório',       placeholder: 'CARTÓRIO DO 1º OFÍCIO DA COMARCA DE PARANATINGA - MT' },
+            { k: 'endereco',          label: 'Endereço completo',       placeholder: 'Avenida Mato Grosso, nº 421, Centro, Paranatinga - MT - CEP 78.870-000' },
+            { k: 'telefone',          label: 'Telefone(s)',             placeholder: '(66) 9 9951-1002, 9 9999-8656 ou 3191-1468' },
+            { k: 'email',             label: 'E-mail',                  placeholder: 'atendimento@rgiparanatinga.com.br' },
+            { k: 'nome_responsavel',  label: 'Nome do(a) Responsável',  placeholder: 'Ludmilla Eveline de Freitas Fernandes' },
+            { k: 'cargo_responsavel', label: 'Cargo do(a) Responsável', placeholder: 'Oficial Registradora' },
+          ].map(f => (
+            <div className="form-group" key={f.k} style={{ marginBottom: 0 }}>
+              <label className="form-label">{f.label}</label>
+              <input className="form-input" value={form[f.k]} onChange={e => setForm(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.placeholder} />
+            </div>
+          ))}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={() => onClose(null)}>Cancelar</button>
+          <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+            {salvando ? 'Salvando...' : '💾 Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
     ? {
         nome:     usuarioLogado.nome_completo || usuarioLogado.nome_simples || '',
         cpf:      usuarioLogado.cpf      || '',
@@ -1142,9 +1357,19 @@ function gerarArquivoAtos(proc, interessados, cartorio) {
 
 
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso, usuario }) {
+  const { supabaseClient: sb, addToast } = useApp();
   const [certLocal, setCertLocal] = useState(
     () => { try { return JSON.parse(proc.certidoes || '[]'); } catch { return []; } }
   );
+  const [reqConfig, setReqConfig] = useState({});
+  const [modalConf, setModalConf] = useState(false);
+
+  // Carregar configuração do cabeçalho
+  useEffect(() => {
+    sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
+      if (data) setReqConfig(data);
+    });
+  }, []);
 
   // Sincroniza quando proc.certidoes muda externamente
   useEffect(() => {
@@ -1163,11 +1388,9 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
   const add    = () => salvarCertidoes([...certLocal, { ...EMPTY_CERT }]);
   const remove = (idx) => salvarCertidoes(certLocal.filter((_, i) => i !== idx));
 
-  // update local sem salvar ainda (evita requisição por tecla)
   const updateLocal = (idx, k, v) => {
     setCertLocal(prev => prev.map((c, i) => i === idx ? { ...c, [k]: v } : c));
   };
-  // flush: salva no banco ao sair do campo
   const flush = () => {
     const json = JSON.stringify(certLocal);
     onChange('certidoes', json);
@@ -1178,7 +1401,10 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{certLocal.length} pedido(s) de certidão</span>
-        <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)} title="Configurar cabeçalho do requerimento">⚙️ Cabeçalho</button>
+          <button className="btn btn-primary btn-sm" onClick={add}>+ Adicionar</button>
+        </div>
       </div>
 
       {certLocal.length === 0 && (
@@ -1189,7 +1415,6 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
       {certLocal.length > 0 && (
         <div>
-          {/* Cabeçalho */}
           <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
             <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
           </div>
@@ -1211,7 +1436,7 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
                   onBlur={flush}
                 />
                 <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
-                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario)}>
+                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
                   🖨 Imprimir
                 </button>
                 <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
@@ -1219,6 +1444,17 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
             ))}
           </div>
         </div>
+      )}
+
+      {modalConf && (
+        <ModalConfRequerimento
+          sb={sb}
+          addToast={addToast}
+          onClose={(novoConfig) => {
+            if (novoConfig) setReqConfig(novoConfig);
+            setModalConf(false);
+          }}
+        />
       )}
     </div>
   );
