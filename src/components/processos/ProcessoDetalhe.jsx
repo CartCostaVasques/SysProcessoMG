@@ -1157,33 +1157,41 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
 
       {certLocal.length > 0 && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 160px 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span>Finalidade</span><span></span><span></span>
+          <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, padding: '6px 10px', fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
+            <span>Dt. Pedido</span><span>Tipo</span><span>Descrição / Matrícula</span><span></span><span></span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {certLocal.map((c, idx) => (
-              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 160px 110px 28px', gap: 8, padding: '8px 10px', background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', alignItems: 'start' }}>
-                <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
-                <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
-                  <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
-                </select>
-                <textarea
-                  className="form-input"
-                  value={c.descricao || ''}
-                  onChange={e => updateLocal(idx, 'descricao', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + String.fromCharCode(10)); } }}
-                  rows={Math.max(1, (c.descricao || '').split(String.fromCharCode(10)).length)}
-                  style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
-                  placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
-                  onBlur={flush}
-                />
-                <input className="form-input" value={c.finalidade || ''} onChange={e => updateLocal(idx, 'finalidade', e.target.value)} onBlur={flush}
-                  placeholder="Finalidade..." style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
-                <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
-                  onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
-                  🖨 Imprimir
-                </button>
-                <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
+              <div key={idx} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Linha 1: data, tipo, matrícula, botões */}
+                <div style={{ display: 'grid', gridTemplateColumns: '110px 180px 1fr 110px 28px', gap: 8, alignItems: 'start' }}>
+                  <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updateLocal(idx, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28 }} />
+                  <select className="form-select" value={c.tipo || ''} onChange={e => salvarCertidoes(certLocal.map((x, i) => i === idx ? { ...x, tipo: e.target.value } : x))} style={{ fontSize: 11, padding: '4px 6px', height: 28 }}>
+                    <option value="">—</option>{TIPOS_CERT.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                  <textarea
+                    className="form-input"
+                    value={c.descricao || ''}
+                    onChange={e => updateLocal(idx, 'descricao', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); updateLocal(idx, 'descricao', (c.descricao || '') + String.fromCharCode(10)); } }}
+                    rows={Math.max(1, (c.descricao || '').split(String.fromCharCode(10)).length)}
+                    style={{ fontSize: 11, padding: '4px 6px', resize: 'none', lineHeight: '1.6', minHeight: 28 }}
+                    placeholder="Ex: Matrícula nº 123, livro 02-A — Enter para nova matrícula"
+                    onBlur={flush}
+                  />
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: 11, padding: '3px 8px', height: 28, alignSelf: 'flex-start' }}
+                    onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
+                    🖨 Imprimir
+                  </button>
+                  <button onClick={() => remove(idx)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0, alignSelf: 'flex-start', marginTop: 4 }}>✕</button>
+                </div>
+                {/* Linha 2: Finalidade */}
+                <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', background: 'var(--color-surface)' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Finalidade</div>
+                  <input className="form-input" value={c.finalidade || ''} onChange={e => updateLocal(idx, 'finalidade', e.target.value)} onBlur={flush}
+                    placeholder="Informe a finalidade do pedido..."
+                    style={{ fontSize: 11, padding: '2px 0', border: 'none', background: 'transparent', fontWeight: 700, width: '100%', outline: 'none' }} />
+                </div>
               </div>
             ))}
           </div>
