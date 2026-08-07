@@ -1394,9 +1394,220 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
   );
 }
 
-// ── Modal Principal ───────────────────────────────────────────
+// ── Aba: Registro de Imóveis ──────────────────────────────────
+function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig) {
+  const hoje = new Date();
+  const dia  = String(hoje.getDate()).padStart(2,'0');
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const mes  = meses[hoje.getMonth()];
+  const ano  = hoje.getFullYear();
+  const nomeCartorio = (reqConfig && reqConfig.nome_cartorio) || (cartorio && cartorio.nome) || 'CARTÓRIO DO 1º OFÍCIO DA COMARCA DE PARANATINGA - MT';
+  const enderecoCart = (reqConfig && reqConfig.endereco)      || (cartorio && cartorio.endereco) || 'Avenida Mato Grosso, nº 421, Centro, Paranatinga - MT - CEP 78.870-000';
+  const telefoneCart = (reqConfig && reqConfig.telefone)      || (cartorio && cartorio.telefone) || 'Fone: (66) 9 9951-1002, 9 9999-8656 ou 3191-1468';
+  const emailCart    = (reqConfig && reqConfig.email)         || (cartorio && cartorio.email)    || 'E-mail: atendimento@rgiparanatinga.com.br';
+  const nomeResp     = (reqConfig && reqConfig.nome_responsavel)  || 'Ludmilla Eveline de Freitas Fernandes';
+  const cargoResp    = (reqConfig && reqConfig.cargo_responsavel) || 'Oficial Registradora';
+  const logoUrl      = (cartorio && cartorio.logo_url) || '';
+
+  const td = (label, valor, extra='') => `<td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;white-space:nowrap;">${label}</td><td style="padding:4px 6px;border:1px solid #000;font-size:12px;${extra}">${valor||''}</td>`;
+  const matriculaLinhas = (form.matriculas||'').split('\n').concat(['','']).slice(0,3).map(m => `<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;">${m}</td></tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Requerimento para Registro de Imóveis</title>
+<style>
+  @page{size:A4 portrait;margin:14mm 16mm 14mm 16mm;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;}
+  .cab{display:flex;align-items:center;border:1px solid #000;padding:8px 12px;gap:14px;margin-bottom:10px;}
+  .logo{width:70px;height:70px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .logo img{max-width:70px;max-height:70px;object-fit:contain;}
+  .cab-info{flex:1;text-align:center;}
+  .cab-nome{font-size:13px;font-weight:bold;text-transform:uppercase;line-height:1.3;}
+  .cab-end{font-size:10px;line-height:1.7;margin-top:3px;}
+  .cab-sep{border:none;border-top:1px solid #000;width:60%;margin:5px auto;}
+  .tab-dados{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .secao{font-size:12px;font-weight:bold;margin:10px 0 4px;}
+  .tab-linhas{width:100%;border-collapse:collapse;margin-bottom:8px;}
+  .declaracao{font-size:10px;line-height:1.55;text-align:justify;margin-top:10px;}
+  .declaracao p{margin-bottom:5px;}
+  .aviso{background:#fff3cd;border:2px solid #f59e0b;color:#92400e;padding:7px 10px;margin-bottom:10px;font-size:10px;font-weight:bold;border-radius:4px;text-align:center;}
+  @media print{.aviso{display:none!important;}}
+</style>
+</head><body>
+<div class="aviso">⚠️ Para remover data/hora: em Mais configurações desmarque "Cabeçalhos e rodapés"</div>
+<div class="cab">
+  <div class="logo">${logoUrl ? `<img src="${logoUrl}" alt="">` : ''}</div>
+  <div class="cab-info">
+    <div class="cab-nome">${nomeCartorio}</div>
+    <div class="cab-end">${enderecoCart}<br>${telefoneCart}<br>${emailCart}</div>
+    <hr class="cab-sep">
+    <div style="font-size:11px;font-weight:bold;">${nomeResp}</div>
+    <div style="font-size:10px;">${cargoResp}</div>
+  </div>
+</div>
+<div style="text-align:center;margin:10px 0 6px;">
+  <div style="font-size:13px;font-weight:bold;text-decoration:underline;text-transform:uppercase;">Requerimento para Registros de Títulos</div>
+  <div style="font-size:11px;font-weight:bold;margin-top:2px;">Escrituras, Cédulas, Contratos, Títulos Judiciais</div>
+</div>
+<table class="tab-dados">
+  <tr><td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Nome</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.nome||''}</td></tr>
+  <tr>${td('CPF',form.cpf)}${td('RG',form.rg)}</tr>
+  <tr>${td('Dt. Nasc.',form.dt_nascimento ? new Date(form.dt_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '')}${td('Estado Civil',form.estado_civil)}</tr>
+  <tr>${td('Profissão',form.profissao)}${td('Nacionalidade',form.nacionalidade)}</tr>
+  <tr>
+    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Endereço</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.endereco||''}</td>
+    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Nº</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;width:60px;">${form.numero||''}</td>
+  </tr>
+  <tr>
+    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Bairro</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.bairro||''}</td>
+    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">CEP</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.cep||''}</td>
+  </tr>
+  <tr>
+    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Cidade</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.cidade||''}</td>
+    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">UF</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.uf||''}</td>
+  </tr>
+  <tr><td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Telefone</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.telefone||''}</td></tr>
+  <tr><td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">E-mail</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.email||''}</td></tr>
+</table>
+<div class="secao">Do Pedido de Registro</div>
+<div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Descrever o título objeto de registro:</div>
+<table class="tab-linhas">
+  ${[form.titulo_registro||'','',''].slice(0,3).map(v=>`<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;">${v}</td></tr>`).join('')}
+</table>
+<div class="secao" style="margin-top:8px;">Indicação da (s) Matrícula (s):</div>
+<table class="tab-linhas">${matriculaLinhas}</table>
+<div class="declaracao">
+  <p><strong>DECLARAÇÃO:</strong> Para comprimento dos princípios da Lei nº 13.709/2018 e do Provimento 15/2021 CGJ, as certidões ou informações restritas somente pode ser fornecida a terceiros mediante análise do legítimo interesse do solicitante por escrito em prontuário conforme exige o Art. 31 do provimento 15/2021 CGJ. Ciente que os dados informados são tratados de acordo com o ordenamento jurídico e Lei Federal 13.709/2018 LGPD. Para pedidos por meio eletrônico é necessário a identificação por assinatura digital do formulário preenchido. Pedido também pode ser realizado pela plataforma da ONR (Operador Nacional do Sistema de Registro Eletrônico de Imóveis) https://www.onr.org.br mediante cadastro.</p>
+  <p>Serão negadas, por meio de nota fundamentada, as solicitações de certidões que visem informações em bloco (de mais de um ato notarial ou registro), ou agrupadas, ou segundo critérios não comuns de pesquisa, ainda que relativas a registros e atos notariais envolvendo titulares distintos de dados pessoais, quando não presente o legítimo interesse do solicitante. Por execução de obrigação legal, conforme Art. 7 da Lei nº 13.709/2018, esses dados serão compartilhados com as Centrais Eletrônicas de Serviços Compartilhados e Conselho de Justiça.</p>
+  <p><strong>DECLARO</strong> ainda, estar ciente de que, comprovada a falsidade nessa declaração, estarei sujeito às penas previstas na Lei, conforme Art. 299 do Código Penal Brasileiro.</p>
+</div>
+<div style="margin-top:16px;">
+  <div style="font-size:11px;margin-bottom:22px;">Paranatinga-MT, ${dia} de ${mes} de ${ano}</div>
+  <div style="text-align:center;border-top:1px solid #000;padding-top:4px;font-size:11px;width:60%;margin:0 auto;">${form.nome||''}<br><span style="font-weight:normal;">Requerente</span></div>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=1150');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
+}
+
+function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
+  const { supabaseClient: sb, addToast } = useApp();
+  const [reqConfig, setReqConfig] = useState({});
+  const [modalConf, setModalConf] = useState(false);
+  const [form, setForm] = useState({
+    nome: (usuario && (usuario.nome_completo || usuario.nome_simples)) || '',
+    cpf: (usuario && usuario.cpf) || '',
+    rg: (usuario && usuario.rg) || '',
+    dt_nascimento: '',
+    estado_civil: '',
+    profissao: '',
+    nacionalidade: 'Brasileiro(a)',
+    endereco: (usuario && usuario.endereco) || '',
+    numero: '',
+    bairro: '',
+    cep: (usuario && usuario.cep) || '',
+    cidade: 'Paranatinga',
+    uf: 'MT',
+    telefone: (usuario && usuario.celular) || '',
+    email: (usuario && usuario.email) || '',
+    titulo_registro: '',
+    matriculas: '',
+  });
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
+      if (data) setReqConfig(data);
+    });
+  }, []);
+
+  const inp = (label, campo, tipo, placeholder, style) => (
+    <div className="form-group" style={{ marginBottom: 0 }}>
+      <label className="form-label" style={{ fontSize: 11 }}>{label}</label>
+      <input className="form-input" type={tipo||'text'} value={form[campo]||''} onChange={e => setF(campo, e.target.value)} placeholder={placeholder||''} style={{ fontSize: 12, ...style }} />
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>Requerimento para Registro de Imóveis</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>Preencha e clique em Imprimir.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
+          <button className="btn btn-primary btn-sm" onClick={() => gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig)}>🖨 Imprimir</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="card" style={{ padding: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Dados do Requerente</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {inp('Nome completo', 'nome')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {inp('CPF', 'cpf', 'text', '000.000.000-00')}
+              {inp('RG', 'rg')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {inp('Data de Nascimento', 'dt_nascimento', 'date')}
+              {inp('Estado Civil', 'estado_civil')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {inp('Profissão', 'profissao')}
+              {inp('Nacionalidade', 'nacionalidade')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 8 }}>
+              {inp('Endereço', 'endereco')}
+              {inp('Nº', 'numero')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 50px', gap: 8 }}>
+              {inp('Bairro', 'bairro')}
+              {inp('CEP', 'cep')}
+              {inp('UF', 'uf')}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {inp('Cidade', 'cidade')}
+              {inp('Telefone', 'telefone')}
+            </div>
+            {inp('E-mail', 'email', 'email')}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Do Pedido de Registro</div>
+          <div className="form-group" style={{ marginBottom: 8 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>Descrever o título objeto de registro</label>
+            <textarea className="form-input" rows={3} value={form.titulo_registro||''} onChange={e => setF('titulo_registro', e.target.value)}
+              style={{ fontSize: 12, resize: 'vertical' }} placeholder="Ex: Escritura Pública de Compra e Venda..." />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>Indicação da(s) Matrícula(s) — uma por linha</label>
+            <textarea className="form-input" rows={3} value={form.matriculas||''} onChange={e => setF('matriculas', e.target.value)}
+              style={{ fontSize: 12, resize: 'vertical' }} placeholder={'Matrícula nº 1234, livro 02-A\nMatrícula nº 5678, livro 02-B'} />
+          </div>
+        </div>
+      </div>
+
+      {modalConf && (
+        <ModalConfRequerimento sb={sb} addToast={addToast}
+          onClose={(c) => { if (c) setReqConfig(c); setModalConf(false); }} />
+      )}
+    </div>
+  );
+}
 
 // ── Modal Principal ───────────────────────────────────────────
+
 export { ModalTelaAndamento };
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
   const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario } = useApp();
@@ -1488,6 +1699,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               ['historico', `Histórico${qtdHistorico > 0 ? ` (${qtdHistorico})` : ''}`],
               ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
               ['certidoes', 'Pedido de Certidões'],
+              ['registro_imoveis', 'Registro de Imóveis'],
             ].map(([id, label]) => (
               <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
             ))}
@@ -1517,6 +1729,9 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             )}
             {aba === 'certidoes' && (
               <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} usuario={usuario} />
+            )}
+            {aba === 'registro_imoveis' && (
+              <TabRegistroImoveis proc={form} interessados={interessados} cartorio={cartorio} usuario={usuario} />
             )}
           </div>
 
