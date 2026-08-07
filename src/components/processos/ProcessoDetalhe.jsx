@@ -1501,7 +1501,7 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
   setTimeout(() => w.print(), 600);
 }
 
-function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
+function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario }) {
   const { supabaseClient: sb, addToast, addHistoricoObs } = useApp();
   const [reqConfig,      setReqConfig]      = useState({});
   const [modalConf,      setModalConf]      = useState(false);
@@ -1544,7 +1544,7 @@ function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
           <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
           <button className="btn btn-primary btn-sm" onClick={() => {
             gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig);
-            addHistoricoObs(proc.id, `Requerimento de Registro impresso${tituloRegistro ? ' — ' + tituloRegistro.substring(0, 80) : ''}${matriculas ? ' · Matr.: ' + matriculas.split('\n')[0] : ''}`, '🏠');
+            addHistoricoObs(processoId, `Requerimento de Registro impresso${tituloRegistro ? ' — ' + tituloRegistro.substring(0, 80) : ''}${matriculas ? ' · Matr.: ' + matriculas.split('\n')[0] : ''}`, '🏠');
           }}>🖨 Imprimir</button>
         </div>
       </div>
@@ -1697,7 +1697,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} usuario={usuario} />
             )}
             {aba === 'registro_imoveis' && (
-              <TabRegistroImoveis proc={form} interessados={interessados} cartorio={cartorio} usuario={usuario} />
+              <TabRegistroImoveis proc={form} processoId={processo.id} interessados={interessados} cartorio={cartorio} usuario={usuario} />
             )}
           </div>
 
