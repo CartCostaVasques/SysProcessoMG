@@ -1407,7 +1407,6 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
   const emailCart    = (reqConfig && reqConfig.email)         || (cartorio && cartorio.email)    || 'E-mail: atendimento@rgiparanatinga.com.br';
   const nomeResp     = (reqConfig && reqConfig.nome_responsavel)  || 'Ludmilla Eveline de Freitas Fernandes';
   const cargoResp    = (reqConfig && reqConfig.cargo_responsavel) || 'Oficial Registradora';
-  const logoUrl      = (cartorio && cartorio.logo_url) || '';
 
   const td = (label, valor, extra='') => `<td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;white-space:nowrap;">${label}</td><td style="padding:4px 6px;border:1px solid #000;font-size:12px;${extra}">${valor||''}</td>`;
   const matriculaLinhas = (form.matriculas||'').split('\n').concat(['','']).slice(0,3).map(m => `<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;">${m}</td></tr>`).join('');
@@ -1435,7 +1434,6 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
 </head><body>
 <div class="aviso">⚠️ Para remover data/hora: em Mais configurações desmarque "Cabeçalhos e rodapés"</div>
 <div class="cab">
-  <div class="logo">${logoUrl ? `<img src="${logoUrl}" alt="">` : ''}</div>
   <div class="cab-info">
     <div class="cab-nome">${nomeCartorio}</div>
     <div class="cab-end">${enderecoCart}<br>${telefoneCart}<br>${emailCart}</div>
@@ -1477,10 +1475,10 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
 <div class="secao">Do Pedido de Registro</div>
 <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Descrever o título objeto de registro:</div>
 <table class="tab-linhas">
-  ${[form.titulo_registro||'','',''].slice(0,3).map(v=>`<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;">${v}</td></tr>`).join('')}
+  ${[form.titulo_registro||'','',''].slice(0,3).map(v=>`<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;font-weight:bold;">${v}</td></tr>`).join('')}
 </table>
 <div class="secao" style="margin-top:8px;">Indicação da (s) Matrícula (s):</div>
-<table class="tab-linhas">${matriculaLinhas}</table>
+<table class="tab-linhas">${(form.matriculas||'').split('\n').concat(['','']).slice(0,3).map(m=>`<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;font-weight:bold;">${m}</td></tr>`).join('')}</table>
 <div class="declaracao">
   <p><strong>DECLARAÇÃO:</strong> Para comprimento dos princípios da Lei nº 13.709/2018 e do Provimento 15/2021 CGJ, as certidões ou informações restritas somente pode ser fornecida a terceiros mediante análise do legítimo interesse do solicitante por escrito em prontuário conforme exige o Art. 31 do provimento 15/2021 CGJ. Ciente que os dados informados são tratados de acordo com o ordenamento jurídico e Lei Federal 13.709/2018 LGPD. Para pedidos por meio eletrônico é necessário a identificação por assinatura digital do formulário preenchido. Pedido também pode ser realizado pela plataforma da ONR (Operador Nacional do Sistema de Registro Eletrônico de Imóveis) https://www.onr.org.br mediante cadastro.</p>
   <p>Serão negadas, por meio de nota fundamentada, as solicitações de certidões que visem informações em bloco (de mais de um ato notarial ou registro), ou agrupadas, ou segundo critérios não comuns de pesquisa, ainda que relativas a registros e atos notariais envolvendo titulares distintos de dados pessoais, quando não presente o legítimo interesse do solicitante. Por execução de obrigação legal, conforme Art. 7 da Lei nº 13.709/2018, esses dados serão compartilhados com as Centrais Eletrônicas de Serviços Compartilhados e Conselho de Justiça.</p>
@@ -1500,28 +1498,10 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
 
 function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
   const { supabaseClient: sb, addToast } = useApp();
-  const [reqConfig, setReqConfig] = useState({});
-  const [modalConf, setModalConf] = useState(false);
-  const [form, setForm] = useState({
-    nome: (usuario && (usuario.nome_completo || usuario.nome_simples)) || '',
-    cpf: (usuario && usuario.cpf) || '',
-    rg: (usuario && usuario.rg) || '',
-    dt_nascimento: '',
-    estado_civil: '',
-    profissao: '',
-    nacionalidade: 'Brasileiro(a)',
-    endereco: (usuario && usuario.endereco) || '',
-    numero: '',
-    bairro: '',
-    cep: (usuario && usuario.cep) || '',
-    cidade: 'Paranatinga',
-    uf: 'MT',
-    telefone: (usuario && usuario.celular) || '',
-    email: (usuario && usuario.email) || '',
-    titulo_registro: '',
-    matriculas: '',
-  });
-  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const [reqConfig,      setReqConfig]      = useState({});
+  const [modalConf,      setModalConf]      = useState(false);
+  const [tituloRegistro, setTituloRegistro] = useState('');
+  const [matriculas,     setMatriculas]     = useState('');
 
   useEffect(() => {
     sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
@@ -1529,72 +1509,49 @@ function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
     });
   }, []);
 
-  const inp = (label, campo, tipo, placeholder, style) => (
-    <div className="form-group" style={{ marginBottom: 0 }}>
-      <label className="form-label" style={{ fontSize: 11 }}>{label}</label>
-      <input className="form-input" type={tipo||'text'} value={form[campo]||''} onChange={e => setF(campo, e.target.value)} placeholder={placeholder||''} style={{ fontSize: 12, ...style }} />
-    </div>
-  );
+  const form = {
+    nome:            usuario?.nome_completo || usuario?.nome_simples || '',
+    cpf:             usuario?.cpf           || '',
+    rg:              usuario?.rg            || '',
+    dt_nascimento:   '',
+    estado_civil:    '',
+    profissao:       '',
+    nacionalidade:   'Brasileiro(a)',
+    endereco:        usuario?.endereco      || '',
+    numero:          '',
+    bairro:          '',
+    cep:             usuario?.cep           || '',
+    cidade:          'Paranatinga',
+    uf:              'MT',
+    telefone:        usuario?.celular       || '',
+    email:           usuario?.email         || '',
+    titulo_registro: tituloRegistro,
+    matriculas:      matriculas,
+  };
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Requerimento para Registro de Imóveis</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>Preencha e clique em Imprimir.</div>
-        </div>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+          Os dados do requerente são preenchidos automaticamente com o usuário logado.
+        </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
           <button className="btn btn-primary btn-sm" onClick={() => gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig)}>🖨 Imprimir</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Dados do Requerente</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {inp('Nome completo', 'nome')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {inp('CPF', 'cpf', 'text', '000.000.000-00')}
-              {inp('RG', 'rg')}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {inp('Data de Nascimento', 'dt_nascimento', 'date')}
-              {inp('Estado Civil', 'estado_civil')}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {inp('Profissão', 'profissao')}
-              {inp('Nacionalidade', 'nacionalidade')}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 8 }}>
-              {inp('Endereço', 'endereco')}
-              {inp('Nº', 'numero')}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 130px 50px', gap: 8 }}>
-              {inp('Bairro', 'bairro')}
-              {inp('CEP', 'cep')}
-              {inp('UF', 'uf')}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {inp('Cidade', 'cidade')}
-              {inp('Telefone', 'telefone')}
-            </div>
-            {inp('E-mail', 'email', 'email')}
-          </div>
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Do Pedido de Registro</div>
+        <div className="form-group" style={{ marginBottom: 10 }}>
+          <label className="form-label">Descrever o título objeto de registro</label>
+          <textarea className="form-input" rows={3} value={tituloRegistro} onChange={e => setTituloRegistro(e.target.value)}
+            style={{ fontSize: 12, resize: 'vertical' }} placeholder="Ex: Escritura Pública de Compra e Venda..." />
         </div>
-
-        <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Do Pedido de Registro</div>
-          <div className="form-group" style={{ marginBottom: 8 }}>
-            <label className="form-label" style={{ fontSize: 11 }}>Descrever o título objeto de registro</label>
-            <textarea className="form-input" rows={3} value={form.titulo_registro||''} onChange={e => setF('titulo_registro', e.target.value)}
-              style={{ fontSize: 12, resize: 'vertical' }} placeholder="Ex: Escritura Pública de Compra e Venda..." />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label" style={{ fontSize: 11 }}>Indicação da(s) Matrícula(s) — uma por linha</label>
-            <textarea className="form-input" rows={3} value={form.matriculas||''} onChange={e => setF('matriculas', e.target.value)}
-              style={{ fontSize: 12, resize: 'vertical' }} placeholder={'Matrícula nº 1234, livro 02-A\nMatrícula nº 5678, livro 02-B'} />
-          </div>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label">Indicação da(s) Matrícula(s) — uma por linha</label>
+          <textarea className="form-input" rows={3} value={matriculas} onChange={e => setMatriculas(e.target.value)}
+            style={{ fontSize: 12, resize: 'vertical' }} placeholder="Matrícula nº 1234, livro 02-A" />
         </div>
       </div>
 
@@ -1605,6 +1562,7 @@ function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
     </div>
   );
 }
+
 
 // ── Modal Principal ───────────────────────────────────────────
 
