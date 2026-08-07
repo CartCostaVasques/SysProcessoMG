@@ -286,14 +286,15 @@ function TabHistorico({ processoId, processo }) {
       <div style={{ position: 'absolute', left: 10, top: 8, bottom: 8, width: 2, background: 'var(--color-border)', borderRadius: 2 }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
         {historico.map((h, i) => {
-          const c = STATUS_CONF_GLOBAL[h.status_novo] || { cor: '#888', icon: '●' };
+          const isEvento = !h.status_anterior && h.status_novo?.startsWith('📄') || h.status_novo?.startsWith('🏠') || h.status_novo?.startsWith('📋');
+          const c = isEvento ? { cor: '#6366f1', icon: '' } : (STATUS_CONF_GLOBAL[h.status_novo] || { cor: '#888', icon: '●' });
           return (
             <div key={h.id} style={{ position: 'relative', paddingBottom: 20 }}>
               <div style={{ position: 'absolute', left: -22, top: 4, width: 14, height: 14, borderRadius: '50%', background: c.cor, border: '2px solid var(--color-surface)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8 }} />
-              <div style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
+              <div style={{ background: 'var(--color-surface-2)', border: `1px solid ${isEvento ? 'color-mix(in srgb, #6366f1 30%, var(--color-border))' : 'var(--color-border)'}`, borderRadius: 'var(--radius-md)', padding: '10px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: h.obs ? 6 : 0 }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: c.cor }}>{c.icon} {h.status_novo}</span>
-                  {h.status_anterior && (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: c.cor }}>{h.status_novo}</span>
+                  {!isEvento && h.status_anterior && (
                     <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>← {h.status_anterior}</span>
                   )}
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -301,10 +302,10 @@ function TabHistorico({ processoId, processo }) {
                     {h.usuarios?.nome_simples && (
                       <span style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>por {h.usuarios.nome_simples}</span>
                     )}
-                    <button className="btn-icon btn-sm" style={{ fontSize: 12, opacity: 0.7 }} onClick={() => setEditando(h)} title="Editar">✎</button>
+                    {!isEvento && <button className="btn-icon btn-sm" style={{ fontSize: 12, opacity: 0.7 }} onClick={() => setEditando(h)} title="Editar">✎</button>}
                   </div>
                 </div>
-                {h.obs && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: 'italic', borderTop: '1px solid var(--color-border)', paddingTop: 6, marginTop: 4 }}>"{h.obs}"</div>}
+                {h.obs && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', fontStyle: isEvento ? 'normal' : 'italic', borderTop: '1px solid var(--color-border)', paddingTop: 6, marginTop: 4 }}>{isEvento ? h.obs : `"${h.obs}"`}</div>}
               </div>
             </div>
           );
@@ -1247,9 +1248,7 @@ function ModalConfRequerimento({ onClose, sb, addToast }) {
   );
 }
 function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuarios, processoId, editProcesso, usuario }) {
-  const { supabaseClient: sb, addToast } = useApp();
-
-  // Cada certidão: { dt_pedido, finalidade, itens: [{tipo, descricao}] }
+  const { supabaseClient: sb, addToast, addHistoricoObs } = useApp();
   // Compatibilidade com formato antigo (sem itens)
   const parseComp = (raw) => {
     try {
@@ -1337,7 +1336,11 @@ function TabCertidoes({ proc, editando, onChange, interessados, cartorio, usuari
               <input className="form-input" type="date" value={c.dt_pedido || ''} onChange={e => updatePedido(pi, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28, width: 130 }} />
               <div style={{ flex: 1 }} />
               <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
-                onClick={() => gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig)}>
+                onClick={() => {
+                  gerarRequerimento(proc, [c], usuarios, cartorio, usuario, reqConfig);
+                  const tipos = (c.itens||[]).map(it => it.tipo).filter(Boolean).join(', ');
+                  addHistoricoObs(processoId, `Pedido de Certidão impresso — ${tipos || 'Certidão'}${c.finalidade ? ' · Finalidade: ' + c.finalidade : ''}`, '📄');
+                }}>
                 🖨 Imprimir
               </button>
               <button onClick={() => removePedido(pi)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
@@ -1408,8 +1411,6 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
   const nomeResp     = (reqConfig && reqConfig.nome_responsavel)  || 'Ludmilla Eveline de Freitas Fernandes';
   const cargoResp    = (reqConfig && reqConfig.cargo_responsavel) || 'Oficial Registradora';
 
-  const td = (label, valor, extra='') => `<td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;white-space:nowrap;">${label}</td><td style="padding:4px 6px;border:1px solid #000;font-size:12px;${extra}">${valor||''}</td>`;
-  const matriculaLinhas = (form.matriculas||'').split('\n').concat(['','']).slice(0,3).map(m => `<tr><td style="border:none;border-bottom:1px solid #000;height:24px;padding:2px 4px;font-size:12px;">${m}</td></tr>`).join('');
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Requerimento para Registro de Imóveis</title>
 <style>
@@ -1447,30 +1448,34 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
   <div style="font-size:11px;font-weight:bold;margin-top:2px;">Escrituras, Cédulas, Contratos, Títulos Judiciais</div>
 </div>
 <table class="tab-dados">
-  <tr><td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Nome</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.nome||''}</td></tr>
-  <tr>${td('CPF',form.cpf)}${td('RG',form.rg)}</tr>
-  <tr>${td('Dt. Nasc.',form.dt_nascimento ? new Date(form.dt_nascimento+'T12:00:00').toLocaleDateString('pt-BR') : '')}${td('Estado Civil',form.estado_civil)}</tr>
-  <tr>${td('Profissão',form.profissao)}${td('Nacionalidade',form.nacionalidade)}</tr>
   <tr>
-    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Endereço</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.endereco||''}</td>
-    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Nº</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;width:60px;">${form.numero||''}</td>
+    <td colspan="4" style="padding:4px 8px;border:1px solid #000;font-size:11px;background:#f5f5f5;">Requerente</td>
   </tr>
   <tr>
-    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Bairro</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.bairro||''}</td>
-    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">CEP</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.cep||''}</td>
+    <td colspan="4" style="padding:5px 8px;border:1px solid #000;font-size:12px;font-weight:bold;">${form.nome||''}</td>
   </tr>
   <tr>
-    <td style="width:90px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Cidade</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.cidade||''}</td>
-    <td style="width:30px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">UF</td>
-    <td style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.uf||''}</td>
+    <td style="width:60px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">CPF</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;width:40%;">${form.cpf||''}</td>
+    <td style="width:100px;padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">Registro Geral</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;">${form.rg||''}</td>
   </tr>
-  <tr><td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">Telefone</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.telefone||''}</td></tr>
-  <tr><td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f0f0f0;">E-mail</td><td colspan="3" style="padding:4px 6px;border:1px solid #000;font-size:12px;">${form.email||''}</td></tr>
+  <tr>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">Endereço</td>
+    <td colspan="3" style="padding:4px 8px;border:1px solid #000;font-size:12px;">${form.endereco||''}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">Cidade</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;width:40%;">${form.cidade||'Paranatinga'}</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">CEP</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;">${form.cep||''}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">E-mail</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;">${form.email||''}</td>
+    <td style="padding:4px 6px;border:1px solid #000;font-size:11px;background:#f5f5f5;">Celular</td>
+    <td style="padding:4px 8px;border:1px solid #000;font-size:12px;">${form.telefone||''}</td>
+  </tr>
 </table>
 <div class="secao">Do Pedido de Registro</div>
 <div style="font-size:11px;font-weight:bold;margin-bottom:4px;">Descrever o título objeto de registro:</div>
@@ -1497,11 +1502,7 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
 }
 
 function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
-  const { supabaseClient: sb, addToast } = useApp();
-  const [reqConfig,      setReqConfig]      = useState({});
-  const [modalConf,      setModalConf]      = useState(false);
-  const [tituloRegistro, setTituloRegistro] = useState('');
-  const [matriculas,     setMatriculas]     = useState('');
+  const { supabaseClient: sb, addToast, addHistoricoObs } = useApp();
 
   useEffect(() => {
     sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
@@ -1537,7 +1538,10 @@ function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
-          <button className="btn btn-primary btn-sm" onClick={() => gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig)}>🖨 Imprimir</button>
+          <button className="btn btn-primary btn-sm" onClick={() => {
+            gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig);
+            addHistoricoObs(proc.id, `Requerimento de Registro impresso${tituloRegistro ? ' — ' + tituloRegistro.substring(0, 80) : ''}${matriculas ? ' · Matr.: ' + matriculas.split('\n')[0] : ''}`, '🏠');
+          }}>🖨 Imprimir</button>
         </div>
       </div>
 
