@@ -254,17 +254,15 @@ export function AppProvider({ children }) {
       let todos = [];
       let from = 0;
       while (true) {
-        const { data, error } = await supabase
-          .from('processos')
-          .select('*, andamentos(id)')
-          .order('dt_abertura', { ascending: false })
-          .range(from, from + PAGE - 1);
+        const { data, error } = await supabase.from('processos').select('*').order('dt_abertura', { ascending: false }).range(from, from + PAGE - 1);
         if (error) throw error;
         if (data?.length) todos = [...todos, ...data];
         if (!data || data.length < PAGE) break;
         from += PAGE;
       }
-      setProcessos(todos.map(p => ({ ...p, total_andamentos: p.andamentos?.length || 0, andamentos: undefined })));
+      const { data: ands } = await supabase.from('andamentos').select('processo_id');
+      const counts = (ands||[]).reduce((acc,a) => { acc[a.processo_id] = (acc[a.processo_id]||0)+1; return acc; }, {});
+      setProcessos(todos.map(p => ({ ...p, total_andamentos: counts[p.id]||0 })));
     } catch(e) { console.error('processos', e); }
   };
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
@@ -276,7 +274,7 @@ export function AppProvider({ children }) {
   const fetchSetores   = async () => { try { const {data} = await supabase.from('setores').select('*').order('nome'); if(data) setSetores(data); } catch(e){} };
   const fetchServicos  = async () => { try { const {data} = await supabase.from('servicos').select('*').order('categoria'); if(data) setServicos(data); } catch(e){} };
   const fetchLogs      = async () => { try { const {data} = await supabase.from('logs_acesso').select('*').order('dt_acesso',{ascending:false}).limit(100); if(data) setLogs(data); } catch(e){} };
-  const fetchProcessoHistorico = async () => { try { const {data} = await supabase.from('processo_historico').select('*, usuarios(nome_simples)').order('dt_alteracao',{ascending:false}).limit(500); if(data) setProcessoHistorico(data); } catch(e){ console.error('processo_historico',e); } };
+  const fetchProcessoHistorico = async () => { try { const {data} = await supabase.from('processo_historico').select('*, usuarios(nome_simples)').order('dt_alteracao',{ascending:false}); if(data) setProcessoHistorico(data); } catch(e){ console.error('processo_historico',e); } };
   const fetchCartorio  = async () => { try { const {data} = await supabase.from('cartorio').select('*').eq('id',1).single(); if(data) { setCartorio(data); } } catch(e){} };
   const fetchDashboard = async () => { try { const {data} = await supabase.rpc('dashboard_stats'); if(data) setDashStats(data); } catch(e){} };
 
@@ -367,9 +365,7 @@ export function AppProvider({ children }) {
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
   const addProcesso    = useCallback(async (d) => { try { 
-    const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error;
-    setProcessos(p=>[{...data, total_andamentos:0}, ...p]);
-    addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+    const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
   const editProcesso   = useCallback(async (id, d) => { try {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
 
@@ -413,10 +409,23 @@ export function AppProvider({ children }) {
       return data;
     } catch(e) { addToast(e.message, 'error'); }
   }, [usuario]);
-  const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
+  const addHistoricoObs = useCallback(async (processoId, obs, icone = '📋') => {
+    try {
+      const proc = processos.find(p => p.id === processoId);
+      await supabase.from('processo_historico').insert({
+        processo_id:     processoId,
+        status_anterior: null,
+        status_novo:     icone + ' ' + (proc?.status || 'Em andamento'),
+        dt_alteracao:    new Date().toISOString(),
+        obs:             obs,
+        usuario_id:      usuario?.id || null,
+      });
+      await fetchProcessoHistorico();
+    } catch(e) { console.error('addHistoricoObs', e); }
+  }, [usuario, processos]);
 
   const addAndamento    = useCallback(async (d) => { try { const {data,error} = await supabase.from('andamentos').insert(d).select().single(); if(error) throw error; setAndamentos(p=>[data,...p]); setProcessos(p=>p.map(proc=>proc.id===d.processo_id?{...proc,total_andamentos:(proc.total_andamentos||0)+1}:proc)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
-  const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().maybeSingle(); if(error) throw error; setAndamentos(p=>p.map(a=>a.id===id?{...a,...(data||d)}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
+  const editAndamento   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('andamentos').update(d).eq('id',id).select().maybeSingle(); if(error) throw error; if(data) setAndamentos(p=>p.map(a=>a.id===id?{...a,...data}:a)); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const deleteAndamento = useCallback(async (id) => { try { await supabase.from('andamentos').delete().eq('id',id); setAndamentos(p=>p.filter(a=>a.id!==id)); } catch(e){ addToast(e.message,'error'); } }, []);
   const addInteressado    = useCallback(async (d) => { try { const {data,error} = await supabase.from('interessados').insert(d).select().single(); if(error) throw error; setInteressados(p=>[...p,data]); return data; } catch(e){ addToast(e.message,'error'); } }, []);
   const editInteressado   = useCallback(async (id, d) => { try { const {data,error} = await supabase.from('interessados').update(d).eq('id',id).select().single(); if(error) throw error; setInteressados(p=>p.map(i=>i.id===id?data:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
@@ -449,15 +458,7 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!usuario) return;
     const channel = supabase.channel('realtime')
-      .on('postgres_changes', {event:'INSERT', schema:'public', table:'processos'}, ({ new: row }) => {
-        setProcessos(p => p.some(x => x.id === row.id) ? p : [{ ...row, total_andamentos: 0 }, ...p]);
-      })
-      .on('postgres_changes', {event:'UPDATE', schema:'public', table:'processos'}, ({ new: row }) => {
-        setProcessos(p => p.map(x => x.id === row.id ? { ...x, ...row } : x));
-      })
-      .on('postgres_changes', {event:'DELETE', schema:'public', table:'processos'}, ({ old: row }) => {
-        setProcessos(p => p.filter(x => x.id !== row.id));
-      })
+      .on('postgres_changes', {event:'*',schema:'public',table:'processos'}, fetchProcessos)
       .on('postgres_changes', {event:'*',schema:'public',table:'andamentos'}, fetchAndamentos)
       .on('postgres_changes', {event:'*',schema:'public',table:'tarefas'}, fetchTarefas)
       .on('postgres_changes', {event:'*',schema:'public',table:'oficios'}, fetchOficios)
@@ -548,7 +549,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
       usuarios, addUsuario, editUsuario, deleteUsuario, alterarSenha, minhaSenha,
-      processos, addProcesso, editProcesso, deleteProcesso, alterarStatusProcesso,
+      processos, addProcesso, editProcesso, deleteProcesso, alterarStatusProcesso, addHistoricoObs,
       processoHistorico, fetchProcessoHistorico,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
