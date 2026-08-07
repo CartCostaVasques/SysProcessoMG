@@ -1501,12 +1501,14 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
   setTimeout(() => w.print(), 600);
 }
 
-function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario }) {
+function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario, onChange, editProcesso }) {
   const { supabaseClient: sb, addToast, addHistoricoObs } = useApp();
-  const [reqConfig,      setReqConfig]      = useState({});
-  const [modalConf,      setModalConf]      = useState(false);
-  const [tituloRegistro, setTituloRegistro] = useState('');
-  const [matriculas,     setMatriculas]     = useState('');
+
+  const parse = (raw) => { try { return JSON.parse(raw || '[]'); } catch { return []; } };
+
+  const [pedidos,  setPedidos]  = useState(() => parse(proc.pedidos_registro));
+  const [reqConfig,setReqConfig]= useState({});
+  const [modalConf,setModalConf]= useState(false);
 
   useEffect(() => {
     sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
@@ -1514,53 +1516,90 @@ function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario 
     });
   }, []);
 
-  const form = {
-    nome:            usuario?.nome_completo || usuario?.nome_simples || '',
-    cpf:             usuario?.cpf           || '',
-    rg:              usuario?.rg            || '',
-    dt_nascimento:   '',
-    estado_civil:    '',
-    profissao:       '',
-    nacionalidade:   'Brasileiro(a)',
-    endereco:        usuario?.endereco      || '',
-    numero:          '',
-    bairro:          '',
-    cep:             usuario?.cep           || '',
-    cidade:          'Paranatinga',
-    uf:              'MT',
-    telefone:        usuario?.celular       || '',
-    email:           usuario?.email         || '',
-    titulo_registro: tituloRegistro,
-    matriculas:      matriculas,
+  useEffect(() => {
+    setPedidos(parse(proc.pedidos_registro));
+  }, [proc.pedidos_registro]);
+
+  const salvar = (nova) => {
+    setPedidos(nova);
+    const json = JSON.stringify(nova);
+    onChange('pedidos_registro', json);
+    editProcesso(processoId, { ...proc, pedidos_registro: json });
   };
+
+  const addPedido = () => {
+    const nova = [...pedidos, { dt_pedido: HOJE(), titulo_registro: '', matriculas: '' }];
+    salvar(nova);
+    addHistoricoObs(processoId, 'Novo pedido de Registro de Imóveis adicionado.', '🏠');
+  };
+  const removePedido = (i) => salvar(pedidos.filter((_, j) => j !== i));
+
+  const updateLocal = (i, k, v) => setPedidos(prev => prev.map((p, j) => j === i ? { ...p, [k]: v } : p));
+  const flush = () => {
+    const json = JSON.stringify(pedidos);
+    onChange('pedidos_registro', json);
+    editProcesso(processoId, { ...proc, pedidos_registro: json });
+  };
+
+  const formReq = (p) => ({
+    nome:     usuario?.nome_completo || usuario?.nome_simples || '',
+    cpf:      usuario?.cpf      || '',
+    rg:       usuario?.rg       || '',
+    endereco: usuario?.endereco || '',
+    cep:      usuario?.cep      || '',
+    cidade:   'Paranatinga',
+    uf:       'MT',
+    telefone: usuario?.celular  || '',
+    email:    usuario?.email    || '',
+    titulo_registro: p.titulo_registro || '',
+    matriculas:      p.matriculas      || '',
+  });
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-          Os dados do requerente são preenchidos automaticamente com o usuário logado.
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{pedidos.length} pedido(s) de registro</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => setModalConf(true)}>⚙️ Cabeçalho</button>
-          <button className="btn btn-primary btn-sm" onClick={() => {
-            gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig);
-            addHistoricoObs(processoId, `Requerimento de Registro impresso${tituloRegistro ? ' — ' + tituloRegistro.substring(0, 80) : ''}${matriculas ? ' · Matr.: ' + matriculas.split('\n')[0] : ''}`, '🏠');
-          }}>🖨 Imprimir</button>
+          <button className="btn btn-primary btn-sm" onClick={addPedido}>+ Novo Pedido</button>
         </div>
       </div>
 
-      <div className="card" style={{ padding: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>Do Pedido de Registro</div>
-        <div className="form-group" style={{ marginBottom: 10 }}>
-          <label className="form-label">Descrever o título objeto de registro</label>
-          <textarea className="form-input" rows={3} value={tituloRegistro} onChange={e => setTituloRegistro(e.target.value)}
-            style={{ fontSize: 12, resize: 'vertical' }} placeholder="Ex: Escritura Pública de Compra e Venda..." />
+      {pedidos.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-faint)', fontSize: 13 }}>
+          Clique em "+ Novo Pedido" para registrar um pedido de registro de imóveis.
         </div>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label className="form-label">Indicação da(s) Matrícula(s) — uma por linha</label>
-          <textarea className="form-input" rows={3} value={matriculas} onChange={e => setMatriculas(e.target.value)}
-            style={{ fontSize: 12, resize: 'vertical' }} placeholder="Matrícula nº 1234, livro 02-A" />
-        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {pedidos.map((p, i) => (
+          <div key={i} style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-faint)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Dt. Pedido</span>
+              <input className="form-input" type="date" value={p.dt_pedido || ''} onChange={e => updateLocal(i, 'dt_pedido', e.target.value)} onBlur={flush} style={{ fontSize: 11, padding: '4px 6px', height: 28, width: 130 }} />
+              <div style={{ flex: 1 }} />
+              <button className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}
+                onClick={() => {
+                  gerarRequerimentoRegistro(proc, formReq(p), interessados, cartorio, reqConfig);
+                  addHistoricoObs(processoId, 'Requerimento de Registro impresso' + (p.titulo_registro ? ' — ' + p.titulo_registro.substring(0, 60) : '') + (p.matriculas ? ' · Matr.: ' + p.matriculas.split('\n')[0] : ''), '🖨');
+                }}>
+                🖨 Imprimir
+              </button>
+              <button onClick={() => removePedido(i)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 8 }}>
+              <label className="form-label" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.5px' }}>Título objeto de registro</label>
+              <textarea className="form-input" rows={2} value={p.titulo_registro || ''} onChange={e => updateLocal(i, 'titulo_registro', e.target.value)} onBlur={flush}
+                style={{ fontSize: 12, resize: 'vertical' }} placeholder="Ex: Escritura Pública de Compra e Venda..." />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.5px' }}>Matrícula(s) — uma por linha</label>
+              <textarea className="form-input" rows={2} value={p.matriculas || ''} onChange={e => updateLocal(i, 'matriculas', e.target.value)} onBlur={flush}
+                style={{ fontSize: 12, resize: 'vertical' }} placeholder="Matrícula nº 1234, livro 02-A" />
+            </div>
+          </div>
+        ))}
       </div>
 
       {modalConf && (
@@ -1570,6 +1609,7 @@ function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario 
     </div>
   );
 }
+
 
 
 // ── Modal Principal ───────────────────────────────────────────
@@ -1697,7 +1737,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               <TabCertidoes proc={form} editando={editando} onChange={onChange} interessados={interessados} cartorio={cartorio} usuarios={usuarios} processoId={processo.id} editProcesso={editProcesso} usuario={usuario} />
             )}
             {aba === 'registro_imoveis' && (
-              <TabRegistroImoveis proc={form} processoId={processo.id} interessados={interessados} cartorio={cartorio} usuario={usuario} />
+              <TabRegistroImoveis proc={form} processoId={processo.id} interessados={interessados} cartorio={cartorio} usuario={usuario} onChange={onChange} editProcesso={editProcesso} />
             )}
           </div>
 
