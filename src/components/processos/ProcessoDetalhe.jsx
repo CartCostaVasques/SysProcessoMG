@@ -1503,6 +1503,10 @@ function gerarRequerimentoRegistro(proc, form, interessados, cartorio, reqConfig
 
 function TabRegistroImoveis({ proc, interessados, cartorio, usuario }) {
   const { supabaseClient: sb, addToast, addHistoricoObs } = useApp();
+  const [reqConfig,      setReqConfig]      = useState({});
+  const [modalConf,      setModalConf]      = useState(false);
+  const [tituloRegistro, setTituloRegistro] = useState('');
+  const [matriculas,     setMatriculas]     = useState('');
 
   useEffect(() => {
     sb.from('requerimento_config').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
