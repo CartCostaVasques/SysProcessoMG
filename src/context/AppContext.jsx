@@ -409,6 +409,8 @@ export function AppProvider({ children }) {
       return data;
     } catch(e) { addToast(e.message, 'error'); }
   }, [usuario]);
+  const deleteProcesso = useCallback(async (id) => { try { await supabase.from('processos').delete().eq('id',id); setProcessos(p=>p.filter(i=>i.id!==id)); addToast('Removido.','info'); } catch(e){ addToast(e.message,'error'); } }, []);
+
   const addHistoricoObs = useCallback(async (processoId, obs, icone = '📋') => {
     try {
       const proc = processos.find(p => p.id === processoId);
