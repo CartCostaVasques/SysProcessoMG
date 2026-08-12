@@ -216,19 +216,3 @@ export default function Interessados() {
     </div>
   );
 }
-
-
-const TIPOS = ['Cliente', 'Colaborador', 'Fornecedor', 'Outros'];
-const EMPTY = { nome: '', cpf: '', rg: '', email: '', telefone: '', endereco: '', cidade: '', cep: '', obs: '', tipo: 'Cliente' };
-
-const TIPO_COLORS = {
-  'Colaborador': { bg: '#dbeafe', color: '#1e40af' },
-  'Fornecedor':  { bg: '#dcfce7', color: '#15803d' },
-  'Outros':      { bg: '#f3f4f6', color: '#6b7280' },
-  'Cliente':     { bg: '#fef9c3', color: '#854d0e' },
-};
-
-const TipoBadge = ({ tipo }) => {
-  const s = TIPO_COLORS[tipo] || TIPO_COLORS['Cliente'];
-  return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color }}>{tipo || 'Cliente'}</span>;
-};
