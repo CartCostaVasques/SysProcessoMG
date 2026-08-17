@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ProcessoDetalhe from './ProcessoDetalhe.jsx';
 import Portal from '../layout/Portal.jsx';
 import { useApp } from '../../context/AppContext.jsx';
@@ -68,8 +68,7 @@ function ModalServicRapido({ usuarios, onSalvar, onClose, processos = [] }) {
   const [salvando, setSalvando]       = useState(false);
   const primeiroRef = useRef(null);
 
-  const numerosSet = useMemo(() => new Set(processos.map(p => p.numero_interno.trim())), [processos]);
-  const numExiste = useCallback((num) => num.trim() && numerosSet.has(num.trim()), [numerosSet]);
+  const numExiste = (num) => num.trim() && processos.some(p => p.numero_interno.trim() === num.trim());
 
   useEffect(() => { primeiroRef.current?.focus(); }, []);
 
@@ -441,7 +440,7 @@ function ModalInteressado({ nomeInicial = '', onSalvar, onClose }) {
 // ─── Principal ────────────────────────────────────────────────
 export default function Processos() {
   const {
-    processos, addProcesso, editProcesso, deleteProcesso,
+    processos, addProcesso, addProcessosBatch, editProcesso, deleteProcesso,
     andamentos, addAndamento, editAndamento, deleteAndamento,
     servicos, usuarios, interessados, addInteressado, addToast, usuario,
   } = useApp();
@@ -471,39 +470,30 @@ export default function Processos() {
     if (!newRow) focadoRef.current = false;
   }, [newRow]);
 
-  const categorias  = useMemo(() => [...new Set(servicos.map(s => s.categoria))], [servicos]);
+  const categorias  = [...new Set(servicos.map(s => s.categoria))];
   const parsePartes = (v) => { try { return JSON.parse(v || '[]'); } catch { return []; } };
-  const toSel = useCallback((partes) => parsePartes(partes).map(item => {
+  const toSel = (partes) => parsePartes(partes).map(item => {
     if (item.id) { const i = interessados.find(x => x.id === item.id); return i ? { ...i, vinculo: item.vinculo } : item; }
     return item;
-  }).filter(Boolean), [interessados]);
+  }).filter(Boolean);
 
-  // Mapa de responsáveis para evitar .find() em loop
-  const usuariosMap = useMemo(() => Object.fromEntries(usuarios.map(u => [u.id, u])), [usuarios]);
-
-  const lista = useMemo(() => processos.filter(p => {
-    if (filtroStatus && p.status !== filtroStatus) return false;
-    if (filtroResp && (usuariosMap[p.responsavel_id]?.nome_simples || '') !== filtroResp) return false;
-    if (filtroCateg && p.categoria !== filtroCateg) return false;
-    if (busca) {
-      const nomes = toSel(p.partes).map(i => i.nome || '').join(' ');
-      const txt = (p.numero_interno + nomes + (p.especie||'') + (p.categoria||'')).toLowerCase();
-      if (!txt.includes(busca.toLowerCase())) return false;
-    }
-    return true;
-  }), [processos, busca, filtroStatus, filtroResp, filtroCateg, usuariosMap, toSel]);
-
-  const listaLimitada = useMemo(() => limite === 'todos' ? lista : lista.slice(0, limite), [lista, limite]);
-
-  const responsaveis = useMemo(() =>
-    [...new Set(processos.map(p => usuariosMap[p.responsavel_id]?.nome_simples).filter(Boolean))],
-    [processos, usuariosMap]);
+  const lista = processos.filter(p => {
+    const nomes = toSel(p.partes).map(i => i.nome || '').join(' ');
+    const txt = (p.numero_interno + nomes + p.especie + p.categoria).toLowerCase();
+    return (!busca || txt.includes(busca.toLowerCase()))
+      && (!filtroStatus || p.status === filtroStatus)
+      && (!filtroResp || (usuarios.find(u => u.id === p.responsavel_id)?.nome_simples || '') === filtroResp)
+      && (!filtroCateg || p.categoria === filtroCateg);
+  });
+  const listaLimitada = limite === 'todos' ? lista : lista.slice(0, limite);
 
   const startEdit  = (p) => { setEditingId(p.id); setEditRow({ ...p, _sel: toSel(p.partes) }); };
   const cancelEdit = () => { setEditingId(null); setEditRow({}); };
   const setEd = (k, v) => setEditRow(p => ({ ...p, [k]: v }));
   const setNR = (k, v) => setNewRow(p => ({ ...p, [k]: v }));
   const getEspecies = (c) => servicos.filter(s => !c || s.categoria === c).map(s => s.subcategoria);
+  const responsaveis = [...new Set(processos.map(p => usuarios.find(u => u.id === p.responsavel_id)?.nome_simples).filter(Boolean))];
+
   const serializarPartes = (sel) =>
     JSON.stringify((sel || []).map(i => ({ id: i.id, nome: i.nome, cpf: i.cpf || '', vinculo: i.vinculo || '' })));
 
@@ -513,9 +503,8 @@ export default function Processos() {
     setEditingId(null);
   };
 
-  // Set para lookup O(1) em vez de .some() em 15k registros
-  const numerosExistentes = useMemo(() => new Set(processos.map(p => p.numero_interno.trim())), [processos]);
-  const numeroExiste = useCallback((num) => numerosExistentes.has(num.trim()), [numerosExistentes]);
+  // Verifica se número já existe
+  const numeroExiste = (num) => processos.some(p => p.numero_interno.trim() === num.trim());
 
   const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
@@ -553,13 +542,10 @@ export default function Processos() {
       addToast(`Nº duplicado(s): ${duplicados.join(', ')}. Corrija antes de salvar.`, 'error');
       return;
     }
-    let salvos = 0;
-    for (const dados of lista) {
-      await addProcesso({ ...dados, numero_interno: dados.numero_interno.trim(), quantidade: 1 });
-      salvos++;
-    }
+    const dados = lista.map(d => ({ ...d, numero_interno: d.numero_interno.trim(), quantidade: 1 }));
+    await addProcessosBatch(dados);
     setModalRapido(false);
-    if (salvos > 0) addToast(`${salvos} processo(s) registrado(s)!`, 'success');
+    if (dados.length > 0) addToast(`${dados.length} processo(s) registrado(s)!`, 'success');
   };
 
   const STATUS_CONF = {
