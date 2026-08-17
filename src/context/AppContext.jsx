@@ -249,20 +249,21 @@ export function AppProvider({ children }) {
   };
   const fetchProcessos = async () => {
     try {
-      // Busca paginada — Supabase limita 1000 por query
       const PAGE = 1000;
       let todos = [];
       let from = 0;
       while (true) {
-        const { data, error } = await supabase.from('processos').select('*').order('dt_abertura', { ascending: false }).range(from, from + PAGE - 1);
+        const { data, error } = await supabase
+          .from('processos')
+          .select('*, andamentos(id)')
+          .order('dt_abertura', { ascending: false })
+          .range(from, from + PAGE - 1);
         if (error) throw error;
         if (data?.length) todos = [...todos, ...data];
         if (!data || data.length < PAGE) break;
         from += PAGE;
       }
-      const { data: ands } = await supabase.from('andamentos').select('processo_id');
-      const counts = (ands||[]).reduce((acc,a) => { acc[a.processo_id] = (acc[a.processo_id]||0)+1; return acc; }, {});
-      setProcessos(todos.map(p => ({ ...p, total_andamentos: counts[p.id]||0 })));
+      setProcessos(todos.map(p => ({ ...p, total_andamentos: p.andamentos?.length || 0, andamentos: undefined })));
     } catch(e) { console.error('processos', e); }
   };
   const fetchAndamentos= async () => { try { const {data} = await supabase.from('andamentos').select('*').order('dt_andamento',{ascending:false}); if(data) setAndamentos(data); } catch(e){} };
@@ -365,7 +366,18 @@ export function AppProvider({ children }) {
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
   const addProcesso    = useCallback(async (d) => { try { 
-    const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error; await fetchProcessos(); addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+    const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error;
+    setProcessos(p=>[{...data, total_andamentos:0}, ...p]);
+    addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+
+  const addProcessosBatch = useCallback(async (lista) => { try {
+    const payload = lista.map(d => ({ ...limparProcesso(d), criado_por: usuario?.id }));
+    const { data, error } = await supabase.from('processos').insert(payload).select();
+    if (error) throw error;
+    const novos = (data||[]).map(p => ({ ...p, total_andamentos: 0 }));
+    setProcessos(p => [...novos, ...p]);
+    return data;
+  } catch(e) { addToast(e.message,'error'); } }, [usuario]);
   const editProcesso   = useCallback(async (id, d) => { try {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
 
@@ -460,7 +472,15 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!usuario) return;
     const channel = supabase.channel('realtime')
-      .on('postgres_changes', {event:'*',schema:'public',table:'processos'}, fetchProcessos)
+      .on('postgres_changes', {event:'INSERT', schema:'public', table:'processos'}, ({ new: row }) => {
+        setProcessos(p => p.some(x => x.id === row.id) ? p : [{ ...row, total_andamentos: 0 }, ...p]);
+      })
+      .on('postgres_changes', {event:'UPDATE', schema:'public', table:'processos'}, ({ new: row }) => {
+        setProcessos(p => p.map(x => x.id === row.id ? { ...x, ...row } : x));
+      })
+      .on('postgres_changes', {event:'DELETE', schema:'public', table:'processos'}, ({ old: row }) => {
+        setProcessos(p => p.filter(x => x.id !== row.id));
+      })
       .on('postgres_changes', {event:'*',schema:'public',table:'andamentos'}, fetchAndamentos)
       .on('postgres_changes', {event:'*',schema:'public',table:'tarefas'}, fetchTarefas)
       .on('postgres_changes', {event:'*',schema:'public',table:'oficios'}, fetchOficios)
@@ -551,7 +571,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       usuario, login, logout, registrarAcesso, authLoading,
       usuarios, addUsuario, editUsuario, deleteUsuario, alterarSenha, minhaSenha,
-      processos, addProcesso, editProcesso, deleteProcesso, alterarStatusProcesso, addHistoricoObs,
+      processos, addProcesso, addProcessosBatch, editProcesso, deleteProcesso, alterarStatusProcesso, addHistoricoObs,
       processoHistorico, fetchProcessoHistorico,
       andamentos, addAndamento, editAndamento, deleteAndamento,
       tarefas, addTarefa, editTarefa, deleteTarefa,
