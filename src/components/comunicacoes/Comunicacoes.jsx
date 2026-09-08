@@ -142,7 +142,7 @@ function parseSegmentos(linha, juizPaz, mesAno, periodo) {
 }
 
 // Gera o .docx usando a mesma estrutura dos ofícios
-async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, titulo, nrOficio, dataOficio }) {
+async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, titulo, nrOficio, dataOficio, destinatario = '' }) {
   const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, ImageRun, Header, UnderlineType } = await import('docx');
 
   const FONTE = 'Arial', TAM = 24;
@@ -263,8 +263,20 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     }
   }
 
+  // Bloco do destinatário (após assinatura)
+  const destinatarioParags = destinatario
+    ? [
+        pEmpty(),
+        pEmpty(),
+        ...destinatario.split('\n').map((linha, i) => new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 40, line: 276 },
+          children: [new TextRun({ text: linha.trim(), font: FONTE, size: TAM, bold: i > 0 && linha.trim() === linha.trim().toUpperCase() })],
+        })),
+      ]
+    : [];
+
   const children = nrOficio ? [
-    // Padrão ofício: data à esquerda + número do ofício
     p(dtEmissaoStr, { align: AlignmentType.LEFT, after: 80 }),
     new Paragraph({
       alignment: AlignmentType.LEFT,
@@ -280,8 +292,8 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     pEmpty(),
     ...assinaturaParags,
+    ...destinatarioParags,
   ] : [
-    // Padrão atestado: título centralizado negrito sublinhado
     pEmpty(),
     pEmpty(),
     pEmpty(),
@@ -301,6 +313,7 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     pEmpty(),
     pEmpty(),
     ...assinaturaParags,
+    ...destinatarioParags,
   ];
 
   const doc = new Document({
@@ -337,8 +350,9 @@ function getTextoPadrao(titulo) {
 
 function ModalModelo({ config, modelo, onClose, onSave }) {
   const padrao = !modelo ? getTextoPadrao(config.titulo) : null;
-  const [titulo, setTitulo] = useState(modelo?.titulo || padrao?.titulo || config.titulo);
-  const [corpo, setCorpo]   = useState(modelo?.corpo  || padrao?.corpo  || '');
+  const [titulo,       setTitulo]       = useState(modelo?.titulo       || padrao?.titulo || config.titulo);
+  const [corpo,        setCorpo]        = useState(modelo?.corpo        || padrao?.corpo  || '');
+  const [destinatario, setDestinatario] = useState(modelo?.destinatario || '');
 
   return (
     <Portal>
@@ -371,12 +385,18 @@ function ModalModelo({ config, modelo, onClose, onSave }) {
                 placeholder="Digite o texto do documento aqui. Use as variáveis acima para campos automáticos."
                 style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.8, fontSize: 13, minHeight: 220 }} />
             </div>
+            <div>
+              <label className="form-label">Destinatário <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(aparece após a assinatura — opcional)</span></label>
+              <textarea className="form-input" rows={4} value={destinatario} onChange={e => setDestinatario(e.target.value)}
+                placeholder={'Ao Ilmo. Sr.\nDELEGADO DA POLÍCIA FEDERAL\nDEPARTAMENTO DA POLÍCIA FEDERAL\nDO ESTADO DO MATO GROSSO'}
+                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.8, fontSize: 13 }} />
+            </div>
           </div>
           <div className="modal-footer">
             <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button className="btn btn-primary" onClick={() => {
               if (!corpo.trim()) { alert('Digite o texto do modelo.'); return; }
-              onSave({ titulo, corpo });
+              onSave({ titulo, corpo, destinatario });
             }}>Salvar Modelo</button>
           </div>
         </div>
@@ -433,7 +453,7 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
     setGerando(true);
     try {
       const assinanteReal = assinante || { nome_completo: cartorio?.responsavel, cargo: 'Tabeliã' };
-      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante: assinanteReal, titulo, nrOficio, dataOficio: dataOficio ? new Date(dataOficio + 'T12:00:00').toLocaleDateString('pt-BR') : '' });
+      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante: assinanteReal, titulo, nrOficio, dataOficio: dataOficio ? new Date(dataOficio + 'T12:00:00').toLocaleDateString('pt-BR') : '', destinatario: modelo.destinatario || '' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
