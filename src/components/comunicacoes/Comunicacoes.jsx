@@ -86,10 +86,13 @@ function calcProximoVencimento(config) {
 }
 
 // Substitui variáveis no texto do modelo
-function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento, nrOficio = '', dataOficio = '' }) {
-  // O período sempre se refere ao mês ANTERIOR à data de vencimento/emissão
+function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento, nrOficio = '', dataOficio = '', mesExplicito = false }) {
+  // Se mesRef foi passado explicitamente (dtVencimento termina em -15 de um mês escolhido),
+  // usa direto. Caso contrário, subtrai 1 mês (mês anterior).
   const base = dtVencimento ? new Date(dtVencimento + 'T12:00:00') : new Date();
-  const refDate = new Date(base.getFullYear(), base.getMonth() - 1, 1); // mês anterior
+  const refDate = mesExplicito
+    ? new Date(base.getFullYear(), base.getMonth(), 1)
+    : new Date(base.getFullYear(), base.getMonth() - 1, 1);
   const mes = refDate.getMonth(); // 0-based
   const ano = refDate.getFullYear();
   const nomeMes = MESES[mes];
@@ -386,8 +389,9 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
   const [titulo,    setTitulo]  = useState(modelo.titulo || config?.titulo || 'ATESTADO');
   const [assinante, setAss]     = useState(null);
   const [gerando,   setGerando] = useState(false);
-  const [nrOficio,  setNrOficio]  = useState('');
-  const [dataOficio,setDataOficio]= useState('');
+  const [nrOficio,   setNrOficio]    = useState('');
+  const [dataOficio, setDataOficio]  = useState('');
+  const [mesRef,     setMesRef]      = useState(''); // YYYY-MM — vazio = mês anterior
   const { addToast } = useApp();
   const temJuizVar    = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
   const temNrOficio   = true;  // sempre exibe — inserido no cabeçalho do doc se preenchido
@@ -415,7 +419,8 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
   const texto = substituirVariaveis(modelo.corpo, {
     cartorio: { ...cartorio, juiz_paz: juizSel },
     responsavelNome,
-    dtVencimento: ocorrencia?.dt_vencimento,
+    dtVencimento: mesRef ? mesRef + '-15' : ocorrencia?.dt_vencimento,
+    mesExplicito: !!mesRef,
     nrOficio,
     dataOficio: dataOficio ? new Date(dataOficio + 'T12:00:00').toLocaleDateString('pt-BR') : '',
   });
@@ -477,14 +482,20 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
               </div>
             )}
             {(temNrOficio || temDataOficio) && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div>
-                  <label className="form-label">Nº do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
-                  <input className="form-input" value={nrOficio} onChange={e => setNrOficio(e.target.value)} placeholder="Ex: 204/2026 — deixe vazio para omitir" />
+                  <label className="form-label">Mês de referência <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(vazio = mês anterior automaticamente)</span></label>
+                  <input className="form-input" type="month" value={mesRef} onChange={e => setMesRef(e.target.value)} />
                 </div>
-                <div>
-                  <label className="form-label">Data do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
-                  <input className="form-input" type="date" value={dataOficio} onChange={e => setDataOficio(e.target.value)} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label className="form-label">Nº do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
+                    <input className="form-input" value={nrOficio} onChange={e => setNrOficio(e.target.value)} placeholder="Ex: 204/2026" />
+                  </div>
+                  <div>
+                    <label className="form-label">Data do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
+                    <input className="form-input" type="date" value={dataOficio} onChange={e => setDataOficio(e.target.value)} />
+                  </div>
                 </div>
               </div>
             )}
