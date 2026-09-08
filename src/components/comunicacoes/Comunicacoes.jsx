@@ -270,8 +270,8 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
         pEmpty(),
         ...destinatario.split('\n').map((linha, i) => new Paragraph({
           alignment: AlignmentType.LEFT,
-          spacing: { after: 40, line: 276 },
-          children: [new TextRun({ text: linha.trim(), font: FONTE, size: TAM, bold: i > 0 && linha.trim() === linha.trim().toUpperCase() })],
+          spacing: { after: 0, line: 240 },
+          children: [new TextRun({ text: linha.trim(), font: FONTE, size: 22, bold: i > 0 && linha.trim() === linha.trim().toUpperCase() })],
         })),
       ]
     : [];
