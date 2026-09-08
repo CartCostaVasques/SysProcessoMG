@@ -135,7 +135,165 @@ function parseSegmentos(linha, juizPaz, mesAno, periodo) {
 }
 
 // Gera o .docx usando a mesma estrutura dos ofícios
-async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, titulo }) {
+async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, titulo, nrOficio, dataOficio }) {
+  const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, ImageRun, Header, UnderlineType } = await import('docx');
+
+  const FONTE = 'Arial', TAM = 24;
+  const MARGIN_H = 227, MARGIN_LR = 1134, MARGIN_BOT = 1134;
+
+  const p = (text, opts = {}) => new Paragraph({
+    alignment: opts.align || AlignmentType.JUSTIFIED,
+    spacing: { after: opts.after ?? 160, before: opts.before ?? 0, line: 276 },
+    children: [new TextRun({ text: text || '', font: FONTE, size: opts.size || TAM, bold: opts.bold || false })],
+  });
+  const pEmpty = () => new Paragraph({ children: [new TextRun({ text: '', font: FONTE, size: TAM })], spacing: { after: 0, line: 276 } });
+  const pCenter = (text, opts = {}) => new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: opts.after ?? 160, line: 276 },
+    children: [new TextRun({ text: text || '', font: FONTE, size: opts.size || TAM, bold: opts.bold || false, underline: opts.underline ? { type: UnderlineType.SINGLE } : undefined })],
+  });
+  const pIndent = (text, opts = {}) => new Paragraph({
+    alignment: opts.align || AlignmentType.JUSTIFIED,
+    spacing: { after: opts.after ?? 160, line: 360 },
+    indent: { firstLine: 1701 },
+    children: typeof text === 'string'
+      ? [new TextRun({ text: text || '', font: FONTE, size: TAM })]
+      : text,
+  });
+
+  // Cabeçalho com imagem
+  const cabecalhoImgUrl = cartorio?.cabecalho_img_url || null;
+  let headerChildren = [];
+  let headerHeightDXA = 1800;
+
+  if (cabecalhoImgUrl) {
+    try {
+      const imgResp = await fetch(cabecalhoImgUrl);
+      const imgBuffer = await imgResp.arrayBuffer();
+      const imgBytes = new Uint8Array(imgBuffer);
+      const imgType = (imgResp.headers.get('content-type') || '').includes('png') ? 'png' : 'jpg';
+      const targetW = Math.round(17 * 37.795);
+      const targetH = Math.round(3.5 * 37.795);
+      headerHeightDXA = Math.round((3.5 / 2.54) * 1440) + 400;
+      headerChildren = [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 0 },
+        children: [new ImageRun({ data: imgBytes.buffer, transformation: { width: targetW, height: targetH }, type: imgType })],
+      })];
+    } catch {
+      headerChildren = [pCenter(cartorio?.nome || '', { bold: true })];
+    }
+  } else {
+    headerChildren = [pCenter(cartorio?.nome || '', { bold: true })];
+  }
+
+  const wordHeader = new Header({ children: headerChildren });
+
+  // Assinatura
+  const nomeAssin    = assinante?.nome_completo || assinante?.nome_simples || cartorio?.responsavel || '';
+  const funcaoAssin  = assinante?.cargo || assinante?.perfil || 'Tabeliã';
+  const nomeCartorio = cartorio?.nome || '';
+
+  const assinaturaParags = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, border: { top: { style: BorderStyle.SINGLE, size: 4, color: '333333', space: 6 } }, children: [new TextRun({ text: nomeAssin, font: FONTE, size: TAM, bold: true })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: funcaoAssin, font: FONTE, size: 22, color: '555555' })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [new TextRun({ text: nomeCartorio, font: FONTE, size: 22, color: '555555' })] }),
+  ];
+
+  // Data de emissão
+  const hoje2 = new Date();
+  const dtEmissaoStr = `Paranatinga, ${String(hoje2.getDate()).padStart(2,'0')} de ${MESES[hoje2.getMonth()]} de ${hoje2.getFullYear()}.`;
+
+  // Montar body no padrão do ofício
+  // Separar linhas e identificar saudação, corpo, fechamento
+  const linhas = textoFinal.split('\n');
+
+  // Encontra mês/ano e período no texto para negritar
+  const textoCorpo = linhas.join(' ');
+  const matchPeriodo = textoCorpo.match(/(\d{2} a \d{2} de \w+ de \d{4})/);
+  const periodo = matchPeriodo?.[1] || '';
+  const matchMes = textoCorpo.match(/(?:do\s+)?m[eê]s\s+de\s+(\w+)\s+(?:do\s+)?(?:ano\s+de\s+)?(\d{4})/i);
+  const mesNegrito = matchMes ? `${matchMes[1]} de ${matchMes[2]}` : '';
+
+  // Função para criar runs com partes em negrito
+  const runsComNegrito = (texto) => {
+    const marcadores = [
+      periodo    ? { orig: periodo,    bold: true } : null,
+      mesNegrito ? { orig: mesNegrito, bold: true } : null,
+    ].filter(Boolean);
+
+    let parts = [{ texto, bold: false }];
+    for (const { orig, bold } of marcadores) {
+      const novas = [];
+      for (const run of parts) {
+        if (run.bold) { novas.push(run); continue; }
+        const idx = run.texto.indexOf(orig);
+        if (idx === -1) { novas.push(run); continue; }
+        if (idx > 0) novas.push({ texto: run.texto.slice(0, idx), bold: false });
+        novas.push({ texto: orig, bold });
+        const resto = run.texto.slice(idx + orig.length);
+        if (resto) novas.push({ texto: resto, bold: false });
+      }
+      parts = novas;
+    }
+    return parts.map(r => new TextRun({ text: r.texto, font: FONTE, size: TAM, bold: r.bold }));
+  };
+
+  // Detecta linhas especiais
+  const ehSaudacao = (l) => /^(prezad|senhor|vossa|ilustr)/i.test(l.trim());
+  const ehFechamento = (l) => /^(atenciosamente|respeitosamente|valemo-nos|permanecemos)/i.test(l.trim());
+
+  const bodyParags = [];
+  for (const linha of linhas) {
+    const t = linha.trim();
+    if (!t) { bodyParags.push(pEmpty()); continue; }
+    if (ehSaudacao(t)) {
+      bodyParags.push(pIndent(t, { after: 200 }));
+    } else if (ehFechamento(t)) {
+      bodyParags.push(p(t, { after: 160 }));
+    } else {
+      bodyParags.push(pIndent(runsComNegrito(t)));
+    }
+  }
+
+  const children = [
+    // Data alinhada à esquerda
+    p(dtEmissaoStr, { align: AlignmentType.LEFT, after: 80 }),
+    // Número do ofício se informado
+    ...(nrOficio ? [new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 240, line: 276 },
+      children: [
+        new TextRun({ text: 'Ofício sob nº ', font: FONTE, size: TAM }),
+        new TextRun({ text: nrOficio, font: FONTE, size: TAM, bold: true }),
+      ],
+    })] : []),
+    pEmpty(),
+    // Corpo
+    ...bodyParags,
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    // Assinatura
+    ...assinaturaParags,
+  ];
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: FONTE, size: TAM } } } },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 },
+          margin: { header: MARGIN_H, top: headerHeightDXA, right: MARGIN_LR, bottom: MARGIN_BOT, left: MARGIN_LR },
+        },
+      },
+      headers: { default: wordHeader },
+      children,
+    }],
+  });
+
+  return await Packer.toBlob(doc);
+}
   const { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, ImageRun, Header, UnderlineType } = await import('docx');
 
   const FONTE = 'Arial', TAM = 24;
@@ -402,7 +560,7 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
     setGerando(true);
     try {
       const assinanteReal = assinante || { nome_completo: cartorio?.responsavel, cargo: 'Tabeliã' };
-      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante: assinanteReal, titulo });
+      const blob = await gerarDocxComunicacao({ cartorio, modelo, textoFinal: texto, assinante: assinanteReal, titulo, nrOficio, dataOficio: dataOficio ? new Date(dataOficio + 'T12:00:00').toLocaleDateString('pt-BR') : '' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
