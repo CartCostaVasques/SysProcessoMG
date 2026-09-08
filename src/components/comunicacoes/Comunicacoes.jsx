@@ -87,12 +87,16 @@ function calcProximoVencimento(config) {
 
 // Substitui variáveis no texto do modelo
 function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento, nrOficio = '', dataOficio = '', mesExplicito = false }) {
-  // Se mesRef foi passado explicitamente (dtVencimento termina em -15 de um mês escolhido),
-  // usa direto. Caso contrário, subtrai 1 mês (mês anterior).
-  const base = dtVencimento ? new Date(dtVencimento + 'T12:00:00') : new Date();
-  const refDate = mesExplicito
-    ? new Date(base.getFullYear(), base.getMonth(), 1)
-    : new Date(base.getFullYear(), base.getMonth() - 1, 1);
+  let refDate;
+  if (mesExplicito && dtVencimento) {
+    // Mês escolhido explicitamente pelo usuário
+    const base = new Date(dtVencimento + 'T12:00:00');
+    refDate = new Date(base.getFullYear(), base.getMonth(), 1);
+  } else {
+    // Mês anterior ao mês atual (independente do vencimento da tarefa)
+    const agora = new Date();
+    refDate = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+  }
   const mes = refDate.getMonth(); // 0-based
   const ano = refDate.getFullYear();
   const nomeMes = MESES[mes];
