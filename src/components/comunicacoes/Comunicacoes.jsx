@@ -27,6 +27,8 @@ const VARIAVEIS = [
   { key: '{{PERIODO}}',        desc: 'Período do mês (ex: 01 a 31 de Maio de 2026)' },
   { key: '{{DATA_EMISSAO}}',   desc: 'Data de emissão do documento' },
   { key: '{{RESPONSAVEL}}',    desc: 'Nome do responsável pela comunicação' },
+  { key: '{{NR_OFICIO}}',      desc: 'Número do ofício (preenchido na hora de gerar)' },
+  { key: '{{DATA_OFICIO}}',    desc: 'Data do ofício (preenchida na hora de gerar)' },
 ];
 
 function hoje() {
@@ -84,7 +86,7 @@ function calcProximoVencimento(config) {
 }
 
 // Substitui variáveis no texto do modelo
-function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento }) {
+function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento, nrOficio = '', dataOficio = '' }) {
   // O período sempre se refere ao mês ANTERIOR à data de vencimento/emissão
   const base = dtVencimento ? new Date(dtVencimento + 'T12:00:00') : new Date();
   const refDate = new Date(base.getFullYear(), base.getMonth() - 1, 1); // mês anterior
@@ -100,7 +102,9 @@ function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento })
     .replace(/\{\{MES_ANO\}\}/g, `${nomeMes} de ${ano}`)
     .replace(/\{\{PERIODO\}\}/g, `01 a ${ultimoDia} de ${nomeMes} de ${ano}`)
     .replace(/\{\{DATA_EMISSAO\}\}/g, dtEmissao)
-    .replace(/\{\{RESPONSAVEL\}\}/g, responsavelNome || '___________________');
+    .replace(/\{\{RESPONSAVEL\}\}/g, responsavelNome || '___________________')
+    .replace(/\{\{NR_OFICIO\}\}/g, nrOficio || '______')
+    .replace(/\{\{DATA_OFICIO\}\}/g, dataOficio || '___/___/______');
 }
 
 // Divide o texto em segmentos com formatação (negrito/caixa alta para variáveis especiais)
@@ -360,8 +364,12 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
   const [titulo,    setTitulo]  = useState(modelo.titulo || config?.titulo || 'ATESTADO');
   const [assinante, setAss]     = useState(null);
   const [gerando,   setGerando] = useState(false);
+  const [nrOficio,  setNrOficio]  = useState('');
+  const [dataOficio,setDataOficio]= useState('');
   const { addToast } = useApp();
-  const temJuizVar = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
+  const temJuizVar   = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
+  const temNrOficio  = modelo.corpo.includes('{{NR_OFICIO}}');
+  const temDataOficio= modelo.corpo.includes('{{DATA_OFICIO}}');
 
   const assinantes = usuarios.filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase()));
 
@@ -386,6 +394,8 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
     cartorio: { ...cartorio, juiz_paz: juizSel },
     responsavelNome,
     dtVencimento: ocorrencia?.dt_vencimento,
+    nrOficio,
+    dataOficio: dataOficio ? new Date(dataOficio + 'T12:00:00').toLocaleDateString('pt-BR') : '',
   });
 
   const gerar = async () => {
@@ -441,6 +451,22 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
                   </select>
                 ) : (
                   <input className="form-input" value={juizSel} onChange={e => setJuizSel(e.target.value)} placeholder="Nome do Juiz de Paz" />
+                )}
+              </div>
+            )}
+            {(temNrOficio || temDataOficio) && (
+              <div style={{ display: 'grid', gridTemplateColumns: temNrOficio && temDataOficio ? '1fr 1fr' : '1fr', gap: 10 }}>
+                {temNrOficio && (
+                  <div>
+                    <label className="form-label">Número do Ofício</label>
+                    <input className="form-input" value={nrOficio} onChange={e => setNrOficio(e.target.value)} placeholder="Ex: 001/2026" />
+                  </div>
+                )}
+                {temDataOficio && (
+                  <div>
+                    <label className="form-label">Data do Ofício</label>
+                    <input className="form-input" type="date" value={dataOficio} onChange={e => setDataOficio(e.target.value)} />
+                  </div>
                 )}
               </div>
             )}
