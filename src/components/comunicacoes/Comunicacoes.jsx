@@ -256,25 +256,43 @@ async function gerarDocxComunicacao({ cartorio, modelo, textoFinal, assinante, t
     }
   }
 
-  const children = [
-    // Data alinhada à esquerda
+  const children = nrOficio ? [
+    // Padrão ofício: data à esquerda + número do ofício
     p(dtEmissaoStr, { align: AlignmentType.LEFT, after: 80 }),
-    // Número do ofício se informado
-    ...(nrOficio ? [new Paragraph({
+    new Paragraph({
       alignment: AlignmentType.LEFT,
       spacing: { after: 240, line: 276 },
       children: [
         new TextRun({ text: 'Ofício sob nº ', font: FONTE, size: TAM }),
         new TextRun({ text: nrOficio, font: FONTE, size: TAM, bold: true }),
       ],
-    })] : []),
+    }),
     pEmpty(),
-    // Corpo
     ...bodyParags,
     pEmpty(),
     pEmpty(),
     pEmpty(),
-    // Assinatura
+    ...assinaturaParags,
+  ] : [
+    // Padrão atestado: título centralizado negrito sublinhado
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    pCenter(titulo || 'ATESTADO', { bold: true, underline: true, size: 36, after: 0 }),
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    ...bodyParags,
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    p(dtEmissaoStr, { align: AlignmentType.CENTER, after: 0 }),
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
+    pEmpty(),
     ...assinaturaParags,
   ];
 
@@ -371,9 +389,9 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
   const [nrOficio,  setNrOficio]  = useState('');
   const [dataOficio,setDataOficio]= useState('');
   const { addToast } = useApp();
-  const temJuizVar   = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
-  const temNrOficio  = modelo.corpo.includes('{{NR_OFICIO}}');
-  const temDataOficio= modelo.corpo.includes('{{DATA_OFICIO}}');
+  const temJuizVar    = modelo.corpo.includes('{{NOME_JUIZ_PAZ}}');
+  const temNrOficio   = true;  // sempre exibe — inserido no cabeçalho do doc se preenchido
+  const temDataOficio = true;
 
   const assinantes = usuarios.filter(u => u.ativo && ['tabelião','tabeliao','escrevente','administrador','substituto'].includes((u.perfil||'').toLowerCase()));
 
@@ -459,19 +477,15 @@ function ModalGerar({ ocorrencia, config, modelo, cartorio, usuarios, onClose })
               </div>
             )}
             {(temNrOficio || temDataOficio) && (
-              <div style={{ display: 'grid', gridTemplateColumns: temNrOficio && temDataOficio ? '1fr 1fr' : '1fr', gap: 10 }}>
-                {temNrOficio && (
-                  <div>
-                    <label className="form-label">Número do Ofício</label>
-                    <input className="form-input" value={nrOficio} onChange={e => setNrOficio(e.target.value)} placeholder="Ex: 001/2026" />
-                  </div>
-                )}
-                {temDataOficio && (
-                  <div>
-                    <label className="form-label">Data do Ofício</label>
-                    <input className="form-input" type="date" value={dataOficio} onChange={e => setDataOficio(e.target.value)} />
-                  </div>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="form-label">Nº do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
+                  <input className="form-input" value={nrOficio} onChange={e => setNrOficio(e.target.value)} placeholder="Ex: 204/2026 — deixe vazio para omitir" />
+                </div>
+                <div>
+                  <label className="form-label">Data do Ofício <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(opcional)</span></label>
+                  <input className="form-input" type="date" value={dataOficio} onChange={e => setDataOficio(e.target.value)} />
+                </div>
               </div>
             )}
             <div style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: 13, lineHeight: 1.7, color: 'var(--color-text-muted)', maxHeight: 180, overflowY: 'auto' }}>
