@@ -711,9 +711,9 @@ export default function Comunicacoes() {
     setModalConfig(null); carregar();
   };
 
-  const salvarModelo = async ({ titulo, corpo }) => {
+  const salvarModelo = async ({ titulo, corpo, destinatario }) => {
     const { config, modelo } = modalModelo;
-    const payload = { config_id: config.id, titulo, corpo, atualizado_em: new Date().toISOString() };
+    const payload = { config_id: config.id, titulo, corpo, destinatario: destinatario || null, atualizado_em: new Date().toISOString() };
     if (modelo?.id) { await supabase.from('comunicacoes_modelos').update(payload).eq('id', modelo.id); addToast('Modelo atualizado.', 'success'); }
     else { await supabase.from('comunicacoes_modelos').insert(payload); addToast('Modelo salvo.', 'success'); }
     setModalModelo(null); carregar();
