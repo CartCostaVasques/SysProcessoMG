@@ -85,7 +85,9 @@ function calcProximoVencimento(config) {
 
 // Substitui variáveis no texto do modelo
 function substituirVariaveis(corpo, { cartorio, responsavelNome, dtVencimento }) {
-  const refDate = dtVencimento ? new Date(dtVencimento + 'T12:00:00') : new Date();
+  // O período sempre se refere ao mês ANTERIOR à data de vencimento/emissão
+  const base = dtVencimento ? new Date(dtVencimento + 'T12:00:00') : new Date();
+  const refDate = new Date(base.getFullYear(), base.getMonth() - 1, 1); // mês anterior
   const mes = refDate.getMonth(); // 0-based
   const ano = refDate.getFullYear();
   const nomeMes = MESES[mes];
