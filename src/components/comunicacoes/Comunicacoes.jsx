@@ -387,7 +387,7 @@ function ModalModelo({ config, modelo, onClose, onSave }) {
             </div>
             <div>
               <label className="form-label">Destinatário <span style={{ fontWeight: 400, color: 'var(--color-text-faint)', fontSize: 11 }}>(aparece após a assinatura — opcional)</span></label>
-              <textarea className="form-input" rows={4} value={destinatario} onChange={e => setDestinatario(e.target.value)}
+              <textarea className="form-input" rows={5} value={destinatario} onChange={e => setDestinatario(e.target.value)}
                 placeholder={'Ao Ilmo. Sr.\nDELEGADO DA POLÍCIA FEDERAL\nDEPARTAMENTO DA POLÍCIA FEDERAL\nDO ESTADO DO MATO GROSSO'}
                 style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.8, fontSize: 13 }} />
             </div>
