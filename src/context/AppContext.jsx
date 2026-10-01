@@ -365,10 +365,18 @@ export function AppProvider({ children }) {
   const CAMPOS_PROCESSO = ['numero_interno','numero_judicial','categoria','especie','partes','municipio','status','dt_abertura','dt_conclusao','dt_encerramento','responsavel_id','valor_ato','quantidade','obs','livro_ato','folhas_ato','esc_natureza','esc_descricao','certidoes','pedidos_registro'];
   const limparProcesso = (d) => Object.fromEntries(Object.entries(d).filter(([k]) => CAMPOS_PROCESSO.includes(k)).map(([k,v]) => [k, v === '' ? null : v]));
 
+  const traduzirErro = (e) => {
+    const msg = e?.message || '';
+    if (msg.includes('dt_abertura') && msg.includes('not-null')) return 'Data de abertura é obrigatória.';
+    if (msg.includes('not-null')) return 'Campo obrigatório não preenchido.';
+    if (msg.includes('duplicate') || msg.includes('unique')) return 'Número de processo já cadastrado.';
+    return msg;
+  };
+
   const addProcesso    = useCallback(async (d) => { try { 
     const {data,error} = await supabase.from('processos').insert({...limparProcesso(d),criado_por:usuario?.id}).select().single(); if(error) throw error;
     setProcessos(p=>[{...data, total_andamentos:0}, ...p]);
-    addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, [usuario]);
+    addToast('Processo cadastrado!','success'); return data; } catch(e){ addToast(traduzirErro(e),'error'); } }, [usuario]);
 
   const addProcessosBatch = useCallback(async (lista) => { try {
     const payload = lista.map(d => ({ ...limparProcesso(d), criado_por: usuario?.id }));
@@ -377,7 +385,7 @@ export function AppProvider({ children }) {
     const novos = (data||[]).map(p => ({ ...p, total_andamentos: 0 }));
     setProcessos(p => [...novos, ...p]);
     return data;
-  } catch(e) { addToast(e.message,'error'); } }, [usuario]);
+  } catch(e) { addToast(traduzirErro(e),'error'); } }, [usuario]);
   const editProcesso   = useCallback(async (id, d) => { try {
     const {data,error} = await supabase.from('processos').update(limparProcesso(d)).eq('id',id).select().single(); if(error) throw error; setProcessos(p=>p.map(i=>i.id===id?{...i,...data}:i)); addToast('Salvo!','success'); return data; } catch(e){ addToast(e.message,'error'); } }, []);
 
