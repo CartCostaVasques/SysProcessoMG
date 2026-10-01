@@ -508,6 +508,8 @@ export default function Processos() {
 
   const saveNewRow = async () => {
     if (!newRow.numero_interno) { addToast('Número interno é obrigatório.', 'error'); return; }
+    if (!newRow.dt_abertura)    { addToast('Data de abertura é obrigatória.', 'error'); return; }
+    if (!newRow.especie)        { addToast('Espécie é obrigatória.', 'error'); return; }
     if (salvandoNovo) return;
     const num = newRow.numero_interno.trim();
     if (numeroExiste(num)) {
@@ -540,6 +542,11 @@ export default function Processos() {
     const duplicados = lista.filter(d => numeroExiste(d.numero_interno.trim())).map(d => d.numero_interno.trim());
     if (duplicados.length > 0) {
       addToast(`Nº duplicado(s): ${duplicados.join(', ')}. Corrija antes de salvar.`, 'error');
+      return;
+    }
+    const semData = lista.filter(d => !d.dt_abertura);
+    if (semData.length > 0) {
+      addToast(`Preencha a data de abertura em todos os registros antes de salvar.`, 'error');
       return;
     }
     const dados = lista.map(d => ({ ...d, numero_interno: d.numero_interno.trim(), quantidade: 1 }));
