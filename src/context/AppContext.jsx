@@ -290,15 +290,13 @@ export function AppProvider({ children }) {
       const { data: existente } = await supabase.from('usuarios').select('id').eq('email', d.email).maybeSingle();
       if (existente) { addToast('E-mail já cadastrado no sistema.', 'error'); return; }
 
-      // Cria usuário direto no auth via função admin (já confirmado, sem email)
-      const { data: authResult, error: authError } = await supabase.rpc('admin_criar_usuario', {
-        p_email: d.email,
-        p_senha: d.senha,
-        p_nome:  d.nome_completo,
+      // Cria usuário via Edge Function com Admin API (já confirmado, sem email)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('admin-usuario', {
+        body: { acao: 'criar', email: d.email, senha: d.senha },
       });
-      if (authError) throw authError;
-      if (!authResult?.ok) throw new Error(authResult?.erro || 'Falha ao criar acesso.');
-      const uid = authResult.id;
+      if (fnError) throw fnError;
+      if (!fnData?.ok) throw new Error(fnData?.erro || 'Falha ao criar acesso.');
+      const uid = fnData.id;
       if (!uid) throw new Error('Falha ao obter ID do usuário.');
 
       // Monta perfil explicitamente (evita passar campos errados)
@@ -338,9 +336,8 @@ export function AppProvider({ children }) {
       addToast('Senha deve ter mínimo 6 caracteres.', 'error'); return false;
     }
     try {
-      const { data, error } = await supabase.rpc('admin_alterar_senha', {
-        p_user_id: userId,
-        p_nova_senha: novaSenha,
+      const { data, error } = await supabase.functions.invoke('admin-usuario', {
+        body: { acao: 'alterar_senha', user_id: userId, senha: novaSenha },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.erro || 'Erro ao alterar senha');
