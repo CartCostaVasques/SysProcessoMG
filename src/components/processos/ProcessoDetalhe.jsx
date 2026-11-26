@@ -1745,60 +1745,59 @@ function TabCompromissos({ processoId, usuarios }) {
       )}
 
       {modal && (
-        <Portal>
-          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
-            <div className="modal-container" style={{ maxWidth: 480, width: '95%' }}>
-              <div className="modal-header">
-                <h3 className="modal-title" style={{ fontSize: 15 }}>{editItem ? 'Editar Compromisso' : 'Novo Compromisso'}</h3>
-                <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => e.target === e.currentTarget && setModal(false)}>
+          <div className="modal-container" style={{ maxWidth: 480, width: '95%', zIndex: 1101 }}>
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ fontSize: 15 }}>{editItem ? 'Editar Compromisso' : 'Novo Compromisso'}</h3>
+              <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="form-group">
+                <label className="form-label">Tipo / Título *</label>
+                <input className="form-input" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
+                  placeholder="Ex: Assinatura, Vistoria, Entrega..." />
               </div>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="form-group">
-                  <label className="form-label">Tipo / Título *</label>
-                  <input className="form-input" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
-                    placeholder="Ex: Assinatura, Vistoria, Entrega..." />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Data *</label>
-                    <input type="date" className="form-input" value={form.dt_fim} onChange={e => setForm(p => ({ ...p, dt_fim: e.target.value }))} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Hora do aviso</label>
-                    <input type="time" className="form-input" value={form.hora_aviso} onChange={e => setForm(p => ({ ...p, hora_aviso: e.target.value }))} />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Avisar X dias antes</label>
-                    <input type="number" className="form-input" min={0} max={30} value={form.avisar_antes}
-                      onChange={e => setForm(p => ({ ...p, avisar_antes: Number(e.target.value) }))} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Responsável</label>
-                    <select className="form-select" value={form.responsavel_id || ''} onChange={e => setForm(p => ({ ...p, responsavel_id: e.target.value }))}>
-                      <option value="">— Nenhum —</option>
-                      {(usuarios || []).filter(u => u.ativo).map(u => (
-                        <option key={u.id} value={u.id}>{u.nome_simples || u.nome_completo}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <label className="form-label">Data *</label>
+                  <input type="date" className="form-input" value={form.dt_fim} onChange={e => setForm(p => ({ ...p, dt_fim: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Observação</label>
-                  <textarea className="form-input" rows={2} value={form.obs} onChange={e => setForm(p => ({ ...p, obs: e.target.value }))}
-                    placeholder="Detalhes adicionais..." style={{ resize: 'vertical' }} />
+                  <label className="form-label">Hora do aviso</label>
+                  <input type="time" className="form-input" value={form.hora_aviso} onChange={e => setForm(p => ({ ...p, hora_aviso: e.target.value }))} />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
-                  {salvando ? 'Salvando...' : editItem ? 'Salvar Alterações' : 'Criar Compromisso'}
-                </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Avisar X dias antes</label>
+                  <input type="number" className="form-input" min={0} max={30} value={form.avisar_antes}
+                    onChange={e => setForm(p => ({ ...p, avisar_antes: Number(e.target.value) }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Responsável</label>
+                  <select className="form-select" value={form.responsavel_id || ''} onChange={e => setForm(p => ({ ...p, responsavel_id: e.target.value }))}>
+                    <option value="">— Nenhum —</option>
+                    {(usuarios || []).filter(u => u.ativo).map(u => (
+                      <option key={u.id} value={u.id}>{u.nome_simples || u.nome_completo}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Observação</label>
+                <textarea className="form-input" rows={2} value={form.obs} onChange={e => setForm(p => ({ ...p, obs: e.target.value }))}
+                  placeholder="Detalhes adicionais..." style={{ resize: 'vertical' }} />
               </div>
             </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+                {salvando ? 'Salvando...' : editItem ? 'Salvar Alterações' : 'Criar Compromisso'}
+              </button>
+            </div>
           </div>
-        </Portal>
+        </div>
       )}
     </div>
   );
