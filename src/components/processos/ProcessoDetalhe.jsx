@@ -1890,17 +1890,17 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
           </div>
 
           {/* Abas */}
-          <div className="tabs" style={{ flexShrink: 0, padding: '0 20px', borderBottom: '1px solid var(--color-border)' }}>
+          <div className="tabs" style={{ flexShrink: 0, padding: '0 20px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
             {[
-              ['dados', 'Dados do Processo'],
+              ['dados', 'Dados'],
               ['andamentos', `Andamentos${andsPendentes > 0 ? ` (${andsPendentes})` : ''}`],
               ['historico', `Histórico${qtdHistorico > 0 ? ` (${qtdHistorico})` : ''}`],
-              ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
-              ['certidoes', 'Pedido de Certidões'],
-              ['registro_imoveis', 'Registro de Imóveis'],
+              ['oficios', `Ofícios${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
+              ['certidoes', 'Certidões'],
+              ['registro_imoveis', 'Reg. Imóveis'],
               ['compromissos', `Compromissos${tarefas.filter(t=>t.processo_id===processo.id&&!t.concluida).length>0?' ('+tarefas.filter(t=>t.processo_id===processo.id&&!t.concluida).length+')':''}`],
             ].map(([id, label]) => (
-              <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
+              <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{label}</button>
             ))}
           </div>
 
