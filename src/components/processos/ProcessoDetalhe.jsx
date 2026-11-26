@@ -1612,11 +1612,204 @@ function TabRegistroImoveis({ proc, processoId, interessados, cartorio, usuario,
 
 
 
+// ── Tab Compromissos ─────────────────────────────────────────
+function TabCompromissos({ processoId, usuarios }) {
+  const { tarefas, addTarefa, editTarefa, deleteTarefa, addToast, usuario } = useApp();
+  const [modal, setModal]       = useState(false);
+  const [editItem, setEditItem] = useState(null); // null = novo, objeto = editar
+  const [form, setForm]         = useState({});
+  const [salvando, setSalvando] = useState(false);
+
+  const lista = useMemo(() =>
+    tarefas.filter(t => t.processo_id === processoId).sort((a, b) => {
+      if (a.concluida !== b.concluida) return a.concluida ? 1 : -1;
+      return (a.dt_fim || '').localeCompare(b.dt_fim || '');
+    }), [tarefas, processoId]);
+
+  const abrirNovo = () => {
+    setEditItem(null);
+    setForm({ titulo: '', dt_fim: '', hora_aviso: '08:00', avisar_antes: 1, responsavel_id: usuario?.id || '', obs: '' });
+    setModal(true);
+  };
+
+  const abrirEditar = (t) => {
+    setEditItem(t);
+    setForm({
+      titulo: t.titulo || '',
+      dt_fim: t.dt_fim || '',
+      hora_aviso: t.hora_aviso || '08:00',
+      avisar_antes: t.avisar_antes ?? 1,
+      responsavel_id: t.responsavel_id || '',
+      obs: t.obs || '',
+    });
+    setModal(true);
+  };
+
+  const salvar = async () => {
+    if (!form.titulo?.trim()) { addToast('Informe o tipo/título do compromisso.', 'error'); return; }
+    if (!form.dt_fim)         { addToast('Informe a data do compromisso.', 'error'); return; }
+    setSalvando(true);
+    try {
+      const payload = {
+        titulo: form.titulo.trim(),
+        dt_fim: form.dt_fim,
+        hora_aviso: form.hora_aviso || '08:00',
+        avisar_antes: Number(form.avisar_antes) || 1,
+        responsavel_id: form.responsavel_id || null,
+        obs: form.obs || null,
+        processo_id: processoId,
+      };
+      if (editItem) {
+        await editTarefa(editItem.id, payload);
+      } else {
+        await addTarefa(payload);
+      }
+      setModal(false);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const toggleConcluida = async (t) => {
+    await editTarefa(t.id, { concluida: !t.concluida });
+  };
+
+  const excluir = async (id) => {
+    if (!window.confirm('Excluir este compromisso?')) return;
+    await deleteTarefa(id);
+  };
+
+  const isoToBr = (d) => {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
+  };
+
+  const nomeResp = (id) => {
+    const u = (usuarios || []).find(u => u.id === id);
+    return u ? u.nome_simples || u.nome_completo : '—';
+  };
+
+  const hoje = new Date().toISOString().split('T')[0];
+  const isVencido = (t) => !t.concluida && t.dt_fim && t.dt_fim < hoje;
+  const isHoje    = (t) => !t.concluida && t.dt_fim === hoje;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+          {lista.length === 0 ? 'Nenhum compromisso cadastrado.' : `${lista.length} compromisso(s)`}
+        </span>
+        <button className="btn btn-primary btn-sm" onClick={abrirNovo}>+ Novo Compromisso</button>
+      </div>
+
+      {lista.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {lista.map(t => {
+            const vencido = isVencido(t);
+            const ehHoje  = isHoje(t);
+            return (
+              <div key={t.id} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '10px 12px', borderRadius: 8,
+                background: t.concluida ? 'var(--color-surface)' : vencido ? 'rgba(239,68,68,.08)' : ehHoje ? 'rgba(234,179,8,.08)' : 'var(--color-surface)',
+                border: `1px solid ${t.concluida ? 'var(--color-border)' : vencido ? 'rgba(239,68,68,.3)' : ehHoje ? 'rgba(234,179,8,.3)' : 'var(--color-border)'}`,
+                opacity: t.concluida ? 0.65 : 1,
+              }}>
+                <input type="checkbox" checked={!!t.concluida} onChange={() => toggleConcluida(t)}
+                  style={{ marginTop: 2, cursor: 'pointer', accentColor: 'var(--color-accent)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, textDecoration: t.concluida ? 'line-through' : 'none', color: 'var(--color-text)' }}>
+                      {t.titulo}
+                    </span>
+                    {vencido && <span style={{ fontSize: 10, background: 'var(--color-danger)', color: '#fff', borderRadius: 4, padding: '1px 6px' }}>VENCIDO</span>}
+                    {ehHoje  && <span style={{ fontSize: 10, background: 'var(--color-warning)', color: '#000', borderRadius: 4, padding: '1px 6px' }}>HOJE</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <span>📅 {isoToBr(t.dt_fim)}</span>
+                    {t.hora_aviso && <span>🕐 {t.hora_aviso}</span>}
+                    {t.avisar_antes != null && <span>⏰ Avisar {t.avisar_antes}d antes</span>}
+                    {t.responsavel_id && <span>👤 {nomeResp(t.responsavel_id)}</span>}
+                  </div>
+                  {t.obs && <div style={{ fontSize: 11, color: 'var(--color-text-faint)', marginTop: 4, fontStyle: 'italic' }}>{t.obs}</div>}
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => abrirEditar(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: '0 4px', fontSize: 14 }} title="Editar">✏️</button>
+                  <button onClick={() => excluir(t.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: '0 4px', fontSize: 14 }} title="Excluir">🗑</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modal && (
+        <Portal>
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
+            <div className="modal-container" style={{ maxWidth: 480, width: '95%' }}>
+              <div className="modal-header">
+                <h3 className="modal-title" style={{ fontSize: 15 }}>{editItem ? 'Editar Compromisso' : 'Novo Compromisso'}</h3>
+                <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Tipo / Título *</label>
+                  <input className="form-input" value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
+                    placeholder="Ex: Assinatura, Vistoria, Entrega..." />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Data *</label>
+                    <input type="date" className="form-input" value={form.dt_fim} onChange={e => setForm(p => ({ ...p, dt_fim: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Hora do aviso</label>
+                    <input type="time" className="form-input" value={form.hora_aviso} onChange={e => setForm(p => ({ ...p, hora_aviso: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Avisar X dias antes</label>
+                    <input type="number" className="form-input" min={0} max={30} value={form.avisar_antes}
+                      onChange={e => setForm(p => ({ ...p, avisar_antes: Number(e.target.value) }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Responsável</label>
+                    <select className="form-select" value={form.responsavel_id || ''} onChange={e => setForm(p => ({ ...p, responsavel_id: e.target.value }))}>
+                      <option value="">— Nenhum —</option>
+                      {(usuarios || []).filter(u => u.ativo).map(u => (
+                        <option key={u.id} value={u.id}>{u.nome_simples || u.nome_completo}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Observação</label>
+                  <textarea className="form-input" rows={2} value={form.obs} onChange={e => setForm(p => ({ ...p, obs: e.target.value }))}
+                    placeholder="Detalhes adicionais..." style={{ resize: 'vertical' }} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+                <button className="btn btn-primary" onClick={salvar} disabled={salvando}>
+                  {salvando ? 'Salvando...' : editItem ? 'Salvar Alterações' : 'Criar Compromisso'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+    </div>
+  );
+}
+
+
 // ── Modal Principal ───────────────────────────────────────────
 
 export { ModalTelaAndamento };
 export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
-  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario } = useApp();
+  const { editProcesso, alterarStatusProcesso, processoHistorico, usuarios, servicos, interessados, addInteressado, addToast, cartorio, oficios, usuario, tarefas } = useApp();
   const [aba, setAba]                   = useState('dados');
   const [editando, setEditando]         = useState(false);
   const [form, setForm]                 = useState({ ...processo });
@@ -1706,6 +1899,7 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
               ['oficios', `Ofícios Expedidos${(oficios||[]).filter(o=>o.processo_id===processo.id).length > 0 ? ` (${(oficios||[]).filter(o=>o.processo_id===processo.id).length})` : ''}`],
               ['certidoes', 'Pedido de Certidões'],
               ['registro_imoveis', 'Registro de Imóveis'],
+              ['compromissos', `Compromissos${tarefas.filter(t=>t.processo_id===processo.id&&!t.concluida).length>0?' ('+tarefas.filter(t=>t.processo_id===processo.id&&!t.concluida).length+')':''}`],
             ].map(([id, label]) => (
               <button key={id} className={`tab-btn ${aba === id ? 'active' : ''}`} onClick={() => setAba(id)}>{label}</button>
             ))}
@@ -1738,6 +1932,9 @@ export default function ProcessoDetalhe({ processo, onClose, inline = false }) {
             )}
             {aba === 'registro_imoveis' && (
               <TabRegistroImoveis proc={form} processoId={processo.id} interessados={interessados} cartorio={cartorio} usuario={usuario} onChange={onChange} editProcesso={editProcesso} />
+            )}
+            {aba === 'compromissos' && (
+              <TabCompromissos processoId={processo.id} usuarios={usuarios} />
             )}
           </div>
 
