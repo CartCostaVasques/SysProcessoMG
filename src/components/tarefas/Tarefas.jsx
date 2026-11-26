@@ -87,7 +87,7 @@ function ModalTarefa({ tarefa, onClose, onSave, usuarios, setores }) {
 }
 
 export default function Tarefas() {
-  const { tarefas, addTarefa, editTarefa, deleteTarefa, usuarios, setores, addToast, supabaseClient: sb } = useApp();
+  const { tarefas, addTarefa, editTarefa, deleteTarefa, usuarios, setores, processos, addToast, supabaseClient: sb } = useApp();
   const [modal, setModal] = useState(null);
   const [filtroResp, setFiltroResp] = useState('');
   const [filtroSetor, setFiltroSetor] = useState('');
@@ -315,10 +315,11 @@ SELECT cron.schedule(
                   </td>
                   <td>
                     <div style={{ fontWeight: 500, textDecoration: t.concluida ? 'line-through' : 'none' }}>{t.titulo}</div>
+                    {t.processo_id && (() => { const p = (processos||[]).find(p => p.id === t.processo_id); return p ? <div style={{ fontSize: 11, color: 'var(--color-accent)', marginTop: 2 }}>📋 Processo {p.numero_interno}{p.especie ? ` · ${p.especie}` : ''}</div> : null; })()}
                     {t.obs && <div style={{ fontSize: 11, color: 'var(--color-text-faint)' }}>{t.obs}</div>}
                   </td>
-                  <td><span className="badge badge-neutral">{t.tipo || '—'}</span></td>
-                  <td>{t.responsavel || '—'}</td>
+                  <td><span className="badge badge-neutral">{t.tipo || (t.processo_id ? 'Compromisso' : '—')}</span></td>
+                  <td>{t.responsavel || (t.responsavel_id ? (usuarios||[]).find(u=>u.id===t.responsavel_id)?.nome_simples || '—' : '—')}</td>
                   <td>{t.setor || '—'}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatDate(t.dt_inicio)}</td>
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{formatDate(t.dt_fim)}</td>
